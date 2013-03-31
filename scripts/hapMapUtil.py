@@ -39,6 +39,7 @@ from types import *
 import os
 import sys
 import random
+import string
 
 def mergeHapMapPops(HapMap_dir, HapMap_pops, chrom, logger=None):
     '''
@@ -61,7 +62,7 @@ def mergeHapMapPops(HapMap_dir, HapMap_pops, chrom, logger=None):
     '''
     pop = None
     for HapMap_pop in HapMap_pops:
-        filename = os.path.join(HapMap_dir, 'HapMap_%s_chr%d.pop' % \
+        filename = os.path.join(os.path.expanduser(HapMap_dir), 'HapMap3_%s_chr%d.pop' % \
             (HapMap_pop, chrom))
         if logger is not None:
             logger.info('Loading HapMap Population %s' % filename)
@@ -152,7 +153,8 @@ def getHapMapMarkers(HapMap_dir, names = [], chroms=[], HapMap_pops=['CEU'],
         chs = chroms
     # read in HapMap data file
     pop = None
-    genDist = {}
+    geneticMap = {}
+    #recombRates = {}
     sPos = paramExpandList(startPos, len(chs), 'Incorrect starting position')
     ePos = paramExpandList(endPos, len(chs), 'Incorrect ending position')
     nMarkers = paramExpandList(numMarkers, len(chs), 'Incorrect number of markers')
@@ -204,7 +206,8 @@ def getHapMapMarkers(HapMap_dir, names = [], chroms=[], HapMap_pops=['CEU'],
             if logger is not None:
                 logger.info('%s markers are found on chromosome %d ' % (len(indexes), ch))
             chPop.removeLoci(keep=indexes)
-            genDist.update(chPop.dvars().genDist)
+            geneticMap.update(chPop.dvars().geneticMap)
+            #recombRates.update(chPop.dvars().recombRates)
             chPop.vars().clear()
             if pop is None:
                 pop = chPop
@@ -214,15 +217,16 @@ def getHapMapMarkers(HapMap_dir, names = [], chroms=[], HapMap_pops=['CEU'],
             if logger is not None:
                 logger.info('No qualified marker is found on chromosome %d ' % ch)
             del chPop
-    pop.dvars().genDist = genDist
+    pop.dvars().geneticMap = geneticMap
+    #pop.dvars().recombRates = recombRates
     return pop
 
-HapMap_pops = ['CEU', 'YRI', 'JPT+CHB']
+HapMap_pops = ['CEU', 'YRI']
 
 options = [
     {
     'longarg': 'HapMap_dir=',
-    'default': '../HapMap',
+    'default': '~/Data/HapMap',
     'useDefault': True,
     'label': 'HapMap data directory',
     'description': '''Directory to store HapMap data in simuPOP format. The 
@@ -268,7 +272,7 @@ options = [
     },
     {
     'longarg': 'chroms=',
-    'default': [],
+    'default': [1],
     'useDefault': True,
     'label': 'Chromosomes to use',
     'description': 'A list of chromosomes (1-22) to use.',
@@ -277,7 +281,7 @@ options = [
     },
     {
     'longarg': 'numMarkers=',
-    'default': [],
+    'default': [50000],
     'useDefault': True,
     'label': 'Number of markers to use',
     'description': '''Number of markers to use for each chromosome. This
@@ -330,7 +334,7 @@ options = [
     {
     'longarg': 'filename=',
     'label': 'Filename to save population',
-    'default': '',
+    'default': 'AfricanAmericans4.pop',
     'useDefault': True,
     'description': '''Name of the population or an absolute path to
         a file. This parameter will be ignored if an empty string or None
@@ -339,8 +343,11 @@ options = [
     }
 ]
 
-def demo(pop):
-    return [int(x*random.randint(130, 170)/100.0) for x in pop.subPopSizes()]
+def demo(gen, pop):
+    if gen<17 and (pop.subPopSizes()[0] < 8000 or pop.subPopSizes()[1] < 8000):
+        return [int(x*random.randint(130, 140)/100.0) for x in pop.subPopSizes()]
+    else:
+        return [int(x) for x in pop.subPopSizes()]
 
 if __name__ == '__main__':
     import logging
@@ -348,14 +355,16 @@ if __name__ == '__main__':
     from simuPOP.utils import export
     from IBD import cIBD
     from itertools import product
+    import gzip
+    from subprocess import call
     logging.basicConfig(level=logging.DEBUG)
     logger = logging.getLogger()
     pars = opt.Params(options,
         'This script chooses specified markers from one or more HapMap\n'
         'populations and saves them in simuPOP format.\n',
         __doc__)
-    if not pars.getParam():
-        sys.exit(1)
+    #if not pars.getParam():
+    #    sys.exit(1)
     if logger is not None:
         logger.info('Reading marker list %s' % pars.markerList)
     names = []
@@ -384,6 +393,9 @@ if __name__ == '__main__':
             print 'Failed to locate any locus. Please check your parameters.'
             sys.exit(0)
     #
+    
+    #pop = loadPopulation('AfricanAmericans.pop')
+    
     pop = getHapMapMarkers(pars.HapMap_dir, 
         names = names,
         chroms=pars.chroms, 
@@ -403,34 +415,73 @@ if __name__ == '__main__':
         infoFields='ancestry')
     # define two virtual subpopulations by ancestry value
     pop.setVirtualSplitter(sim.InfoSplitter(field='ancestry', cutoff = [0.5]))
+    pop.addInfoFields(['ind_id'])
+    sim.initInfo(pop,values=range(pop.popSize()),infoFields='ind_id')
+    
+    ceu_inds = [int(ind.info('ind_id')) for ind in pop.individuals(0)]
+    yri_inds = [int(ind.info('ind_id')) for ind in pop.individuals(1)]
+    
     transmitters=[
-        sim.MendelianGenoTransmitter(),
+        #sim.MendelianGenoTransmitter(),
+        sim.Recombinator(intensity=10e-9),
         sim.InheritTagger(mode=sim.MEAN, infoFields='ancestry')]
     pop.evolve(
         initOps=[sim.InitSex(),
                  sim.InitLineage(range(pop.popSize()), mode=sim.PER_INDIVIDUAL),
                  ],
+        preOps=[sim.ResizeSubPops(sizes=(2000, 8000), at=17),
+                sim.MergeSubPops(subPops=[0, 1], at=17),
+                sim.Stat(popSize=True),
+                sim.PyEval(r'"Gen %d:\t%s\n" % (gen, subPopSize)')],
         matingScheme=sim.RandomMating(ops=transmitters,subPopSize=demo),
         postOps=[sim.Stat(popSize=True),
                  sim.PyEval(r'"%s\n" % subPopSize')],
-        gen=10,
-    )
-    pop.evolve(
-        preOps=[sim.Migrator(rate=[[0., 0], [0.05, 0]]),
-                sim.Stat(popSize=True)], 
-        matingScheme=sim.HeteroMating(
-            matingSchemes=[
-                #sim.RandomMating(sexMode=sim.RANDOM_SEX),
-                sim.RandomMating(ops=transmitters),
-                sim.RandomMating(subPopSize=list(pop.subPopSizes()), subPops=[(0,0)], weight=-0.80, ops=transmitters),
-                sim.RandomMating(subPopSize=list(pop.subPopSizes()), subPops=[(0,1)], weight=-0.80, ops=transmitters)
-            ],
-        ),
-        gen=10,
-    )
-    
+        gen=25,
+    )   
+
     pop.addInfoFields(['ind_id'])
     sim.initInfo(pop,values=range(pop.popSize()),infoFields='ind_id')
+    
+    pop.removeIndividuals(range(100,pop.popSize()))
+    
+    map_out = open("AfricanAmericans4.genos.map", 'w')
+    for locus in pop.lociNames():
+        pos = '%d' % pop.locusPos(pop.locusByName(locus))
+        map_out.writelines(pop.chromNames()[0] + " " + locus + " " + str(pop.dvars().geneticMap[locus]) + " " + pos + "\n")
+    map_out.close()
+    #export(pop, format='PED', output='AfricanAmericans4.genos.ped', gui=False) 
+    #export(pop, format='csv', output='AfricanAmericans4.genos.dat.temp', delimiter='', header=False, infoFields=[],sexFormatter=None, affectionFormatter=None, gui=False)
+    #call(r"awk '{print substr($1,0,length($1)/2); print substr($1,length($1)/2+1,length($1)/2)}' AfricanAmericans4.genos.dat.temp > AfricanAmericans4.genos.dat", shell=True)
+    
+    data_out = open("AfricanAmericans4.genos.dat", 'w')
+    count=0
+    for h1 in pop.individuals():
+        count+=1
+        if count > 100:
+            break
+        logger.info("Writing data of individual %d  ", int(h1.info('ind_id')))
+        data_out.writelines(string.join([str(x) for x in h1.genotype(0)],'') + "\n")
+        data_out.writelines(string.join([str(x) for x in h1.genotype(1)],'') + "\n")
+    data_out.close()
+    
+    anc_out = open("AfricanAmericans4.trueancestry.dat", 'w')
+    count=0
+    for h1 in pop.individuals():
+        count+=1
+        if count > 100:
+            break
+        logger.info("Writing ancestry of individual %d  ", int(h1.info('ind_id')))
+        anc_out.writelines(string.join(['0' if int(x) in ceu_inds else '1' for x in h1.lineage(0)],'') + "\n")
+        anc_out.writelines(string.join(['0' if int(x) in ceu_inds else '1' for x in h1.lineage(1)],'') + "\n")
+    anc_out.close()
+    
+    if False:
+        lin_out = open("AfricanAmericans4.lineages.dat", 'w')
+        for h1 in pop.individuals():
+            logger.info("Writing lineage of individual %d  ", int(h1.info('ind_id')))
+            lin_out.writelines(string.join([str(x) for x in h1.lineage(0)]," ") + "\n")
+            lin_out.writelines(string.join([str(x) for x in h1.lineage(1)]," ")+ "\n")
+        lin_out.close()
     
     from IBD.FoundersContainer import FoundersContainer
     from IBD.cIBD import cPairIBD, cPopulationIBD 
@@ -442,18 +493,23 @@ if __name__ == '__main__':
     #sim.initInfo(pop, [FoundersContainer.from_founders_list(list(ind.lineage()),pop.locusPos(0),pop.locusPos(pop.totNumLoci)) for ind in pop.individuals()],
     #infoFields='contributor_container')
     
-    pop.dvars().cont_to_inds = {}
-    pop.dvars().ind_to_cont_list = {}
-    pop.dvars().ind_to_cont_struct = {}
+    cont_to_inds = {}
+    ind_to_cont_list = {}
+    ind_to_cont_struct = {}
+    count=0
     for h1 in pop.individuals():
-        pop.dvars().ind_to_cont_list[h1.info('ind_id')] = set(h1.lineage())
-        pop.dvars().ind_to_cont_struct[h1.info('ind_id')] = \
+        count+=1
+        if count > 100:
+            break
+        ind_to_cont_list[int(h1.info('ind_id'))] = set(h1.lineage())
+        ind_to_cont_struct[int(h1.info('ind_id'))] = \
         [FoundersContainer.from_founders_list(list(h1.lineage(ploidy=0)),0,pop.totNumLoci()), 
          FoundersContainer.from_founders_list(list(h1.lineage(ploidy=1)),0,pop.totNumLoci())] 
-        for cont in pop.dvars().ind_to_cont_list[h1.info('ind_id')]:
-            if not pop.dvars().cont_to_inds.has_key(cont):
-                pop.dvars().cont_to_inds[cont] = []
-            pop.dvars().cont_to_inds[cont].append(h1.info('ind_id'))
+        for cont in ind_to_cont_list[int(h1.info('ind_id'))]:
+            if not cont_to_inds.has_key(cont):
+                cont_to_inds[cont] = []
+            if int(h1.info('ind_id')) not in cont_to_inds[cont]:  
+                cont_to_inds[cont].append(int(h1.info('ind_id')))
             
     num_ibd_segments = 0
     total_ibd_length = 0
@@ -461,29 +517,37 @@ if __name__ == '__main__':
     ibd = cPopulationIBD()
     for h1 in pop.individuals():
         count+=1
+        if count > 100:
+            break
             
         humans = []
-        for cont in pop.dvars().ind_to_cont_list[h1.info('ind_id')]:
-            for ind in pop.dvars().cont_to_inds[cont]:
-                humans.append(pop.individual(ind))
+        for cont in ind_to_cont_list[int(h1.info('ind_id'))]:
+            for ind in cont_to_inds[cont]:
+                if ind not in [i.info('ind_id') for i in humans]:
+                    humans.append(pop.individual(ind))
                 
         if logger is not None:
             if len(humans) > 0:
-                logger.info("Calculating IBD for human with ID: %s (%d out of %d) with %d other humans ", h1.info('ind_id'), count, pop.popSize(), len(humans))
+                logger.info("Calculating IBD for human with ID: %s (%d out of %d) with %d other humans ", int(h1.info('ind_id')), count, pop.popSize(), len(humans))
             
         for h2 in humans:
-            if h1.info('ind_id') >= h2.info('ind_id'):
+            if int(h1.info('ind_id')) >= int(h2.info('ind_id')):
                 continue
 
             pairIBD = cPairIBD()
             for c1,c2 in product([0,1],[0,1]):
-                pairIBD.add_ibd_from_containers(pop.dvars().ind_to_cont_struct[h1.info('ind_id')][c1],pop.dvars().ind_to_cont_struct[h2.info('ind_id')][c2],0)
+                pairIBD.add_ibd_from_containers(ind_to_cont_struct[int(h1.info('ind_id'))][c1],ind_to_cont_struct[int(h2.info('ind_id'))][c2],0)
             if pairIBD != None:
                 if len(pairIBD.to_list()) > 0:
-                    ibd.add_human_pair((h1.info('ind_id'),h2.info('ind_id')), pairIBD)
+                    ibd.add_human_pair((int(h1.info('ind_id')),int(h2.info('ind_id'))), pairIBD)
                     num_ibd_segments += len(pairIBD.to_list())
                     total_ibd_length += pairIBD.get_total_segments_length()
     
+    trueibd_out = open("AfricanAmericans4.trueibd.dat", 'w')
+    trueibd_out.writelines(ibd.to_string())
+    trueibd_out.close()
     x = 1
-    export(pop, format='csv', output='test4.dat', delimiter='', header=False, infoFields=[],sexFormatter=None, affectionFormatter=None)
+    #export(pop, format='csv', output='AfricanAmericans.genos.dat', delimiter='', header=False, infoFields=[],sexFormatter=None, affectionFormatter=None, gui=None)
+    #export(pop, format='PED', output='AfricanAmericans.genos.ped', gui=None)
+    
     # awk '{print substr($1,1,length($1)/2); print substr($1,length($1)/2+1,length($1)/2)}' test4.dat > test4.2line.dat

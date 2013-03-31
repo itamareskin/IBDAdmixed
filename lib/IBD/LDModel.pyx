@@ -14,8 +14,12 @@ from libc.stdlib cimport malloc, free
 from itertools import islice
 from libc.math cimport exp, log
 from libc.float cimport DBL_MIN, DBL_MAX
+from IBD.cIBD import cPairIBD
 
-cdef double eps = 1e-5 
+cdef double eps = 1e-4
+
+cdef extern from "string.h":
+    char *strncpy(char *dest, char *src, size_t n)
 
 cdef extern from "structs.h":
     int c_isfinite(double x)
@@ -76,6 +80,9 @@ cdef class LDModel(object):
         
         # total number of SNPs to be analyzed
         self._snp_num = snp_num
+        
+        # number of haplotypes to analyze
+        self._nr_haplos = 0
         
         # number of ancestral populations
         self.K = k 
@@ -181,7 +188,9 @@ cdef class LDModel(object):
             print "the file: " + file_name + " does not exist!"
             return
         
-        print "reading from bgl file: " + file_name
+        self._nr_haplos = nr_haplos
+        
+        print "reading from haplos file: " + file_name
         self._haplos = <char **> malloc(nr_haplos * sizeof(char *)) 
         
         with open(file_name) as bgl_file:
@@ -203,8 +212,13 @@ cdef class LDModel(object):
                 
                 for line in lines:
                     #print "line: " + line
-                    #print "pos: " + line[0] 
-                    self._haplos[hap_idx] = line
+                    #print "pos: " + line[0]
+                    line_trunc = line[:self._snp_num] 
+                    self._haplos[hap_idx] = <char *> malloc((self._snp_num) * sizeof(char))
+                    strncpy(self._haplos[hap_idx], line_trunc,self._snp_num) 
+                    #py_bytes = line_trunc.encode('UTF-8')
+                    #self._haplos[hap_idx] = py_bytes
+                    #print self._haplos[hap_idx]
                     hap_idx += 1
                     if hap_idx >= nr_haplos:
                         done = True;
@@ -216,7 +230,7 @@ cdef class LDModel(object):
         '''
         
         if not os.path.exists(file_name):
-            print "the file: " + file_name + " does not exist!"
+            print "the file: " + file_name + " does not exist!"  
             return
         
         print "reading from bgl model file: " + file_name
@@ -285,12 +299,13 @@ cdef class LDModel(object):
                                 if nodes_prev[k][3] == nodes_curr[j][2]:
                                     edges_num += 1
                             # create states and set emission probability
+                            error_eps = 0
                             if int(nodes_curr[j][4]) == 0:
-                                #self._states[layer][j] = create_state(1 - eps, eps, 0, edges_num)
-                                self._states[anc][layer][j] = create_state(1, 0, 0, edges_num)
+                                self._states[anc][layer][j] = create_state(1 - error_eps, error_eps, 0, edges_num)
+                                #self._states[anc][layer][j] = create_state(1, 0, 0, edges_num)
                             else: 
-                                #self._states[layer][j] = create_state(eps, 1 - eps, 0, edges_num)
-                                self._states[anc][layer][j] = create_state(0, 1, 0, edges_num)
+                                self._states[anc][layer][j] = create_state(error_eps, 1 - error_eps, 0, edges_num)
+                                #self._states[anc][layer][j] = create_state(0, 1, 0, edges_num)
                             
                             if layer > 0:
                                 # allocate memory for the edges
@@ -340,73 +355,78 @@ cdef class LDModel(object):
                 #p = [self._pi[anc][i] for i in xrange(self._layer_state_nums[anc][0])]
                 #print "pi: " + str(p)  
     
+    def get_haplo_num(self):
+        return self._nr_haplos
+    
     def get_snp_num(self):
         return self._snp_num
     
     def get_haplo(self,hap_idx):
-        return self._haplos[hap_idx][:self._snp_num]
+        #pystring = self._haplos[hap_idx][:self._snp_num].decode('UTF-8')
+        pystring = self._haplos[hap_idx][:self._snp_num]
+        return pystring
     
-    def get_layer_node_nums(self):
+    def get_layer_node_nums(self, anc):
         node_nums = []
         for layer in range(self._snp_num):
-            node_nums.append(self._layer_state_nums[0][layer])
+            node_nums.append(self._layer_state_nums[anc][layer])
         return node_nums 
     
-    def get_node_edges(self):
+    def get_node_edges(self, anc):
         edges = []
         edge_weights = []
         for layer in range(self._snp_num-1):
             print "layer: " + str(layer)
             layer_edges = []
             layer_edge_weights = []
-            for node in range(self._layer_state_nums[0][layer]):
+            for node in range(self._layer_state_nums[anc][layer]):
                 print "node: " + str(node)
-                layer_edges.append([self._trans_idx[0][layer][node][i] for i in xrange(self._states[0][layer][node].out_trans_num)])
-                layer_edge_weights.append([self._trans[0][layer][node][i] for i in xrange(self._states[0][layer][node].out_trans_num)])
+                layer_edges.append([self._trans_idx[anc][layer][node][i] for i in xrange(self._states[anc][layer][node].out_trans_num)])
+                layer_edge_weights.append([self._trans[anc][layer][node][i] for i in xrange(self._states[anc][layer][node].out_trans_num)])
             edges.append(layer_edges)
             edge_weights.append(layer_edge_weights)
         return (edges, edge_weights)
     
-    def get_node_edges_back(self):
+    def get_node_edges_back(self, anc):
         edges = []
         edge_weights = []
         for layer in range(1,self._snp_num):
             print "layer: " + str(layer)
             layer_edges = []
             layer_edge_weights = []
-            for node in range(self._layer_state_nums[0][layer]):
+            for node in range(self._layer_state_nums[anc][layer]):
                 print "node: " + str(node)
-                layer_edges.append([self._back_trans_idx[0][layer][node][i] for i in xrange(self._states[0][layer][node].in_trans_num)])
-                layer_edge_weights.append([self._back_trans[0][layer][node][i] for i in xrange(self._states[0][layer][node].in_trans_num)])
+                layer_edges.append([self._back_trans_idx[anc][layer][node][i] for i in xrange(self._states[anc][layer][node].in_trans_num)])
+                layer_edge_weights.append([self._back_trans[anc][layer][node][i] for i in xrange(self._states[anc][layer][node].in_trans_num)])
             edges.append(layer_edges)
             edge_weights.append(layer_edge_weights)
         return (edges, edge_weights)
     
-    def get_node_ems_probs(self):
+    def get_node_ems_probs(self, anc):
         ems_probs = []
         for layer in range(self._snp_num):
             print "layer: " + str(layer)
             layer_ems_probs = []
-            for node in range(self._layer_state_nums[0][layer]):
+            for node in range(self._layer_state_nums[anc][layer]):
                 print "node: " + str(node)
-                layer_ems_probs.append((self._states[0][layer][node].prob_em[0],self._states[0][layer][node].prob_em[1]))
+                layer_ems_probs.append((self._states[anc][layer][node].prob_em[0],self._states[anc][layer][node].prob_em[1]))
             ems_probs.append(layer_ems_probs)
         return ems_probs
     
-    def get_trans_probs(self):
+    def get_trans_probs(self, anc):
         probs = []
         for layer in range(self._snp_num-1):
             layer_probs = []
-            for node in range(self._layer_state_nums[0][layer]):
-                layer_probs.append([self._trans[0][layer][node][i] for i in xrange(self._states[0][layer][node].out_trans_num)])
+            for node in range(self._layer_state_nums[anc][layer]):
+                layer_probs.append([self._trans[anc][layer][node][i] for i in xrange(self._states[anc][layer][node].out_trans_num)])
             probs.append(layer_probs)
         return probs
     
-    def get_forward_probs(self):
+    def get_forward_probs(self, anc):
         probs = []
         for layer in range(self._snp_num):
             layer_probs = []
-            for node in range(self._layer_state_nums[0][layer]):
+            for node in range(self._layer_state_nums[anc][layer]):
                 layer_probs.append(self._forward_probs[layer][node])
             probs.append(layer_probs)
         return probs
@@ -431,28 +451,6 @@ cdef class LDModel(object):
                 next_node = self._trans_idx[anc][layer][next_node][np.array(t).cumsum().searchsorted(np.random.sample(1))]
                 #print "next node: " + str(next_node)
         return hap
-    
-    '''
-    cpdef calc_ibd_prior(self):
-        cdef double d
-        self._s = <double ***> malloc((self._snp_num) * sizeof(double **))
-        for snp_idx in range(self._snp_num):
-            self._s[snp_idx] = <double **> malloc(2 * sizeof(double*))
-            for j in range(2):
-                self._s[snp_idx][j] = <double *> malloc(2 * sizeof(double))
-        
-        for snp_idx in range(self._snp_num-1):
-            d = self._genetic_map[snp_idx+1].genetic_dist - self._genetic_map[snp_idx].genetic_dist
-            self._s[snp_idx][1][1] = exp(-self._t_1_0 * d)  
-            self._s[snp_idx][0][0] = exp(-self._t_0_1 * d)
-            self._s[snp_idx][1][0] = 1 - self._s[snp_idx][1][1]
-            self._s[snp_idx][0][1] = 1 - self._s[snp_idx][0][0]
-            
-        self._s[self._snp_num-1][0][0] = 1
-        self._s[self._snp_num-1][0][1] = 1
-        self._s[self._snp_num-1][1][0] = 1
-        self._s[self._snp_num-1][1][1] = 1
-    '''
         
     cpdef calc_ibd_prior(self):
         cdef int win_idx
@@ -499,7 +497,7 @@ cdef class LDModel(object):
         self._anc_trans = <double *********> malloc((self.get_num_windows()) * sizeof(double ********))
         for win_idx in range(self.get_num_windows()):
             sum = 0
-            print "calculating ancestry transitions for window: " + str(win_idx)
+            #print "calculating ancestry transitions for window: " + str(win_idx)
             self._anc_trans[win_idx] = <double ********> malloc(self.K * sizeof(double *******))
             for admx_idx1 in range(self.K):
                 self._anc_trans[win_idx][admx_idx1] = <double *******> malloc(self.K * sizeof(double ******))
@@ -540,37 +538,6 @@ cdef class LDModel(object):
                                             self._anc_trans[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][nxt_admx_idx1][nxt_admx_idx2][nxt_admx_idx3][nxt_admx_idx4] * scale
                                             if not c_isfinite(self._anc_trans[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][nxt_admx_idx1][nxt_admx_idx2][nxt_admx_idx3][nxt_admx_idx4]):
                                                 self._anc_trans[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][nxt_admx_idx1][nxt_admx_idx2][nxt_admx_idx3][nxt_admx_idx4] = 0.0                        
-
-    cpdef calc_emission_probs_geno_ibd(self, char* chr1, char* chr2):
-    
-        cdef int snp_idx 
-        cdef int node_idx1
-        cdef int node_idx2
-        cdef int ibd
-        #cdef double sum
-        
-        # allocate memory and initialize to 0
-        
-        self._emission_prob_geno_ibd = <double ****> malloc((self._snp_num) * sizeof(double ***))
-
-        for snp_idx in range(self._snp_num):
-            print "snp_idx " + str(snp_idx)
-            #sum = 0
-            self._emission_prob_geno_ibd[snp_idx] = <double ***> malloc((self._layer_state_nums[0][snp_idx]) * sizeof(double**))
-            for node_idx1 in range(self._layer_state_nums[0][snp_idx]):
-                self._emission_prob_geno_ibd[snp_idx][node_idx1] = <double **> malloc((self._layer_state_nums[0][snp_idx]) * sizeof(double*))
-                for node_idx2 in range(self._layer_state_nums[0][snp_idx]):
-                    self._emission_prob_geno_ibd[snp_idx][node_idx1][node_idx2] = <double *> malloc((self._layer_state_nums[0][snp_idx]) * sizeof(double))
-                    for ibd in range(2):
-                        self._emission_prob_geno_ibd[snp_idx][node_idx1][node_idx2][ibd] = 0
-                        # multiply calculated probability (sum of transition probabilities * forward probabilities) with emission probability
-                        if chr1[snp_idx] == chr2[snp_idx]:
-                            self._emission_prob_geno_ibd[snp_idx][node_idx1][node_idx2][ibd] = self._states[0][snp_idx][node_idx1].prob_em[int(chr(chr1[snp_idx]))] * self._states[0][snp_idx][node_idx2].prob_em[int(chr(chr2[snp_idx]))]
-                        else:
-                            self._emission_prob_geno_ibd[snp_idx][node_idx1][node_idx2][ibd] = self._states[0][snp_idx][node_idx1].prob_em[int(chr(chr1[snp_idx]))] * self._states[0][snp_idx][node_idx2].prob_em[int(chr(chr2[snp_idx]))] + \
-                                       self._states[0][snp_idx][node_idx1].prob_em[int(chr(chr2[snp_idx]))] * self._states[0][snp_idx][node_idx2].prob_em[int(chr(chr1[snp_idx]))]
-                        print "emission: prob: " + str(self._emission_prob_geno_ibd[snp_idx][node_idx1][node_idx2][ibd])
-    
     
     cpdef emission_prob_ibd_admx_mem_alloc(self, int win_idx):
         cdef int snp_idx 
@@ -605,6 +572,39 @@ cdef class LDModel(object):
                                         self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3] = <double *> malloc((self._layer_state_nums[admx_idx4][snp_idx]) * sizeof(double))
             snp_idx_win += 1
     
+#    cpdef emission_prob_ibd_admx_mem_free(self, int win_idx):
+#        cdef int snp_idx 
+#        cdef int node_idx1
+#        cdef int node_idx2
+#        cdef int node_idx3
+#        cdef int node_idx4
+#        cdef int admx_idx1
+#        cdef int admx_idx2
+#        cdef int admx_idx3
+#        cdef int admx_idx4
+#        cdef snp_idx_win
+#        #cdef double sum
+#        
+#        snp_idx_win = 0
+#        self._emission_prob_ibd_admx = <double *********> malloc(self._win_size * sizeof(double ********))
+#        for snp_idx in range(self.start_snp(win_idx), self.end_snp(win_idx)):
+#            self._emission_prob_ibd_admx[snp_idx_win] = <double ********> malloc(self.K * sizeof(double*******))
+#            for admx_idx1 in range(self.K):
+#                self._emission_prob_ibd_admx[snp_idx_win][admx_idx1] = <double *******> malloc(self.K * sizeof(double******))
+#                for admx_idx2 in range(admx_idx1+1):
+#                    self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2] = <double ******> malloc(self.K * sizeof(double*****))
+#                    for admx_idx3 in range(self.K):
+#                        self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3] = <double *****> malloc(self.K * sizeof(double****))
+#                        for admx_idx4 in range(admx_idx3+1):
+#                            self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4] = <double ****> malloc((self._layer_state_nums[admx_idx1][snp_idx]) * sizeof(double***))
+#                            for node_idx1 in range(self._layer_state_nums[admx_idx1][snp_idx]):
+#                                self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1] = <double ***> malloc((self._layer_state_nums[admx_idx2][snp_idx]) * sizeof(double**))
+#                                for node_idx2 in range(self._layer_state_nums[admx_idx2][snp_idx]):
+#                                    self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2] = <double **> malloc((self._layer_state_nums[admx_idx3][snp_idx]) * sizeof(double*))
+#                                    for node_idx3 in range(self._layer_state_nums[admx_idx3][snp_idx]):
+#                                        self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3] = <double *> malloc((self._layer_state_nums[admx_idx4][snp_idx]) * sizeof(double))
+#            snp_idx_win += 1
+    
     cpdef calc_emission_probs_ibd_admx(self, char* chr1, char* chr2, char* chr3, char* chr4, int win_idx):
         
         cdef int snp_idx 
@@ -624,7 +624,7 @@ cdef class LDModel(object):
         
         snp_idx_win = 0
         for snp_idx in range(self.start_snp(win_idx), self.end_snp(win_idx)):
-            print "calculating emission probs in layer: " + str(snp_idx)
+            #print "calculating emission probs in layer: " + str(snp_idx)
             for admx_idx1 in range(self.K):
                 for admx_idx2 in range(admx_idx1+1):
                     for admx_idx3 in range(self.K):
@@ -651,160 +651,7 @@ cdef class LDModel(object):
                                                 self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4] *= \
                                                 self._states[admx_idx3][snp_idx][node_idx3].prob_em[int(chr(chr3[snp_idx]))] * self._states[admx_idx4][snp_idx][node_idx4].prob_em[int(chr(chr4[snp_idx]))] + \
                                                 self._states[admx_idx3][snp_idx][node_idx3].prob_em[int(chr(chr4[snp_idx]))] * self._states[admx_idx4][snp_idx][node_idx4].prob_em[int(chr(chr3[snp_idx]))]
-            snp_idx_win += 1                 
-
-    cpdef calc_forward_probs_geno_ibd(self, char* chr1, char* chr2):
-        
-        cdef int snp_idx 
-        cdef int node_idx1
-        cdef int node_idx2
-        cdef int prev_node_idx1
-        cdef int prev_node_idx2
-        cdef int prev_node1
-        cdef int prev_node2
-        cdef double sum
-        cdef int ibd
-        cdef double eps_or_1_eps
-
-        # allocate memory and initialize to 0
-        self._forward_probs_geno_ibd = <double ****> malloc((self._snp_num) * sizeof(double ***))
-
-        for snp_idx in range(self._snp_num):
-            self._forward_probs_geno_ibd[snp_idx] = <double ***> malloc((self._layer_state_nums[0][snp_idx]) * sizeof(double**))
-            for node_idx1 in range(self._layer_state_nums[0][snp_idx]):
-                self._forward_probs_geno_ibd[snp_idx][node_idx1] = <double **> malloc((self._layer_state_nums[0][snp_idx]) * sizeof(double*))
-                for node_idx2 in range(self._layer_state_nums[0][snp_idx]):
-                    self._forward_probs_geno_ibd[snp_idx][node_idx1][node_idx2] = <double *> malloc(2 * sizeof(double))
-                    for ibd in range(2):
-                        self._forward_probs_geno_ibd[snp_idx][node_idx1][node_idx2][ibd] = 0
-        
-        # first layer
-        for node_idx1 in range(self._layer_state_nums[0][0]):
-            for node_idx2 in range(self._layer_state_nums[0][0]):
-                for ibd in range(2):
-                    if ibd == 0:
-                        self._forward_probs_geno_ibd[0][node_idx1][node_idx2][ibd] = self._pi[0][0][node_idx1] * self._pi[0][0][node_idx2] * self._ibd_prior[ibd] * self._emission_prob_geno_ibd[0][node_idx1][node_idx2][ibd]
-                    else:
-                        self._forward_probs_geno_ibd[0][node_idx1][node_idx2][ibd] = min(self._pi[0][0][node_idx1],self._pi[0][0][node_idx2]) * self._ibd_prior[ibd] * self._emission_prob_geno_ibd[0][node_idx1][node_idx2][ibd]
-                            #print " forward probs in first level: " + str(self._forward_probs_geno[0][node_idx1][node_idx2]) 
-        # all other layers
-        for snp_idx in range(self._snp_num):
-            print "calculating forward probs in layer: " + str(snp_idx)
-            
-            if snp_idx < self._snp_num - 1:
-                sum = 0              
-                # calculate forward probabilities
-                for node_idx1 in range(self._layer_state_nums[0][snp_idx+1]):
-                    for node_idx2 in range(self._layer_state_nums[0][snp_idx+1]):
-                        for ibd in range(2):
-                            for prev_node_idx1 in range(self._states[0][snp_idx+1][node_idx1].in_trans_num):
-                                for prev_node_idx2 in range(self._states[0][snp_idx+1][node_idx2].in_trans_num):
-                                    for prev_ibd in range(2):
-                                        prev_node1 = self._back_trans_idx[0][snp_idx+1][node_idx1][prev_node_idx1]
-                                        prev_node2 = self._back_trans_idx[0][snp_idx+1][node_idx2][prev_node_idx2]
-                                        if ibd == 0:
-                                            self._forward_probs_geno_ibd[snp_idx+1][node_idx1][node_idx2][ibd] += \
-                                            self._forward_probs_geno_ibd[snp_idx][prev_node1][prev_node2][prev_ibd] * \
-                                            self._back_trans[0][snp_idx+1][node_idx1][prev_node_idx1] * \
-                                            self._back_trans[0][snp_idx+1][node_idx2][prev_node_idx2] * \
-                                            self._emission_prob_geno_ibd[snp_idx+1][node_idx1][node_idx2][ibd] #* \
-                                            #self._s[snp_idx+1][prev_ibd][ibd]
-                                        else:
-                                            if chr1[snp_idx+1] == chr2[snp_idx+1]:
-                                                eps_or_1_eps = 1 - eps
-                                            else:
-                                                eps_or_1_eps = eps
-                                            self._forward_probs_geno_ibd[snp_idx+1][node_idx1][node_idx2][ibd] += \
-                                            self._forward_probs_geno_ibd[snp_idx][prev_node1][prev_node2][prev_ibd] * \
-                                            min(self._back_trans[0][snp_idx+1][node_idx1][prev_node_idx1], 
-                                                self._back_trans[0][snp_idx+1][node_idx2][prev_node_idx2]) * \
-                                            self._emission_prob_geno_ibd[snp_idx+1][node_idx1][node_idx2][ibd] * eps_or_1_eps
-                                            #self._s[snp_idx+1][prev_ibd][ibd] * \
-                            sum += self._forward_probs_geno_ibd[snp_idx+1][node_idx1][node_idx2][ibd]
-                            print "snp_num: " + str(snp_idx+1) + " node_idx1: " + str(node_idx1) + " node_idx2: " + str(node_idx2) + " ibd: " + str(ibd) + " forward prob: " + str(self._forward_probs_geno_ibd[snp_idx+1][node_idx1][node_idx2][ibd])
-                # rescaling to avoid underflow
-                for node_idx1 in range(self._layer_state_nums[0][snp_idx+1]):
-                    for node_idx2 in range(self._layer_state_nums[0][snp_idx+1]):
-                        for ibd in range(2):
-                            self._forward_probs_geno_ibd[snp_idx+1][node_idx1][node_idx2][ibd] = self._forward_probs_geno_ibd[snp_idx+1][node_idx1][node_idx2][ibd] * (1/sum)
-                                                        
-    
-    cpdef calc_backward_probs_geno_ibd(self, char* chr1, char* chr2):
-        
-        cdef int snp_idx 
-        cdef int node_idx1
-        cdef int node_idx2
-        cdef int prev_node_idx1
-        cdef int prev_node_idx2
-        cdef int prev_node1
-        cdef int prev_node2
-        cdef double sum
-        cdef int ibd
-        cdef double eps_or_1_eps
-        
-        # allocate memory and initialize to 0
-        self._backward_probs_geno_ibd = <double ****> malloc((self._snp_num) * sizeof(double ***))
-
-        for snp_idx in range(self._snp_num):
-            self._backward_probs_geno_ibd[snp_idx] = <double ***> malloc((self._layer_state_nums[0][snp_idx]) * sizeof(double**))
-            for node_idx1 in range(self._layer_state_nums[0][snp_idx]):
-                self._backward_probs_geno_ibd[snp_idx][node_idx1] = <double **> malloc((self._layer_state_nums[0][snp_idx]) * sizeof(double*))
-                for node_idx2 in range(self._layer_state_nums[0][snp_idx]):
-                    self._backward_probs_geno_ibd[snp_idx][node_idx1][node_idx2] = <double *> malloc(2 * sizeof(double))
-                    for ibd in range(2):
-                        self._backward_probs_geno_ibd[snp_idx][node_idx1][node_idx2][ibd] = 0
-        
-        # last layer
-        for node_idx1 in range(self._layer_state_nums[0][self._snp_num-1]):
-            for node_idx2 in range(self._layer_state_nums[0][self._snp_num-1]):
-                for ibd in range(2):
-                    self._backward_probs_geno_ibd[self._snp_num-1][node_idx1][node_idx2][ibd] = 1
-                    
-        # all other layers
-        for snp_idx in reversed(range(self._snp_num-1)):
-            print "calculating backward probs in layer: " + str(snp_idx)
-
-            sum = 0       
-            # calculate backward probabilities
-            for node_idx1 in range(self._layer_state_nums[0][snp_idx]):
-                for node_idx2 in range(self._layer_state_nums[0][snp_idx]):
-                    for ibd in range(2):
-                        for nxt_node_idx1 in range(self._states[0][snp_idx][node_idx1].out_trans_num):
-                            for nxt_node_idx2 in range(self._states[0][snp_idx][node_idx2].out_trans_num):
-                                for nxt_ibd in range(2):
-                                    nxt_node1 = self._trans_idx[0][snp_idx][node_idx1][nxt_node_idx1]
-                                    nxt_node2 = self._trans_idx[0][snp_idx][node_idx2][nxt_node_idx2] 
-                                    #print " trans: " + str(self._trans[0][snp_idx][node_idx1][nxt_node_idx1]) + " " + str(self._trans[0][snp_idx][node_idx2][nxt_node_idx2])
-                                    #print " s: " + str(self._s[snp_idx][ibd][nxt_ibd])
-                                    #print " emission_prob: " + str(self._emission_prob_geno_ibd[snp_idx+1][nxt_node1][nxt_node2][nxt_ibd])
-                                    if ibd == 0:
-                                        self._backward_probs_geno_ibd[snp_idx][node_idx1][node_idx2][ibd] += \
-                                        self._backward_probs_geno_ibd[snp_idx+1][nxt_node1][nxt_node2][nxt_ibd] * \
-                                        self._trans[0][snp_idx][node_idx1][nxt_node_idx1] * \
-                                        self._trans[0][snp_idx][node_idx2][nxt_node_idx2] * \
-                                        self._emission_prob_geno_ibd[snp_idx+1][nxt_node1][nxt_node2][nxt_ibd]
-                                        #self._s[snp_idx][ibd][nxt_ibd] * \
-                                    else:
-                                        if chr1[snp_idx+1] == chr2[snp_idx+1]:
-                                            eps_or_1_eps = 1 - eps
-                                        else:
-                                            eps_or_1_eps = eps
-                                        self._backward_probs_geno_ibd[snp_idx][node_idx1][node_idx2][ibd] += \
-                                        self._backward_probs_geno_ibd[snp_idx+1][nxt_node1][nxt_node2][nxt_ibd] * \
-                                        min(self._trans[0][snp_idx][node_idx1][nxt_node_idx1], 
-                                            self._trans[0][snp_idx][node_idx2][nxt_node_idx2]) * \
-                                        self._emission_prob_geno_ibd[snp_idx+1][nxt_node1][nxt_node2][nxt_ibd] * eps_or_1_eps
-                                        #self._s[snp_idx][ibd][nxt_ibd] * \
-                        sum += self._backward_probs_geno_ibd[snp_idx][node_idx1][node_idx2][ibd]
-                        print "sum: " + str(sum)
-                        print "snp_num: " + str(snp_idx) + " node_idx1: " + str(node_idx1) + " node_idx2: " + str(node_idx2) + " ibd: " + str(ibd) + " backward prob: " + str(self._backward_probs_geno_ibd[snp_idx][node_idx1][node_idx2][ibd])
-            # rescaling to avoid underflow
-            if sum == 0:
-                sum = 1
-            for node_idx1 in range(self._layer_state_nums[0][snp_idx]):
-                for node_idx2 in range(self._layer_state_nums[0][snp_idx]):
-                    for ibd in range(2):
-                        self._backward_probs_geno_ibd[snp_idx][node_idx1][node_idx2][ibd] = self._backward_probs_geno_ibd[snp_idx][node_idx1][node_idx2][ibd] * (1/sum)                                    
+            snp_idx_win += 1                                                     
     
     cpdef forward_probs_mem_alloc(self, int win_idx):
         cdef int snp_idx 
@@ -858,7 +705,7 @@ cdef class LDModel(object):
         
         snp_idx_win = 0
         for snp_idx in range(self.start_snp(win_idx), self.end_snp(win_idx)):
-            print "freeing in snp: " + str(snp_idx)
+            #print "freeing in snp: " + str(snp_idx)
             for admx_idx1 in range(self.K):
                 for admx_idx2 in range(admx_idx1+1):
                     for admx_idx3 in range(self.K):
@@ -958,7 +805,7 @@ cdef class LDModel(object):
         # all other layers
         snp_idx_win = 0
         for snp_idx in range(self.start_snp(win_idx), self.end_snp(win_idx)-1):
-            print "calculating forward probs in layer: " + str(snp_idx)
+            #print "calculating forward probs in layer: " + str(snp_idx)
             
             sum = 0              
             # calculate forward probabilities
@@ -1138,7 +985,7 @@ cdef class LDModel(object):
         # all other layers
         snp_idx_win = self._win_size - 2 
         for snp_idx in reversed(range(self.start_snp(win_idx), self.end_snp(win_idx) - 1)):
-            print "calculating backward probs in layer: " + str(snp_idx)
+            #print "calculating backward probs in layer: " + str(snp_idx)
             
             sum = 0              
             # calculate forward probabilities
@@ -1242,36 +1089,24 @@ cdef class LDModel(object):
                                 self._top_level_forward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = 0
                                 self._top_level_backward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = 0
     
-    cpdef posterior_decoding_geno_ibd(self):
-        cdef int max_idx1
-        cdef int max_idx2
-        cdef int node_idx1
-        cdef int node_idx2
+    cpdef top_level_init(self):
+        cdef int win_idx
+        cdef int admx_idx1
+        cdef int admx_idx2
+        cdef int admx_idx3
+        cdef int admx_idx4
         cdef int ibd
-        cdef int max_ibd
-        cdef double max_gamma
-        cdef double curr_gamma
-        d1 = ""
-        d2 = "" 
-        i = ""
-        for snp_idx in range(self._snp_num):
-            max_gamma = -DBL_MAX
-            max_idx1 = -1
-            max_idx2 = -1
-            max_ibd = -1
-            for node_idx1 in range(self._layer_state_nums[0][snp_idx]):
-                for node_idx2 in range(self._layer_state_nums[0][snp_idx]):
-                    for ibd in range(2):
-                        curr_gamma = self._forward_probs_geno_ibd[snp_idx][node_idx1][node_idx2][ibd] * self._backward_probs_geno_ibd[snp_idx][node_idx1][node_idx2][ibd] 
-                        if curr_gamma  > max_gamma:
-                            max_gamma = curr_gamma
-                            max_idx1 = node_idx1
-                            max_idx2 = node_idx2
-                            max_ibd = ibd
-            d1 += chr(get_likely_allele(self._states[0][snp_idx][max_idx1]))
-            d2 += chr(get_likely_allele(self._states[0][snp_idx][max_idx2]))
-            i += str(max_ibd)
-        return (d1,d2,i)         
+         
+        for win_idx in range(self.get_num_windows()):
+            #print "initializing window %d" % win_idx
+            for admx_idx1 in range(self.K):
+                for admx_idx2 in range(admx_idx1+1):
+                    for admx_idx3 in range(self.K):
+                        for admx_idx4 in range(admx_idx3+1):
+                            for ibd in range(2):
+                                self._top_level_ems_prob[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = 0
+                                self._top_level_forward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = 0
+                                self._top_level_backward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = 0         
     
     cpdef posterior_decoding_ibd_admx(self, int win_idx):
         cdef int max_node_idx1
@@ -1306,7 +1141,7 @@ cdef class LDModel(object):
         i = ""
         snp_idx_win = 0
         for snp_idx in range(self.start_snp(win_idx), self.end_snp(win_idx)):
-            print "calculating posterior decoding in layer: " + str(snp_idx)
+            #print "calculating posterior decoding in layer: " + str(snp_idx)
             max_gamma = -DBL_MAX
             max_node_idx1 = -1
             max_node_idx2 = -1
@@ -1351,7 +1186,7 @@ cdef class LDModel(object):
             snp_idx_win += 1
         return (a1,a2,a3,a4,d1,d2,d3,d4,i)
     
-    cpdef calc_top_level_ems_probs(self, char* chr1, char* chr2, char* chr3, char* chr4):
+    cpdef calc_top_level_ems_probs_inner(self, char* chr1, char* chr2, char* chr3, char* chr4):
         cdef int win_idx
         cdef int node_idx1
         cdef int node_idx2
@@ -1384,9 +1219,12 @@ cdef class LDModel(object):
                                             for node_idx4 in range(self._layer_state_nums[admx_idx4][(win_idx*self._win_size)+last_snp_win-1]):
                                                 self._top_level_ems_prob[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] += \
                                                 self._forward_probs_ibd_admx[last_snp_win-1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd]
-                                #print ">>>>>>>top level ems probs " + str(admx_idx1) + " " +  str(admx_idx2) + " " +  str(admx_idx3) + " " +  str(admx_idx4) + " " +  str(ibd) + ": " + str(self._top_level_ems_prob[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd])
+                                                #print ">top level ems probs (win_idx admx_idx1 admx_idx2 admx_idx3 admx_idx4 ibd node_idx1 node_idx2 node_idx3 node_idx4)" + str(win_idx) + " " + str(admx_idx1) + " " +  str(admx_idx2) + " " +  str(admx_idx3) + " " +  str(admx_idx4) + " " +  str(ibd) + " " + str(node_idx1) + " " +  str(node_idx2) + " " +  str(node_idx3) + " " +  str(node_idx4) + " " + ": " + str(self._top_level_ems_prob[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd]) + " ibd_admx_forward_probs " + str(self._forward_probs_ibd_admx[last_snp_win-1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd])
             
             self.forward_probs_mem_free(win_idx)
+    
+    cpdef calc_top_level_ems_probs(self, int hap_idx1, int hap_idx2, int hap_idx3, int hap_idx4):
+        self.calc_top_level_ems_probs_inner(self._haplos[hap_idx1],self._haplos[hap_idx2],self._haplos[hap_idx3],self._haplos[hap_idx4])
     
     cpdef calc_top_level_forward_probs(self):
         cdef int win_idx
@@ -1408,13 +1246,13 @@ cdef class LDModel(object):
                         for ibd in range(2):
                             self._top_level_forward_probs[0][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] += \
                             self._top_level_ems_prob[0][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] * \
-                            self._ibd_prior[ibd] * \
                             self._alphas[admx_idx1] * self._alphas[admx_idx2] * self._alphas[admx_idx3] * self._alphas[admx_idx4] 
                             #print "first window ems probs " + str(admx_idx1) + " " +  str(admx_idx2) + " " +  str(admx_idx3) + " " +  str(admx_idx4) + " " +  str(ibd) + ": " + str(self._top_level_ems_prob[0][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd])
                             #print "params: " + str(self._ibd_prior[ibd]) + " " + str(self._alphas[admx_idx1]) + " " + str(self._alphas[admx_idx2]) + " " + str(self._alphas[admx_idx3]) + " "  + str(self._alphas[admx_idx4]) 
                             #print "first window forward probs " + str(admx_idx1) + " " +  str(admx_idx2) + " " +  str(admx_idx3) + " " +  str(admx_idx4) + " " +  str(ibd) + ": " + str(self._top_level_forward_probs[0][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd])
         
         for win_idx in range(self.get_num_windows()-1):
+            print "calculating top level forward probs for window: " + str(win_idx)
             sum = 0
             for admx_idx1 in range(self.K):
                 for admx_idx2 in range(admx_idx1+1):
@@ -1483,6 +1321,7 @@ cdef class LDModel(object):
                             self._top_level_backward_probs[self.get_num_windows()-1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = 1
          
         for win_idx in reversed(range(self.get_num_windows()-1)):
+            print "calculating top level forward probs for window: " + str(win_idx)
             sum = 0
             for admx_idx1 in range(self.K):
                 for admx_idx2 in range(admx_idx1+1):
@@ -1554,6 +1393,7 @@ cdef class LDModel(object):
             max_admx_idx4 = -1
             max_ibd = -1
             max_gamma = -DBL_MAX
+            print "top level decoding in window %d" % win_idx
             for admx_idx1 in range(self.K):
                 for admx_idx2 in range(admx_idx1+1):
                     for admx_idx3 in range(self.K):
@@ -1574,8 +1414,28 @@ cdef class LDModel(object):
             a3 += str(max_admx_idx3)
             a4 += str(max_admx_idx4)
             i += str(max_ibd)
+            
+            a1_filt = ''
+            a2_filt = ''
+            a3_filt = ''
+            a4_filt = ''
+            i_filt = ''
+            for ind in range(len(a1)):
+                start = max(0,ind-3)
+                end = min(ind+4,len(a1))
+                a1_filt += str(int(np.median([int(x) for x in a1[start:end]])))
+                a2_filt += str(int(np.median([int(x) for x in a2[start:end]])))
+                a3_filt += str(int(np.median([int(x) for x in a3[start:end]])))
+                a4_filt += str(int(np.median([int(x) for x in a4[start:end]])))
+                i_filt += str(int(np.median([int(x) for x in i[start:end]])))
+                
+            pairIBD=cPairIBD()
+            for win_i in range(len(i_filt)):
+                if i[win_i] == '1':
+                    pairIBD.add_interval(win_i*self._win_size,(win_i+1)*self._win_size)
+            pairIBD.merge_intervals()
         
-        return (a1,a2,a3,a4,i)
+        return (a1_filt,a2_filt,a3_filt,a4_filt,i_filt,pairIBD)
     
     cdef int start_snp(self, int win_idx):
         return win_idx * self._win_size

@@ -161,11 +161,13 @@ def set_map_dist(pop, ch, dest, logger=None):
     if logger is not None:
         logger.info('Using genetic map file %s' % file)
     dist = {}
+    rate = {}
     for line in open(os.path.join(dest, file)).readlines():
         try:
             fields = line.split()
             pos = int(fields[0])
             dist[pos] = float(fields[2])
+            rate[pos] = float(fields[1])
         except:
             pass
     if logger is not None:
@@ -173,11 +175,13 @@ def set_map_dist(pop, ch, dest, logger=None):
     totNumLoci = pop.totNumLoci()
     # now, try to set genetic map
     map_dist = [-1]*totNumLoci;
+    map_rate = [-1]*totNumLoci;
     cnt = 0
     for loc in range(totNumLoci):
         pos = int(int(pop.locusPos(loc)))
         try:
             map_dist[loc] = dist[pos]
+            map_rate[loc] = rate[pos]
             cnt += 1
         except:
             pass
@@ -221,9 +225,12 @@ def set_map_dist(pop, ch, dest, logger=None):
         logger.info('Map distance of %d markers (%.2f%% of %d) are estimated' % (totNumLoci - cnt,
             (totNumLoci - cnt) * 100.0/totNumLoci, totNumLoci))
     map = {}
+    recombrates = {}
     for loc in range(totNumLoci):
         map[pop.locusName(loc)] = map_dist[loc]
+        recombrates[pop.locusName(loc)] = map_rate[loc]
     pop.dvars().geneticMap = map
+    pop.dvars().recombRates = recombrates
 
     
 def loadHapMapPop(chrom, popName, logger=None):
@@ -248,7 +255,7 @@ def loadHapMapPop(chrom, popName, logger=None):
 
     if logger is not None:
         logger.info("Loading HapMap3 chromosome %d of population %s" % (chrom, popName))
-    tmpdir = tempfile.mkdtemp()
+    tmpdir = tempfile.mkdtemp(dir=".")
     URL = Genotype_URL % (popName.upper())
     sampleCode = {'': 'unr.', 'DUOS':'D.', 'TRIOS':'', 'UNRELATED':'unr.'}
     totNumInds = 0

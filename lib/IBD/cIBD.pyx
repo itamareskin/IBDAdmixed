@@ -228,7 +228,7 @@ cdef class cPopulationIBD:
         '''
         bins defines the bin edges, inluding the leftmost and rightmost edges.
         Returns an array of size len(bins)-1 with the power values:
-        power[i] is the power to detect a segment of length >= bins[i-1] and <bins[i]
+        power[i] is the power to detect a segment of length >= bins[i-1] and <bins[i]  
         '''
         assert isinstance(true_ibd, cPopulationIBD)
         detected_all = []

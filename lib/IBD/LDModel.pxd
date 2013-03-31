@@ -3,6 +3,8 @@ Created on May 15, 2012
 
 @author: eskin3
 '''
+cdef extern from "string.h":
+    char *strncpy(char *dest, char *src, size_t n)
 
 cdef extern from "structs.h":
     int c_isfinite(double x)
@@ -96,28 +98,8 @@ cdef class LDModel(object):
     # number of snps (layers) in the model
     cdef int _snp_num
     
-    # forward probabilities - size of _forward_probs is _snp_num
-    cdef double **_forward_probs
-    
-    # forward probabilities - size of _forward_probs is _snp_num
-    cdef double ***_forward_probs_geno
-    
-    # forward probabilities - size of _forward_probs_geno_ibd is _snp_num
-    cdef double ****_forward_probs_geno_ibd
-    
-    cdef double ****_backward_probs_geno_ibd
-    
-    cdef double ****_emission_prob_geno_ibd
-    
-    # precomputed
-    cdef double ***_pre_computed_geno
-    
-    # forward probabilities - size of _forward_probs_ibd is _snp_num
-    cdef double ******_forward_probs_ibd
-    
-    cdef double ******_backward_probs_ibd
-    
-    cdef double *****_emission_prob_ibd
+    # number of haplotypes to analyze
+    cdef int _nr_haplos
     
     cdef double **********_forward_probs_ibd_admx
     
@@ -146,15 +128,9 @@ cdef class LDModel(object):
     
     cpdef calc_anc_trans(self)
     
-    cpdef calc_emission_probs_geno_ibd(self, char* chr1, char* chr2)
-    
     cpdef emission_prob_ibd_admx_mem_alloc(self, int win_idx)
     
     cpdef calc_emission_probs_ibd_admx(self, char* chr1, char* chr2, char* chr3, char* chr4, int win_idx)
-    
-    cpdef calc_forward_probs_geno_ibd(self, char* chr1, char* chr2)
-    
-    cpdef calc_backward_probs_geno_ibd(self, char* chr1, char* chr2)
     
     cpdef forward_probs_mem_alloc(self, int win_idx)
     
@@ -170,19 +146,21 @@ cdef class LDModel(object):
     
     cpdef calc_backward_probs_ibd_admx(self, char* chr1, char* chr2, char* chr3, char* chr4, int win_idx)
     
-    cpdef posterior_decoding_geno_ibd(self)
-    
     cpdef posterior_decoding_ibd_admx(self, int win_idx)
     
     #cpdef top_level_ems_prob_alloc_mem(self)
     
     cpdef top_level_alloc_mem(self)
     
+    cpdef top_level_init(self)
+    
     cpdef calc_top_level_forward_probs(self)
     
     cpdef calc_top_level_backward_probs(self)
     
-    cpdef calc_top_level_ems_probs(self, char* chr1, char* chr2, char* chr3, char* chr4)
+    cpdef calc_top_level_ems_probs_inner(self, char* chr1, char* chr2, char* chr3, char* chr4)
+    
+    cpdef calc_top_level_ems_probs(self, int hap_idx1, int hap_idx2, int hap_idx3, int hap_idx4)
     
     cpdef posterior_top_level_decoding(self)
     
