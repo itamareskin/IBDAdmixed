@@ -3,6 +3,9 @@ Created on May 15, 2012
 
 @author: eskin3
 '''
+
+from libcpp cimport bool
+
 cdef extern from "string.h":
     char *strncpy(char *dest, char *src, size_t n)
 
@@ -50,20 +53,20 @@ cdef class LDModel(object):
     
     # number of populations
     cdef int K
-    # transition rate from non-IBD to IBD (per cM)
-    cdef double _t_0_1 
-    # transition rate from IBD to non-IBD (per cM)
-    cdef double _t_1_0
+    # transition rate of each ancestry from non-IBD to IBD (per cM)
+    cdef double *_t_0_1 
+    # transition rate of each ancestry from IBD to non-IBD (per cM)
+    cdef double *_t_1_0
     
     cdef int _win_size
     
     cdef char** _haplos
     
-    # probability of IBD in the first position (_ibd_prior[0] is the prob. of no IBS, _ibd_prior[1] is the probability of IBS)
-    cdef double *_ibd_prior
+    # probability of IBD of each ancestry in the first position (_ibd_prior[anc][0] is the prob. of no IBS in ancestry anc, _ibd_prior[anc][1] is the probability of IBS in ancestry anc)
+    cdef double **_ibd_prior
     
-    # _s[i][j][k] is the probability of transition from IBD state j (0/1 - no-IBD/IBD) to state k, from snp k-1 to snp k
-    cdef double ***_s
+    # _s[anc][i][j][k] is the probability of transition from IBD state j (0/1 - no-IBD/IBD) to state k, from snp k-1 to snp k
+    cdef double ****_s
     
     cdef double *********_anc_trans
     
@@ -114,7 +117,18 @@ cdef class LDModel(object):
     
     # genetic map
     cdef gen_map_entry *_genetic_map 
-            
+    
+    # log directory
+    cdef char* _log_dir
+    
+    # log files
+    cdef _inner_probs_file
+    cdef _probs_file
+    cdef _trans_file
+    
+    cdef char* _prefix_string
+    
+    cdef bool* _ibs
             
     ########
     # methods
@@ -129,6 +143,8 @@ cdef class LDModel(object):
     cpdef calc_anc_trans(self)
     
     cpdef emission_prob_ibd_admx_mem_alloc(self, int win_idx)
+    
+    cpdef emission_prob_ibd_admx_mem_free(self, int win_idx)
     
     cpdef calc_emission_probs_ibd_admx(self, char* chr1, char* chr2, char* chr3, char* chr4, int win_idx)
     
@@ -146,7 +162,7 @@ cdef class LDModel(object):
     
     cpdef calc_backward_probs_ibd_admx(self, char* chr1, char* chr2, char* chr3, char* chr4, int win_idx)
     
-    cpdef posterior_decoding_ibd_admx(self, int win_idx)
+    #cpdef posterior_decoding_ibd_admx(self, int win_idx)
     
     #cpdef top_level_ems_prob_alloc_mem(self)
     
@@ -154,9 +170,13 @@ cdef class LDModel(object):
     
     cpdef top_level_init(self)
     
+    cpdef top_level_print(self)
+    
     cpdef calc_top_level_forward_probs(self)
     
     cpdef calc_top_level_backward_probs(self)
+    
+    cpdef print_inner_probs(self, win_idx)
     
     cpdef calc_top_level_ems_probs_inner(self, char* chr1, char* chr2, char* chr3, char* chr4)
     

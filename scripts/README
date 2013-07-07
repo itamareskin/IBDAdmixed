@@ -1,0 +1,8 @@
+~/Software/phasing_pipeline/ped_to_bgl AfricanAmericans.genos.ped AfricanAmericans.genos.map > AfricanAmericans.genos.bgl
+java -Xmx3000m -jar ~/Software/beagle/beagle.jar lowmem=true unphased=AfricanAmericans.genos.bgl missing=? fastibd=true out=AfricanAmericans
+
+awk 'BEGIN{split("",ibd)}{split($1,a,"."); split($2,b,"."); h1=int((a[2]-3)/2); h2=int((b[2]-3)/2); p=h1","h2; v=$3","$4; if (p in ibd) ibd[p]=ibd[p]";"v; else ibd[p]=v}END{for (i in ibd) print i":"ibd[i]}' AfricanAmericans.AfricanAmericans.genos.bgl.fibd > beagle.ibd.txt
+
+awk '{sum_l=0; split($1,a,":"); split(a[2],b,";"); for (i=1;i<=length(b);i++) {split(b[i],c,","); l=c[2]-c[1]; sum_l=sum_l+l;} if (sum_l > 1000) print a[1]}' AfricanAmericans4.trueibd.dat | head -100 > AfricanAmericans4.100ibdpairs.txt
+
+awk 'BEGIN{split("",ibd)}{split($1,a,":"); p=a[1];v=a[2]; if (p in ibd) ibd[p]=ibd[p]";"v; else ibd[p]=v}END{for (i in ibd) print i":"ibd[i]}' *.dat > ibdadmixed.ibd.txt

@@ -14,12 +14,15 @@ from libc.stdlib cimport malloc, free
 from itertools import islice
 from libc.math cimport exp, log
 from libc.float cimport DBL_MIN, DBL_MAX
+from libcpp cimport bool
 from IBD.cIBD import cPairIBD
+from bx.intervals import Interval, IntervalTree
 
 cdef double eps = 1e-4
-
+ 
 cdef extern from "string.h":
     char *strncpy(char *dest, char *src, size_t n)
+    int strlen(char *s)
 
 cdef extern from "structs.h":
     int c_isfinite(double x)
@@ -42,7 +45,6 @@ cdef extern from "structs.h":
     transition create_transition(double prob, int next_node)
     
     cdef struct struct_gen_map_entry:
-        int position
         double recomb_rate
         double genetic_dist
 
@@ -73,10 +75,10 @@ cdef read_until_blank_line(file_name, first_line = None):
 
 cdef class LDModel(object):
     '''
-    Hidden Markov Model for a single ancestral population 
+    Hidden Markov Model for a single ancestral population
     '''
      
-    def __cinit__(self, int snp_num, int k, int g, int win_size):
+    def __cinit__(self, int snp_num, int k, int g, int win_size, char* log_dir):
         
         # total number of SNPs to be analyzed
         self._snp_num = snp_num
@@ -95,20 +97,27 @@ cdef class LDModel(object):
         # that is - transitions from one ancestry to the other are only allowd between consecutive windows
         self._win_size = win_size 
         
-        # probabilities of transition from IBD to No-IBD and vice-versa (notation from the Browning paper)
-        self._t_0_1 = 1e-4
-        self._t_1_0 = 1
+        self._log_dir = log_dir
+        
+        # rate of transition from IBD to No-IBD and vice-versa (notation from the Browning paper)
+        self._t_0_1 = <double *> malloc(self.K * sizeof(double))
+        self._t_1_0 = <double *> malloc(self.K * sizeof(double))
+        for i in range(self.K):
+            self._t_0_1[i] = 1e-5
+            self._t_1_0[i] = 1
         
         # prior probability of IBD
-        self._ibd_prior = <double *> malloc(2 * sizeof(double))
-        self._ibd_prior[1] = self._t_0_1 / (self._t_0_1 + self._t_1_0)
-        self._ibd_prior[0] = 1-self._ibd_prior[1]
+        self._ibd_prior = <double **> malloc(self.K * sizeof(double*))
+        for i in range(self.K):
+            self._ibd_prior[i] = <double *> malloc(2 * sizeof(double))
+            self._ibd_prior[i][1] = self._t_0_1[i] / (self._t_0_1[i] + self._t_1_0[i])
+            self._ibd_prior[i][0] = 1-self._ibd_prior[i][1]
         
         # proportions of ancestry from each ancestral populations
         self._alphas = <double *> malloc(self.K * sizeof(double))
         for i in range(self.K):
             self._alphas[i] = (1.0/self.K)
-            
+        
         # allocate memory
         self._snp_ids = <char **> malloc(self._snp_num * sizeof(char *))
         
@@ -127,7 +136,24 @@ cdef class LDModel(object):
             self._back_trans[i] = <double ***> malloc((self._snp_num) * sizeof(double **))
             self._back_trans_idx[i] = <int ***> malloc((self._snp_num) * sizeof(int **))
             self._pi[i] = <double **> malloc(self.get_num_windows() * sizeof(double *))
-    
+            
+        self._genetic_map = <gen_map_entry *> malloc(self._snp_num * sizeof(gen_map_entry))
+        print "allocated mem"
+        for snp_idx in range(self._snp_num):
+            self._genetic_map[snp_idx] = create_gen_map_entry(snp_idx,1.63936,0.0010840)
+            
+        self._inner_probs_file = open(self._log_dir+"inner.probs.txt","w")
+        self._probs_file = open(self._log_dir+"probs.txt","w")
+        self._trans_file = open(self._log_dir+"trans.txt","w")
+        
+        self._ibs = <bool *> malloc(self.get_num_windows() * sizeof(bool))
+        for win_idx in range(self.get_num_windows()):
+            self._ibs[win_idx] = True
+                
+    def __dealloc__(self):
+        self._inner_probs_file.close()
+        self._probs_file.close()
+        self._trans_file.close()
     
     cpdef set_alphas(self, alphas):
         if len(alphas) != self.K:
@@ -136,7 +162,10 @@ cdef class LDModel(object):
         for i in range(self.K):
             self._alphas[i] = alphas[i]
     
-    
+    def set_prefix_string(self, char* new_prefix_string):
+        self._prefix_string = <char *> malloc(strlen(new_prefix_string) * sizeof(char))
+        strncpy(self._prefix_string, new_prefix_string, strlen(new_prefix_string)) 
+        
     def read_genetic_map(self, genetic_map_file_name):
         '''
         read the genetic map from hapmap format file
@@ -146,10 +175,6 @@ cdef class LDModel(object):
             return
         
         print "reading from genetic map file: " + genetic_map_file_name
-        
-        # allocate memory
-        self._genetic_map = <gen_map_entry *> malloc(self._snp_num * sizeof(gen_map_entry))
-        print "allocated mem"
         
         with open(genetic_map_file_name) as genetic_map_file:
             
@@ -235,6 +260,28 @@ cdef class LDModel(object):
         
         print "reading from bgl model file: " + file_name
         
+        # identify allele coding
+        allele_0 = '' 
+        allele_1 = ''
+        with open(file_name) as model_file:
+            model_file.readline()
+            model_file.readline()
+            line = model_file.readline()
+            node = line.split("\t")
+            allele_0 = node[4]
+            while True:
+                line = model_file.readline()
+                if len(line) > 0:
+                    node = line.split("\t")
+                    if len(node) > 4:
+                        curr_allele = node[4]
+                        if curr_allele != allele_0:
+                            allele_1 = curr_allele
+                            break;
+        
+        print "allele_0: " + allele_0 + "\n"
+        print "allele_1: " + allele_1 + "\n"
+                
         with open(file_name) as model_file:
             
             blank_line = '\n'
@@ -299,8 +346,8 @@ cdef class LDModel(object):
                                 if nodes_prev[k][3] == nodes_curr[j][2]:
                                     edges_num += 1
                             # create states and set emission probability
-                            error_eps = 0
-                            if int(nodes_curr[j][4]) == 0:
+                            error_eps = 1e-5  
+                            if nodes_curr[j][4] == allele_0:
                                 self._states[anc][layer][j] = create_state(1 - error_eps, error_eps, 0, edges_num)
                                 #self._states[anc][layer][j] = create_state(1, 0, 0, edges_num)
                             else: 
@@ -355,6 +402,14 @@ cdef class LDModel(object):
                 #p = [self._pi[anc][i] for i in xrange(self._layer_state_nums[anc][0])]
                 #print "pi: " + str(p)  
     
+    def set_ibs(self, ibs_dic):
+        for win_idx in range(self.get_num_windows()):
+            inter = ibs_dic.find(self._genetic_map[self.start_snp(win_idx)].position,self._genetic_map[self.end_snp(win_idx)].position)
+            if len(inter) > 0:
+                self._ibs[win_idx] = True
+            else:
+                self._ibs[win_idx] = False
+        
     def get_haplo_num(self):
         return self._nr_haplos
     
@@ -431,6 +486,18 @@ cdef class LDModel(object):
             probs.append(layer_probs)
         return probs
     
+    def print_transitions(self):
+        self._trans_file.write("snp ancestry node next_node transition\n")
+        for snp_idx in range(self._snp_num):
+            for admx_idx in range(self.K):
+                for node_idx in range(self._layer_state_nums[admx_idx][snp_idx]):
+                    for nxt_node_idx in range(self._states[admx_idx][snp_idx][node_idx].out_trans_num):
+                        self._trans_file.write(str(snp_idx) + " " + 
+                                  str(admx_idx) + " " +
+                                  str(node_idx) + " " +
+                                  str(nxt_node_idx) + " " + 
+                                  str(self._trans[admx_idx][snp_idx][node_idx][nxt_node_idx]) + "\n") 
+    
     cpdef generate_random_hap(self, int anc):
         hap = ""
         p = [self._pi[anc][0][i] for i in xrange(self._layer_state_nums[anc][0])]
@@ -455,21 +522,23 @@ cdef class LDModel(object):
     cpdef calc_ibd_prior(self):
         cdef int win_idx
         cdef double d
-        self._s = <double ***> malloc((self.get_num_windows()) * sizeof(double **))
-        for win_idx in range(self.get_num_windows()):
-            self._s[win_idx] = <double **> malloc(2 * sizeof(double *))
-            for j in range(2):
-                self._s[win_idx][j] = <double *> malloc(2 * sizeof(double))
-        
-        for win_idx in range(self.get_num_windows()):
-            d = self._genetic_map[self.end_snp(win_idx)].genetic_dist - self._genetic_map[self.start_snp(win_idx)].genetic_dist
-            self._s[win_idx][1][1] = exp(-self._t_1_0 * d)  
-            self._s[win_idx][0][0] = exp(-self._t_0_1 * d)
-            self._s[win_idx][1][0] = 1 - self._s[win_idx][1][1]
-            self._s[win_idx][0][1] = 1 - self._s[win_idx][0][0]
-            #for i in range(2):
-            #    for j in range(2):
-            #        print "ibd trans: " + str(win_idx) + " " + str(i) + " " + str(j) + " : " + str(self._s[win_idx][i][j])
+        self._s = <double ****> malloc(self.K * sizeof(double ***))
+        for anc in range(self.K):
+            self._s[anc] = <double ***> malloc((self.get_num_windows()) * sizeof(double ***))
+            for win_idx in range(self.get_num_windows()):
+                self._s[anc][win_idx] = <double **> malloc(2 * sizeof(double *))
+                for j in range(2):
+                    self._s[anc][win_idx][j] = <double *> malloc(2 * sizeof(double))
+            
+            for win_idx in range(self.get_num_windows()):
+                d = self._genetic_map[self.end_snp(win_idx)].genetic_dist - self._genetic_map[self.start_snp(win_idx)].genetic_dist
+                self._s[anc][win_idx][1][1] = exp(-self._t_1_0[anc] * d)  
+                self._s[anc][win_idx][0][0] = exp(-self._t_0_1[anc] * d)
+                self._s[anc][win_idx][1][0] = 1 - self._s[anc][win_idx][1][1]
+                self._s[anc][win_idx][0][1] = 1 - self._s[anc][win_idx][0][0]
+                for i in range(2):
+                    for j in range(2):
+                        print "ibd trans: " + str(anc) + " " + str(win_idx) + " " + str(i) + " " + str(j) + " : " + str(self._s[anc][win_idx][i][j])
             
         #self._s[self.get_num_windows()-1][0][0] = 1
         #self._s[self.get_num_windows()-1][0][1] = 1
@@ -501,19 +570,19 @@ cdef class LDModel(object):
             self._anc_trans[win_idx] = <double ********> malloc(self.K * sizeof(double *******))
             for admx_idx1 in range(self.K):
                 self._anc_trans[win_idx][admx_idx1] = <double *******> malloc(self.K * sizeof(double ******))
-                for admx_idx2 in range(admx_idx1+1):
+                for admx_idx2 in range(self.K):
                     self._anc_trans[win_idx][admx_idx1][admx_idx2] = <double ******> malloc(self.K * sizeof(double *****))
                     for admx_idx3 in range(self.K):
                         self._anc_trans[win_idx][admx_idx1][admx_idx2][admx_idx3] = <double *****> malloc(self.K * sizeof(double ****))
-                        for admx_idx4 in range(admx_idx3+1):
+                        for admx_idx4 in range(self.K):
                             self._anc_trans[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4] = <double ****> malloc(self.K * sizeof(double ***))
                             for nxt_admx_idx1 in range(self.K):
                                 self._anc_trans[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][nxt_admx_idx1] = <double ***> malloc(self.K * sizeof(double **))
-                                for nxt_admx_idx2 in range(nxt_admx_idx1+1):
+                                for nxt_admx_idx2 in range(self.K):
                                     self._anc_trans[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][nxt_admx_idx1][nxt_admx_idx2] = <double **> malloc(self.K * sizeof(double *))
                                     for nxt_admx_idx3 in range(self.K):
                                         self._anc_trans[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][nxt_admx_idx1][nxt_admx_idx2][nxt_admx_idx3] = <double *> malloc(self.K * sizeof(double))
-                                        for nxt_admx_idx4 in range(nxt_admx_idx3+1):
+                                        for nxt_admx_idx4 in range(self.K):
                                             if sum_recomb[win_idx] > 0:
                                                 self._anc_trans[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][nxt_admx_idx1][nxt_admx_idx2][nxt_admx_idx3][nxt_admx_idx4] = (self.g - 1) * sum_recomb[win_idx]
                                             else:
@@ -527,13 +596,13 @@ cdef class LDModel(object):
                 if not c_isfinite(scale):
                     scale = 1.0                     
             for admx_idx1 in range(self.K):
-                for admx_idx2 in range(admx_idx1+1):
+                for admx_idx2 in range(self.K):
                     for admx_idx3 in range(self.K):
-                        for admx_idx4 in range(admx_idx3+1):
+                        for admx_idx4 in range(self.K):
                             for nxt_admx_idx1 in range(self.K):
-                                for nxt_admx_idx2 in range(nxt_admx_idx1+1):
+                                for nxt_admx_idx2 in range(self.K):
                                     for nxt_admx_idx3 in range(self.K):
-                                        for nxt_admx_idx4 in range(nxt_admx_idx3+1):
+                                        for nxt_admx_idx4 in range(self.K):
                                             self._anc_trans[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][nxt_admx_idx1][nxt_admx_idx2][nxt_admx_idx3][nxt_admx_idx4] = \
                                             self._anc_trans[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][nxt_admx_idx1][nxt_admx_idx2][nxt_admx_idx3][nxt_admx_idx4] * scale
                                             if not c_isfinite(self._anc_trans[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][nxt_admx_idx1][nxt_admx_idx2][nxt_admx_idx3][nxt_admx_idx4]):
@@ -558,11 +627,11 @@ cdef class LDModel(object):
             self._emission_prob_ibd_admx[snp_idx_win] = <double ********> malloc(self.K * sizeof(double*******))
             for admx_idx1 in range(self.K):
                 self._emission_prob_ibd_admx[snp_idx_win][admx_idx1] = <double *******> malloc(self.K * sizeof(double******))
-                for admx_idx2 in range(admx_idx1+1):
+                for admx_idx2 in range(self.K):
                     self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2] = <double ******> malloc(self.K * sizeof(double*****))
                     for admx_idx3 in range(self.K):
                         self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3] = <double *****> malloc(self.K * sizeof(double****))
-                        for admx_idx4 in range(admx_idx3+1):
+                        for admx_idx4 in range(self.K):
                             self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4] = <double ****> malloc((self._layer_state_nums[admx_idx1][snp_idx]) * sizeof(double***))
                             for node_idx1 in range(self._layer_state_nums[admx_idx1][snp_idx]):
                                 self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1] = <double ***> malloc((self._layer_state_nums[admx_idx2][snp_idx]) * sizeof(double**))
@@ -572,38 +641,38 @@ cdef class LDModel(object):
                                         self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3] = <double *> malloc((self._layer_state_nums[admx_idx4][snp_idx]) * sizeof(double))
             snp_idx_win += 1
     
-#    cpdef emission_prob_ibd_admx_mem_free(self, int win_idx):
-#        cdef int snp_idx 
-#        cdef int node_idx1
-#        cdef int node_idx2
-#        cdef int node_idx3
-#        cdef int node_idx4
-#        cdef int admx_idx1
-#        cdef int admx_idx2
-#        cdef int admx_idx3
-#        cdef int admx_idx4
-#        cdef snp_idx_win
-#        #cdef double sum
-#        
-#        snp_idx_win = 0
-#        self._emission_prob_ibd_admx = <double *********> malloc(self._win_size * sizeof(double ********))
-#        for snp_idx in range(self.start_snp(win_idx), self.end_snp(win_idx)):
-#            self._emission_prob_ibd_admx[snp_idx_win] = <double ********> malloc(self.K * sizeof(double*******))
-#            for admx_idx1 in range(self.K):
-#                self._emission_prob_ibd_admx[snp_idx_win][admx_idx1] = <double *******> malloc(self.K * sizeof(double******))
-#                for admx_idx2 in range(admx_idx1+1):
-#                    self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2] = <double ******> malloc(self.K * sizeof(double*****))
-#                    for admx_idx3 in range(self.K):
-#                        self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3] = <double *****> malloc(self.K * sizeof(double****))
-#                        for admx_idx4 in range(admx_idx3+1):
-#                            self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4] = <double ****> malloc((self._layer_state_nums[admx_idx1][snp_idx]) * sizeof(double***))
-#                            for node_idx1 in range(self._layer_state_nums[admx_idx1][snp_idx]):
-#                                self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1] = <double ***> malloc((self._layer_state_nums[admx_idx2][snp_idx]) * sizeof(double**))
-#                                for node_idx2 in range(self._layer_state_nums[admx_idx2][snp_idx]):
-#                                    self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2] = <double **> malloc((self._layer_state_nums[admx_idx3][snp_idx]) * sizeof(double*))
-#                                    for node_idx3 in range(self._layer_state_nums[admx_idx3][snp_idx]):
-#                                        self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3] = <double *> malloc((self._layer_state_nums[admx_idx4][snp_idx]) * sizeof(double))
-#            snp_idx_win += 1
+    cpdef emission_prob_ibd_admx_mem_free(self, int win_idx):
+        cdef int snp_idx 
+        cdef int node_idx1
+        cdef int node_idx2
+        cdef int node_idx3
+        cdef int node_idx4
+        cdef int admx_idx1
+        cdef int admx_idx2
+        cdef int admx_idx3
+        cdef int admx_idx4
+        cdef snp_idx_win
+        #cdef double sum
+        
+        snp_idx_win = 0
+        for snp_idx in range(self.start_snp(win_idx), self.end_snp(win_idx)):
+            for admx_idx1 in range(self.K):
+                for admx_idx2 in range(self.K):
+                    for admx_idx3 in range(self.K):
+                        for admx_idx4 in range(self.K):
+                            for node_idx1 in range(self._layer_state_nums[admx_idx1][snp_idx]):
+                                for node_idx2 in range(self._layer_state_nums[admx_idx2][snp_idx]):
+                                    for node_idx3 in range(self._layer_state_nums[admx_idx3][snp_idx]):
+                                        free(self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3])
+                                    free(self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2])
+                                free(self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1])
+                            free(self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4])
+                        free(self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3])
+                    free(self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2])
+                free(self._emission_prob_ibd_admx[snp_idx_win][admx_idx1])
+            free(self._emission_prob_ibd_admx[snp_idx_win])
+            snp_idx_win += 1
+        free(self._emission_prob_ibd_admx)
     
     cpdef calc_emission_probs_ibd_admx(self, char* chr1, char* chr2, char* chr3, char* chr4, int win_idx):
         
@@ -626,31 +695,31 @@ cdef class LDModel(object):
         for snp_idx in range(self.start_snp(win_idx), self.end_snp(win_idx)):
             #print "calculating emission probs in layer: " + str(snp_idx)
             for admx_idx1 in range(self.K):
-                for admx_idx2 in range(admx_idx1+1):
+                for admx_idx2 in range(self.K):
                     for admx_idx3 in range(self.K):
-                        for admx_idx4 in range(admx_idx3+1):
+                        for admx_idx4 in range(self.K):
                             for node_idx1 in range(self._layer_state_nums[admx_idx1][snp_idx]):
                                 for node_idx2 in range(self._layer_state_nums[admx_idx2][snp_idx]):
                                     for node_idx3 in range(self._layer_state_nums[admx_idx3][snp_idx]):
                                         for node_idx4 in range(self._layer_state_nums[admx_idx4][snp_idx]):
                                             #print "admx_idx1: " + str(admx_idx1) + " admx_idx2: " + str(admx_idx2) + " admx_idx3: " + str(admx_idx3) + " admx_idx4: " + str(admx_idx4) + " snp_idx: " + str(snp_idx) + " node_idx1: " + str(node_idx1) + " node_idx2: " + str(node_idx2) + " node_idx3: " + str(node_idx3) + " node_idx4: " + str(node_idx4)
-                                            if chr1[snp_idx] == chr2[snp_idx]:
-                                                self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4] = \
-                                                self._states[admx_idx1][snp_idx][node_idx1].prob_em[int(chr(chr1[snp_idx]))] * \
-                                                self._states[admx_idx2][snp_idx][node_idx2].prob_em[int(chr(chr2[snp_idx]))]
-                                            else:
-                                                self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4] = \
-                                                self._states[admx_idx1][snp_idx][node_idx1].prob_em[int(chr(chr1[snp_idx]))] * self._states[admx_idx2][snp_idx][node_idx2].prob_em[int(chr(chr2[snp_idx]))] + \
-                                                self._states[admx_idx1][snp_idx][node_idx1].prob_em[int(chr(chr2[snp_idx]))] * self._states[admx_idx2][snp_idx][node_idx2].prob_em[int(chr(chr1[snp_idx]))] 
+                                            #if chr1[snp_idx] == chr2[snp_idx]:
+                                            self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4] = \
+                                            self._states[admx_idx1][snp_idx][node_idx1].prob_em[int(chr(chr1[snp_idx]))] * \
+                                            self._states[admx_idx2][snp_idx][node_idx2].prob_em[int(chr(chr2[snp_idx]))]
+                                            #else:
+                                            #    self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4] = \
+                                            #    self._states[admx_idx1][snp_idx][node_idx1].prob_em[int(chr(chr1[snp_idx]))] * self._states[admx_idx2][snp_idx][node_idx2].prob_em[int(chr(chr2[snp_idx]))] + \
+                                            #    self._states[admx_idx1][snp_idx][node_idx1].prob_em[int(chr(chr2[snp_idx]))] * self._states[admx_idx2][snp_idx][node_idx2].prob_em[int(chr(chr1[snp_idx]))] 
                                                 
-                                            if chr3[snp_idx] == chr4[snp_idx]:
-                                                self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4] *= \
-                                                self._states[admx_idx3][snp_idx][node_idx3].prob_em[int(chr(chr3[snp_idx]))] * \
-                                                self._states[admx_idx4][snp_idx][node_idx4].prob_em[int(chr(chr4[snp_idx]))]
-                                            else:
-                                                self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4] *= \
-                                                self._states[admx_idx3][snp_idx][node_idx3].prob_em[int(chr(chr3[snp_idx]))] * self._states[admx_idx4][snp_idx][node_idx4].prob_em[int(chr(chr4[snp_idx]))] + \
-                                                self._states[admx_idx3][snp_idx][node_idx3].prob_em[int(chr(chr4[snp_idx]))] * self._states[admx_idx4][snp_idx][node_idx4].prob_em[int(chr(chr3[snp_idx]))]
+                                            #if chr3[snp_idx] == chr4[snp_idx]:
+                                            self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4] *= \
+                                            self._states[admx_idx3][snp_idx][node_idx3].prob_em[int(chr(chr3[snp_idx]))] * \
+                                            self._states[admx_idx4][snp_idx][node_idx4].prob_em[int(chr(chr4[snp_idx]))]
+                                            #else:
+                                            #    self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4] *= \
+                                            #    self._states[admx_idx3][snp_idx][node_idx3].prob_em[int(chr(chr3[snp_idx]))] * self._states[admx_idx4][snp_idx][node_idx4].prob_em[int(chr(chr4[snp_idx]))] + \
+                                            #    self._states[admx_idx3][snp_idx][node_idx3].prob_em[int(chr(chr4[snp_idx]))] * self._states[admx_idx4][snp_idx][node_idx4].prob_em[int(chr(chr3[snp_idx]))]
             snp_idx_win += 1                                                     
     
     cpdef forward_probs_mem_alloc(self, int win_idx):
@@ -672,11 +741,11 @@ cdef class LDModel(object):
             self._forward_probs_ibd_admx[snp_idx_win] = <double *********> malloc(self.K * sizeof(double********))
             for admx_idx1 in range(self.K):
                 self._forward_probs_ibd_admx[snp_idx_win][admx_idx1] = <double ********> malloc(self.K * sizeof(double*******))
-                for admx_idx2 in range(admx_idx1+1):
+                for admx_idx2 in range(self.K):
                     self._forward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2] = <double *******> malloc(self.K * sizeof(double******))
                     for admx_idx3 in range(self.K):
                         self._forward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3] = <double ******> malloc(self.K * sizeof(double*****))
-                        for admx_idx4 in range(admx_idx3+1):
+                        for admx_idx4 in range(self.K):
                             self._forward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4]= <double *****> malloc((self._layer_state_nums[admx_idx1][snp_idx]) * sizeof(double****))
                             for node_idx1 in range(self._layer_state_nums[admx_idx1][snp_idx]):
                                 self._forward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1] = <double ****> malloc((self._layer_state_nums[admx_idx2][snp_idx]) * sizeof(double***))
@@ -707,9 +776,9 @@ cdef class LDModel(object):
         for snp_idx in range(self.start_snp(win_idx), self.end_snp(win_idx)):
             #print "freeing in snp: " + str(snp_idx)
             for admx_idx1 in range(self.K):
-                for admx_idx2 in range(admx_idx1+1):
+                for admx_idx2 in range(self.K):
                     for admx_idx3 in range(self.K):
-                        for admx_idx4 in range(admx_idx3+1):
+                        for admx_idx4 in range(self.K):
                             for node_idx1 in range(self._layer_state_nums[admx_idx1][snp_idx]):
                                 for node_idx2 in range(self._layer_state_nums[admx_idx2][snp_idx]):
                                     for node_idx3 in range(self._layer_state_nums[admx_idx3][snp_idx]):
@@ -742,9 +811,9 @@ cdef class LDModel(object):
         snp_idx_win = 0
         for snp_idx in range(self.start_snp(win_idx), self.end_snp(win_idx)):
             for admx_idx1 in range(self.K):
-                for admx_idx2 in range(admx_idx1+1):
+                for admx_idx2 in range(self.K):
                     for admx_idx3 in range(self.K):
-                        for admx_idx4 in range(admx_idx3+1):
+                        for admx_idx4 in range(self.K):
                             for node_idx1 in range(self._layer_state_nums[admx_idx1][snp_idx]):
                                 for node_idx2 in range(self._layer_state_nums[admx_idx2][snp_idx]):
                                     for node_idx3 in range(self._layer_state_nums[admx_idx3][snp_idx]):
@@ -785,9 +854,9 @@ cdef class LDModel(object):
 
         # first layer
         for admx_idx1 in range(self.K):
-            for admx_idx2 in range(admx_idx1+1):
+            for admx_idx2 in range(self.K):
                 for admx_idx3 in range(self.K):
-                    for admx_idx4 in range(admx_idx3+1):
+                    for admx_idx4 in range(self.K):
                         for node_idx1 in range(self._layer_state_nums[admx_idx1][start_snp]):
                             for node_idx2 in range(self._layer_state_nums[admx_idx2][start_snp]):
                                 for node_idx3 in range(self._layer_state_nums[admx_idx3][start_snp]):
@@ -810,9 +879,9 @@ cdef class LDModel(object):
             sum = 0              
             # calculate forward probabilities
             for admx_idx1 in range(self.K):
-                for admx_idx2 in range(admx_idx1+1):
+                for admx_idx2 in range(self.K):
                     for admx_idx3 in range(self.K):
-                        for admx_idx4 in range(admx_idx3+1):
+                        for admx_idx4 in range(self.K):
                             for node_idx1 in range(self._layer_state_nums[admx_idx1][snp_idx+1]):
                                 for node_idx2 in range(self._layer_state_nums[admx_idx2][snp_idx+1]):
                                     for node_idx3 in range(self._layer_state_nums[admx_idx3][snp_idx+1]):
@@ -842,7 +911,8 @@ cdef class LDModel(object):
                                                                         #self._s[snp_idx+1][prev_ibd][ibd]
                                                                         
                                                                     else:
-                                                                        if chr1[snp_idx+1] == chr3[snp_idx+1]:
+                                                                        # node_idx1 == node_idx3: #chr(get_likely_allele(self._states[admx_idx1][snp_idx+1][node_idx1])) == chr(get_likely_allele(self._states[admx_idx3][snp_idx+1][node_idx3])): #chr1[snp_idx+1] == chr3[snp_idx+1]:
+                                                                        if admx_idx1 == admx_idx3 and chr(get_likely_allele(self._states[admx_idx1][snp_idx+1][node_idx1])) == chr(get_likely_allele(self._states[admx_idx3][snp_idx+1][node_idx3])):
                                                                             eps_or_1_eps = 1 - eps
                                                                         else:
                                                                             eps_or_1_eps = eps
@@ -861,9 +931,9 @@ cdef class LDModel(object):
             if sum == 0:
                 sum = 1
             for admx_idx1 in range(self.K):
-                for admx_idx2 in range(admx_idx1+1):
+                for admx_idx2 in range(self.K):
                     for admx_idx3 in range(self.K):
-                        for admx_idx4 in range(admx_idx3+1):
+                        for admx_idx4 in range(self.K):
                             for node_idx1 in range(self._layer_state_nums[admx_idx1][snp_idx+1]):
                                 for node_idx2 in range(self._layer_state_nums[admx_idx2][snp_idx+1]):
                                     for node_idx3 in range(self._layer_state_nums[admx_idx3][snp_idx+1]):
@@ -896,11 +966,11 @@ cdef class LDModel(object):
             self._backward_probs_ibd_admx[snp_idx_win] = <double *********> malloc(self.K * sizeof(double********))
             for admx_idx1 in range(self.K):
                 self._backward_probs_ibd_admx[snp_idx_win][admx_idx1] = <double ********> malloc(self.K * sizeof(double*******))
-                for admx_idx2 in range(admx_idx1+1):
+                for admx_idx2 in range(self.K):
                     self._backward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2] = <double *******> malloc(self.K * sizeof(double******))
                     for admx_idx3 in range(self.K):
                         self._backward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3] = <double ******> malloc(self.K * sizeof(double*****))
-                        for admx_idx4 in range(admx_idx3+1):
+                        for admx_idx4 in range(self.K):
                             self._backward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4]= <double *****> malloc((self._layer_state_nums[admx_idx1][snp_idx]) * sizeof(double****))
                             for node_idx1 in range(self._layer_state_nums[admx_idx1][snp_idx]):
                                 self._backward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1] = <double ****> malloc((self._layer_state_nums[admx_idx2][snp_idx]) * sizeof(double***))
@@ -930,9 +1000,9 @@ cdef class LDModel(object):
         snp_idx_win = 0
         for snp_idx in range(self.start_snp(win_idx), self.end_snp(win_idx)):
             for admx_idx1 in range(self.K):
-                for admx_idx2 in range(admx_idx1+1):
+                for admx_idx2 in range(self.K):
                     for admx_idx3 in range(self.K):
-                        for admx_idx4 in range(admx_idx3+1):
+                        for admx_idx4 in range(self.K):
                             for node_idx1 in range(self._layer_state_nums[admx_idx1][snp_idx]):
                                 for node_idx2 in range(self._layer_state_nums[admx_idx2][snp_idx]):
                                     for node_idx3 in range(self._layer_state_nums[admx_idx3][snp_idx]):
@@ -972,9 +1042,9 @@ cdef class LDModel(object):
         
         # last layer
         for admx_idx1 in range(self.K):
-            for admx_idx2 in range(admx_idx1+1):
+            for admx_idx2 in range(self.K):
                 for admx_idx3 in range(self.K):
-                    for admx_idx4 in range(admx_idx3+1):
+                    for admx_idx4 in range(self.K):
                         for node_idx1 in range(self._layer_state_nums[admx_idx1][self.end_snp(win_idx) - 1]):
                             for node_idx2 in range(self._layer_state_nums[admx_idx2][self.end_snp(win_idx) - 1]):
                                 for node_idx3 in range(self._layer_state_nums[admx_idx3][self.end_snp(win_idx) - 1]):
@@ -990,9 +1060,9 @@ cdef class LDModel(object):
             sum = 0              
             # calculate forward probabilities
             for admx_idx1 in range(self.K):
-                for admx_idx2 in range(admx_idx1+1):
+                for admx_idx2 in range(self.K):
                     for admx_idx3 in range(self.K):
-                        for admx_idx4 in range(admx_idx3+1):
+                        for admx_idx4 in range(self.K):
                             for node_idx1 in range(self._layer_state_nums[admx_idx1][snp_idx]):
                                 for node_idx2 in range(self._layer_state_nums[admx_idx2][snp_idx]):
                                     for node_idx3 in range(self._layer_state_nums[admx_idx3][snp_idx]):
@@ -1038,9 +1108,9 @@ cdef class LDModel(object):
             if sum == 0:
                 sum = 1
             for admx_idx1 in range(self.K):
-                for admx_idx2 in range(admx_idx1+1):
+                for admx_idx2 in range(self.K):
                     for admx_idx3 in range(self.K):
-                        for admx_idx4 in range(admx_idx3+1):
+                        for admx_idx4 in range(self.K):
                             for node_idx1 in range(self._layer_state_nums[admx_idx1][snp_idx]):
                                 for node_idx2 in range(self._layer_state_nums[admx_idx2][snp_idx]):
                                     for node_idx3 in range(self._layer_state_nums[admx_idx3][snp_idx]):
@@ -1065,29 +1135,30 @@ cdef class LDModel(object):
         self._top_level_forward_probs = <double ******> malloc(self.get_num_windows() * sizeof(double *****))
         self._top_level_backward_probs = <double ******> malloc(self.get_num_windows() * sizeof(double *****))
         for win_idx in range(self.get_num_windows()):
-            self._top_level_ems_prob[win_idx] = <double *****> malloc(self.K * sizeof(double ****))
-            self._top_level_forward_probs[win_idx] = <double *****> malloc(self.K * sizeof(double ****))
-            self._top_level_backward_probs[win_idx] = <double *****> malloc(self.K * sizeof(double ****))
-            for admx_idx1 in range(self.K):
-                self._top_level_ems_prob[win_idx][admx_idx1] = <double ****> malloc((admx_idx1+1) * sizeof(double ***))
-                self._top_level_forward_probs[win_idx][admx_idx1] = <double ****> malloc((admx_idx1+1) * sizeof(double ***))
-                self._top_level_backward_probs[win_idx][admx_idx1] = <double ****> malloc((admx_idx1+1) * sizeof(double ***))
-                for admx_idx2 in range(admx_idx1+1):
-                    self._top_level_ems_prob[win_idx][admx_idx1][admx_idx2] = <double ***> malloc(self.K * sizeof(double **))
-                    self._top_level_forward_probs[win_idx][admx_idx1][admx_idx2] = <double ***> malloc(self.K * sizeof(double **))
-                    self._top_level_backward_probs[win_idx][admx_idx1][admx_idx2] = <double ***> malloc(self.K * sizeof(double **))
-                    for admx_idx3 in range(self.K):
-                        self._top_level_ems_prob[win_idx][admx_idx1][admx_idx2][admx_idx3] = <double **> malloc((admx_idx3+1) * sizeof(double *))
-                        self._top_level_forward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3] = <double **> malloc((admx_idx3+1) * sizeof(double *))
-                        self._top_level_backward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3] = <double **> malloc((admx_idx3+1) * sizeof(double *))
-                        for admx_idx4 in range(admx_idx3+1):
-                            self._top_level_ems_prob[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4] = <double *> malloc(2 * sizeof(double))
-                            self._top_level_forward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4] = <double *> malloc(2 * sizeof(double))
-                            self._top_level_backward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4] = <double *> malloc(2 * sizeof(double))
-                            for ibd in range(2):
-                                self._top_level_ems_prob[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = 0
-                                self._top_level_forward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = 0
-                                self._top_level_backward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = 0
+            if self._ibs[win_idx]:
+                self._top_level_ems_prob[win_idx] = <double *****> malloc(self.K * sizeof(double ****))
+                self._top_level_forward_probs[win_idx] = <double *****> malloc(self.K * sizeof(double ****))
+                self._top_level_backward_probs[win_idx] = <double *****> malloc(self.K * sizeof(double ****))
+                for admx_idx1 in range(self.K):
+                    self._top_level_ems_prob[win_idx][admx_idx1] = <double ****> malloc(self.K * sizeof(double ***))
+                    self._top_level_forward_probs[win_idx][admx_idx1] = <double ****> malloc(self.K * sizeof(double ***))
+                    self._top_level_backward_probs[win_idx][admx_idx1] = <double ****> malloc(self.K * sizeof(double ***))
+                    for admx_idx2 in range(self.K):
+                        self._top_level_ems_prob[win_idx][admx_idx1][admx_idx2] = <double ***> malloc(self.K * sizeof(double **))
+                        self._top_level_forward_probs[win_idx][admx_idx1][admx_idx2] = <double ***> malloc(self.K * sizeof(double **))
+                        self._top_level_backward_probs[win_idx][admx_idx1][admx_idx2] = <double ***> malloc(self.K * sizeof(double **))
+                        for admx_idx3 in range(self.K):
+                            self._top_level_ems_prob[win_idx][admx_idx1][admx_idx2][admx_idx3] = <double **> malloc(self.K * sizeof(double *))
+                            self._top_level_forward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3] = <double **> malloc(self.K * sizeof(double *))
+                            self._top_level_backward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3] = <double **> malloc(self.K * sizeof(double *))
+                            for admx_idx4 in range(self.K):
+                                self._top_level_ems_prob[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4] = <double *> malloc(2 * sizeof(double))
+                                self._top_level_forward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4] = <double *> malloc(2 * sizeof(double))
+                                self._top_level_backward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4] = <double *> malloc(2 * sizeof(double))
+                                for ibd in range(2):
+                                    self._top_level_ems_prob[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = 0
+                                    self._top_level_forward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = 0
+                                    self._top_level_backward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = 0
     
     cpdef top_level_init(self):
         cdef int win_idx
@@ -1099,92 +1170,156 @@ cdef class LDModel(object):
          
         for win_idx in range(self.get_num_windows()):
             #print "initializing window %d" % win_idx
-            for admx_idx1 in range(self.K):
-                for admx_idx2 in range(admx_idx1+1):
-                    for admx_idx3 in range(self.K):
-                        for admx_idx4 in range(admx_idx3+1):
-                            for ibd in range(2):
-                                self._top_level_ems_prob[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = 0
-                                self._top_level_forward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = 0
-                                self._top_level_backward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = 0         
+            if self._ibs[win_idx]:
+                for admx_idx1 in range(self.K):
+                    for admx_idx2 in range(self.K):
+                        for admx_idx3 in range(self.K):
+                            for admx_idx4 in range(self.K):
+                                for ibd in range(2):
+                                    self._top_level_ems_prob[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = 0
+                                    self._top_level_forward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = 0
+                                    self._top_level_backward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = 0         
     
-    cpdef posterior_decoding_ibd_admx(self, int win_idx):
-        cdef int max_node_idx1
-        cdef int max_node_idx2
-        cdef int max_node_idx3
-        cdef int max_node_idx4
-        cdef int max_admx_idx1
-        cdef int max_admx_idx2
-        cdef int max_admx_idx3
-        cdef int max_admx_idx4
-        cdef int max_ibd
-        cdef int node_idx1
-        cdef int node_idx2
-        cdef int node_idx3
-        cdef int node_idx4
+    cpdef top_level_print(self):
+        cdef int win_idx
         cdef int admx_idx1
         cdef int admx_idx2
         cdef int admx_idx3
         cdef int admx_idx4
         cdef int ibd
-        cdef double max_gamma
-        cdef double curr_gamma
-        cdef snp_idx_win
-        a1 = ""
-        a2 = ""
-        a3 = ""
-        a4 = ""
-        d1 = ""
-        d2 = ""
-        d3 = ""
-        d4 = ""  
-        i = ""
+        
+        self._probs_file.write("ind1 ind2 win admx1 admx2 admx3 admx4 ibd forward backward gamma emission alpha1 alpha2 alpha3 alpha4 s1 s2 s3 s4\n")
+        for win_idx in range(self.get_num_windows()):
+            #print "initializing window %d" % win_idx
+            if self._ibs[win_idx]:
+                for admx_idx1 in range(self.K):
+                    for admx_idx2 in range(self.K):
+                        for admx_idx3 in range(self.K):
+                            for admx_idx4 in range(self.K):
+                                for ibd in range(2):
+                                    curr_gamma = self._top_level_forward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] * self._top_level_backward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd]
+                                    self._probs_file.write(self._prefix_string + " " + str(win_idx) + " " + 
+                                    str(admx_idx1) + " " +  
+                                    str(admx_idx2) + " " +  
+                                    str(admx_idx3) + " " +  
+                                    str(admx_idx4) + " " +  
+                                    str(ibd) + " " + 
+                                    str(self._top_level_forward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd]) + " " + 
+                                    str(self._top_level_backward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd]) + " " + 
+                                    str(curr_gamma) + " " +
+                                    str(self._top_level_ems_prob[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd]) + " " +
+                                    str(self._alphas[admx_idx1]) + " " + 
+                                    str(self._alphas[admx_idx2]) + " " + 
+                                    str(self._alphas[admx_idx3]) + " " + 
+                                    str(self._alphas[admx_idx4]) + " " +
+                                    str(self._s[0][win_idx][0][0]) + " " + 
+                                    str(self._s[0][win_idx][0][1]) + " " + 
+                                    str(self._s[0][win_idx][1][0]) + " " + 
+                                    str(self._s[0][win_idx][1][1]) + "\n")
+    
+#    cpdef posterior_decoding_ibd_admx(self, int win_idx):
+#        cdef int max_node_idx1
+#        cdef int max_node_idx2
+#        cdef int max_node_idx3
+#        cdef int max_node_idx4
+#        cdef int max_admx_idx1
+#        cdef int max_admx_idx2
+#        cdef int max_admx_idx3
+#        cdef int max_admx_idx4
+#        cdef int max_ibd
+#        cdef int node_idx1
+#        cdef int node_idx2
+#        cdef int node_idx3
+#        cdef int node_idx4
+#        cdef int admx_idx1
+#        cdef int admx_idx2
+#        cdef int admx_idx3
+#        cdef int admx_idx4
+#        cdef int ibd
+#        cdef double max_gamma
+#        cdef double curr_gamma
+#        cdef snp_idx_win
+#        a1 = ""
+#        a2 = ""
+#        a3 = ""
+#        a4 = ""
+#        d1 = ""
+#        d2 = ""
+#        d3 = ""
+#        d4 = ""  
+#        i = ""
+#        snp_idx_win = 0
+#        for snp_idx in range(self.start_snp(win_idx), self.end_snp(win_idx)):
+#            #print "calculating posterior decoding in layer: " + str(snp_idx)
+#            max_gamma = -DBL_MAX
+#            max_node_idx1 = -1
+#            max_node_idx2 = -1
+#            max_node_idx3 = -1
+#            max_node_idx4 = -1
+#            max_admx_idx1 = -1
+#            max_admx_idx2 = -1
+#            max_admx_idx3 = -1
+#            max_admx_idx4 = -1
+#            max_ibd = -1
+#            for admx_idx1 in range(self.K):
+#                for admx_idx2 in range(self.K):
+#                    for admx_idx3 in range(self.K):
+#                        for admx_idx4 in range(self.K):
+#                            for node_idx1 in range(self._layer_state_nums[admx_idx1][snp_idx]):
+#                                for node_idx2 in range(self._layer_state_nums[admx_idx2][snp_idx]):
+#                                    for node_idx3 in range(self._layer_state_nums[admx_idx3][snp_idx]):
+#                                        for node_idx4 in range(self._layer_state_nums[admx_idx4][snp_idx]):
+#                                            for ibd in range(2):
+#                                                curr_gamma = self._forward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd] * \
+#                                                self._backward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd]
+#                                                if curr_gamma  > max_gamma:
+#                                                    max_gamma = curr_gamma
+#                                                    max_node_idx1 = node_idx1
+#                                                    max_node_idx2 = node_idx2
+#                                                    max_node_idx3 = node_idx3
+#                                                    max_node_idx4 = node_idx4
+#                                                    max_admx_idx1 = admx_idx1
+#                                                    max_admx_idx2 = admx_idx2
+#                                                    max_admx_idx3 = admx_idx3
+#                                                    max_admx_idx4 = admx_idx4
+#                                                    max_ibd = ibd
+#            a1 += str(max_admx_idx1)
+#            a2 += str(max_admx_idx2)
+#            a3 += str(max_admx_idx3)
+#            a4 += str(max_admx_idx4)
+#            d1 += chr(get_likely_allele(self._states[max_admx_idx1][snp_idx][max_node_idx1]))
+#            d2 += chr(get_likely_allele(self._states[max_admx_idx2][snp_idx][max_node_idx2]))
+#            d3 += chr(get_likely_allele(self._states[max_admx_idx3][snp_idx][max_node_idx3]))
+#            d4 += chr(get_likely_allele(self._states[max_admx_idx4][snp_idx][max_node_idx4]))
+#            i += str(max_ibd)
+#            snp_idx_win += 1
+#        return (a1,a2,a3,a4,d1,d2,d3,d4,i)
+    
+    cpdef print_inner_probs(self, win_idx):
         snp_idx_win = 0
         for snp_idx in range(self.start_snp(win_idx), self.end_snp(win_idx)):
-            #print "calculating posterior decoding in layer: " + str(snp_idx)
-            max_gamma = -DBL_MAX
-            max_node_idx1 = -1
-            max_node_idx2 = -1
-            max_node_idx3 = -1
-            max_node_idx4 = -1
-            max_admx_idx1 = -1
-            max_admx_idx2 = -1
-            max_admx_idx3 = -1
-            max_admx_idx4 = -1
-            max_ibd = -1
             for admx_idx1 in range(self.K):
-                for admx_idx2 in range(admx_idx1+1):
+                for admx_idx2 in range(self.K):
                     for admx_idx3 in range(self.K):
-                        for admx_idx4 in range(admx_idx3+1):
+                        for admx_idx4 in range(self.K):
                             for node_idx1 in range(self._layer_state_nums[admx_idx1][snp_idx]):
                                 for node_idx2 in range(self._layer_state_nums[admx_idx2][snp_idx]):
                                     for node_idx3 in range(self._layer_state_nums[admx_idx3][snp_idx]):
                                         for node_idx4 in range(self._layer_state_nums[admx_idx4][snp_idx]):
                                             for ibd in range(2):
-                                                curr_gamma = self._forward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd] * \
-                                                self._backward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd]
-                                                if curr_gamma  > max_gamma:
-                                                    max_gamma = curr_gamma
-                                                    max_node_idx1 = node_idx1
-                                                    max_node_idx2 = node_idx2
-                                                    max_node_idx3 = node_idx3
-                                                    max_node_idx4 = node_idx4
-                                                    max_admx_idx1 = admx_idx1
-                                                    max_admx_idx2 = admx_idx2
-                                                    max_admx_idx3 = admx_idx3
-                                                    max_admx_idx4 = admx_idx4
-                                                    max_ibd = ibd
-            a1 += str(max_admx_idx1)
-            a2 += str(max_admx_idx2)
-            a3 += str(max_admx_idx3)
-            a4 += str(max_admx_idx4)
-            d1 += chr(get_likely_allele(self._states[max_admx_idx1][snp_idx][max_node_idx1]))
-            d2 += chr(get_likely_allele(self._states[max_admx_idx2][snp_idx][max_node_idx2]))
-            d3 += chr(get_likely_allele(self._states[max_admx_idx3][snp_idx][max_node_idx3]))
-            d4 += chr(get_likely_allele(self._states[max_admx_idx4][snp_idx][max_node_idx4]))
-            i += str(max_ibd)
-            snp_idx_win += 1
-        return (a1,a2,a3,a4,d1,d2,d3,d4,i)
+                                                self._inner_probs_file.write(self._prefix_string + " " + str(snp_idx) + " " + 
+                                                          str(admx_idx1) + " " +
+                                                          str(admx_idx2) + " " +
+                                                          str(admx_idx3) + " " +
+                                                          str(admx_idx4) + " " +
+                                                          str(node_idx1) + " " +
+                                                          str(node_idx2) + " " +
+                                                          str(node_idx3) + " " +
+                                                          str(node_idx4) + " " +
+                                                          str(ibd) + " " + 
+                                                          str(self._forward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd]) + " " +                                            
+                                                          str(self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4]) + "\n")
+            snp_idx_win+=1
     
     cpdef calc_top_level_ems_probs_inner(self, char* chr1, char* chr2, char* chr3, char* chr4):
         cdef int win_idx
@@ -1198,31 +1333,37 @@ cdef class LDModel(object):
         cdef int admx_idx4
         cdef int ibd
         cdef last_snp_win
-        for win_idx in range(self.get_num_windows()):
-            print "calculating top level ems probs for window: " + str(win_idx)
-            last_snp_win = self.end_snp(win_idx) - self.start_snp(win_idx)
-            self.emission_prob_ibd_admx_mem_alloc(win_idx)
-            self.calc_emission_probs_ibd_admx(chr1,chr2,chr3,chr4,win_idx)
-            self.forward_probs_mem_alloc(win_idx)
-            self.calc_forward_probs_ibd_admx(chr1,chr2,chr3,chr4,win_idx)
-            #self.backward_probs_mem_alloc(win_idx)
-            #self.calc_backward_probs_ibd_admx(chr1,chr2,chr3,chr4,win_idx)
-            for admx_idx1 in range(self.K):
-                for admx_idx2 in range(admx_idx1+1):
-                    for admx_idx3 in range(self.K):
-                        for admx_idx4 in range(admx_idx3+1):
-                            for ibd in range(2):
-                                sum = 0
-                                for node_idx1 in range(self._layer_state_nums[admx_idx1][(win_idx*self._win_size)+last_snp_win-1]):
-                                    for node_idx2 in range(self._layer_state_nums[admx_idx2][(win_idx*self._win_size)+last_snp_win-1]):
-                                        for node_idx3 in range(self._layer_state_nums[admx_idx3][(win_idx*self._win_size)+last_snp_win-1]):
-                                            for node_idx4 in range(self._layer_state_nums[admx_idx4][(win_idx*self._win_size)+last_snp_win-1]):
-                                                self._top_level_ems_prob[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] += \
-                                                self._forward_probs_ibd_admx[last_snp_win-1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd]
-                                                #print ">top level ems probs (win_idx admx_idx1 admx_idx2 admx_idx3 admx_idx4 ibd node_idx1 node_idx2 node_idx3 node_idx4)" + str(win_idx) + " " + str(admx_idx1) + " " +  str(admx_idx2) + " " +  str(admx_idx3) + " " +  str(admx_idx4) + " " +  str(ibd) + " " + str(node_idx1) + " " +  str(node_idx2) + " " +  str(node_idx3) + " " +  str(node_idx4) + " " + ": " + str(self._top_level_ems_prob[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd]) + " ibd_admx_forward_probs " + str(self._forward_probs_ibd_admx[last_snp_win-1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd])
+        
+        self._inner_probs_file.write("ind1 ind2 snp admx1 admx2 admx3 admx4 node1 node2 node3 node4 ibd forward emission\n")
             
-            self.forward_probs_mem_free(win_idx)
-    
+        for win_idx in range(self.get_num_windows()):
+            if self._ibs[win_idx]:
+                print "calculating top level ems probs for window: " + str(win_idx)
+                last_snp_win = self.end_snp(win_idx) - self.start_snp(win_idx)
+                self.emission_prob_ibd_admx_mem_alloc(win_idx)
+                self.calc_emission_probs_ibd_admx(chr1,chr2,chr3,chr4,win_idx)
+                self.forward_probs_mem_alloc(win_idx)
+                self.calc_forward_probs_ibd_admx(chr1,chr2,chr3,chr4,win_idx)
+                
+                self.print_inner_probs(win_idx)
+                #self.backward_probs_mem_alloc(win_idx)
+                #self.calc_backward_probs_ibd_admx(chr1,chr2,chr3,chr4,win_idx)
+                for admx_idx1 in range(self.K):
+                    for admx_idx2 in range(self.K):
+                        for admx_idx3 in range(self.K):
+                            for admx_idx4 in range(self.K):
+                                for ibd in range(2):
+                                    sum = 0
+                                    for node_idx1 in range(self._layer_state_nums[admx_idx1][(win_idx*self._win_size)+last_snp_win-1]):
+                                        for node_idx2 in range(self._layer_state_nums[admx_idx2][(win_idx*self._win_size)+last_snp_win-1]):
+                                            for node_idx3 in range(self._layer_state_nums[admx_idx3][(win_idx*self._win_size)+last_snp_win-1]):
+                                                for node_idx4 in range(self._layer_state_nums[admx_idx4][(win_idx*self._win_size)+last_snp_win-1]):
+                                                    self._top_level_ems_prob[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] += \
+                                                    self._forward_probs_ibd_admx[last_snp_win-1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd]
+                                                    #print ">top level ems probs (win_idx admx_idx1 admx_idx2 admx_idx3 admx_idx4 ibd node_idx1 node_idx2 node_idx3 node_idx4)" + str(win_idx) + " " + str(admx_idx1) + " " +  str(admx_idx2) + " " +  str(admx_idx3) + " " +  str(admx_idx4) + " " +  str(ibd) + " " + str(node_idx1) + " " +  str(node_idx2) + " " +  str(node_idx3) + " " +  str(node_idx4) + " " + ": " + str(self._top_level_ems_prob[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd]) + " ibd_admx_forward_probs " + str(self._forward_probs_ibd_admx[last_snp_win-1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd])
+                self.emission_prob_ibd_admx_mem_free(win_idx)
+                self.forward_probs_mem_free(win_idx)
+           
     cpdef calc_top_level_ems_probs(self, int hap_idx1, int hap_idx2, int hap_idx3, int hap_idx4):
         self.calc_top_level_ems_probs_inner(self._haplos[hap_idx1],self._haplos[hap_idx2],self._haplos[hap_idx3],self._haplos[hap_idx4])
     
@@ -1238,66 +1379,67 @@ cdef class LDModel(object):
         cdef int prev_admx_idx3
         cdef int prev_admx_idx4
         cdef int prev_ibd
-        
-        for admx_idx1 in range(self.K):
-            for admx_idx2 in range(admx_idx1+1):
-                for admx_idx3 in range(self.K):
-                    for admx_idx4 in range(admx_idx3+1):
-                        for ibd in range(2):
-                            self._top_level_forward_probs[0][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] += \
-                            self._top_level_ems_prob[0][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] * \
-                            self._alphas[admx_idx1] * self._alphas[admx_idx2] * self._alphas[admx_idx3] * self._alphas[admx_idx4] 
-                            #print "first window ems probs " + str(admx_idx1) + " " +  str(admx_idx2) + " " +  str(admx_idx3) + " " +  str(admx_idx4) + " " +  str(ibd) + ": " + str(self._top_level_ems_prob[0][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd])
-                            #print "params: " + str(self._ibd_prior[ibd]) + " " + str(self._alphas[admx_idx1]) + " " + str(self._alphas[admx_idx2]) + " " + str(self._alphas[admx_idx3]) + " "  + str(self._alphas[admx_idx4]) 
-                            #print "first window forward probs " + str(admx_idx1) + " " +  str(admx_idx2) + " " +  str(admx_idx3) + " " +  str(admx_idx4) + " " +  str(ibd) + ": " + str(self._top_level_forward_probs[0][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd])
-        
+        cdef bool first_ibs_window = False
+       
         for win_idx in range(self.get_num_windows()-1):
-            print "calculating top level forward probs for window: " + str(win_idx)
-            sum = 0
-            for admx_idx1 in range(self.K):
-                for admx_idx2 in range(admx_idx1+1):
-                    for admx_idx3 in range(self.K):
-                        for admx_idx4 in range(admx_idx3+1):
-                            for ibd in range(2):
-                                for prev_admx_idx1 in range(self.K):
-                                    for prev_admx_idx2 in range(prev_admx_idx1+1):
-                                        for prev_admx_idx3 in range(self.K):
-                                            for prev_admx_idx4 in range(prev_admx_idx3+1):
-                                                for prev_ibd in range(2):
-                                                    self._top_level_forward_probs[win_idx+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] += \
-                                                    self._top_level_forward_probs[win_idx][prev_admx_idx1][prev_admx_idx2][prev_admx_idx3][prev_admx_idx4][prev_ibd] * \
-                                                    self._top_level_ems_prob[win_idx+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] * \
-                                                    self._s[win_idx][prev_ibd][ibd] * \
-                                                    self._anc_trans[win_idx][prev_admx_idx1][prev_admx_idx2][prev_admx_idx3][prev_admx_idx4][admx_idx1][admx_idx2][admx_idx3][admx_idx4] * \
-                                                    self._alphas[admx_idx1] * self._alphas[admx_idx2] * self._alphas[admx_idx3] * self._alphas[admx_idx4]
-                                sum += self._top_level_forward_probs[win_idx+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd]
-                                if False: #ibd == 0:
-                                    print str(win_idx) + " top level ems probs " + str(win_idx) + " " + str(admx_idx1) + " " +  str(admx_idx2) + " " +  str(admx_idx3) + " " +  str(admx_idx4) + " " +  str(ibd) + ": " + str(self._top_level_ems_prob[win_idx+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd])
-                                    print str(win_idx) + " top level ibd prior and alphas: " + str(win_idx) + " " + str(admx_idx1) + " " +  str(admx_idx2) + " " +  str(admx_idx3) + " " +  str(admx_idx4) + " " +  str(ibd) + ": " + str(self._ibd_prior[0]) + " " + str(self._alphas[admx_idx1]) + " " + str(self._alphas[admx_idx2]) + " " + str(self._alphas[admx_idx3]) + " "  + str(self._alphas[admx_idx4])
-                                    print str(win_idx) + " top level ibd trans: " + str(win_idx) + " " + str(admx_idx1) + " " +  str(admx_idx2) + " " +  str(admx_idx3) + " " +  str(admx_idx4) + " " +  str(ibd) + ": " + str(self._s[win_idx][0][0]) + " " + str(self._s[win_idx][0][1]) + " " + str(self._s[win_idx][1][0]) + " " + str(self._s[win_idx][1][1])
+            if self._ibs[win_idx]:
+                print "calculating top level forward probs for window: " + str(win_idx)
+                
+                if win_idx == 0 or (win_idx > 0 and self._ibs[win_idx] and not self._ibs[win_idx-1]):
+                    for admx_idx1 in range(self.K):
+                        for admx_idx2 in range(self.K):
+                            for admx_idx3 in range(self.K):
+                                for admx_idx4 in range(self.K):
+                                    for ibd in range(2):
+                                        self._top_level_forward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] += \
+                                        self._top_level_ems_prob[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] * \
+                                        self._alphas[admx_idx1] * self._alphas[admx_idx2] * self._alphas[admx_idx3] * self._alphas[admx_idx4] * self._ibd_prior[admx_idx1][ibd]
+                
+                sum = 0
+                for admx_idx1 in range(self.K):
+                    for admx_idx2 in range(self.K):
+                        for admx_idx3 in range(self.K):
+                            for admx_idx4 in range(self.K):
+                                for ibd in range(2):
                                     for prev_admx_idx1 in range(self.K):
-                                        for prev_admx_idx2 in range(prev_admx_idx1+1):
+                                        for prev_admx_idx2 in range(self.K):
                                             for prev_admx_idx3 in range(self.K):
-                                                for prev_admx_idx4 in range(prev_admx_idx3+1):
-                                                    print str(win_idx) + " top level anc trans: " + str(win_idx) + " " + str(admx_idx1) + " " +  str(admx_idx2) + " " +  str(admx_idx3) + " " +  str(admx_idx4) + ": " + str(self._anc_trans[win_idx][prev_admx_idx1][prev_admx_idx2][prev_admx_idx3][prev_admx_idx4][admx_idx1][admx_idx2][admx_idx3][admx_idx4])
-                                    print str(win_idx) + " top level forward probs " + str(win_idx) + " " + str(admx_idx1) + " " +  str(admx_idx2) + " " +  str(admx_idx3) + " " +  str(admx_idx4) + " " +  str(ibd) + ": " + str(self._top_level_forward_probs[win_idx+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd])
-            
-            scale = 1.0                                        
-            if sum == 0:
-                scale = 1.0
-            else:
-                scale = 1.0/sum
-                if not c_isfinite(scale):
-                    scale = 1.0 
-            for admx_idx1 in range(self.K):
-                for admx_idx2 in range(admx_idx1+1):
-                    for admx_idx3 in range(self.K):
-                        for admx_idx4 in range(admx_idx3+1):
-                            for ibd in range(2):
-                                self._top_level_forward_probs[win_idx+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = \
-                                self._top_level_forward_probs[win_idx+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] * scale
-                                if not c_isfinite(self._top_level_forward_probs[win_idx+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd]):
-                                    self._top_level_forward_probs[win_idx+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = 0.0 
+                                                for prev_admx_idx4 in range(self.K):
+                                                    for prev_ibd in range(2):
+                                                        self._top_level_forward_probs[win_idx+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] += \
+                                                        self._top_level_forward_probs[win_idx][prev_admx_idx1][prev_admx_idx2][prev_admx_idx3][prev_admx_idx4][prev_ibd] * \
+                                                        self._top_level_ems_prob[win_idx+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] * \
+                                                        self._s[admx_idx1][win_idx][prev_ibd][ibd] * \
+                                                        self._anc_trans[win_idx][prev_admx_idx1][prev_admx_idx2][prev_admx_idx3][prev_admx_idx4][admx_idx1][admx_idx2][admx_idx3][admx_idx4] * \
+                                                        self._alphas[admx_idx1] * self._alphas[admx_idx2] * self._alphas[admx_idx3] * self._alphas[admx_idx4]
+                                    sum += self._top_level_forward_probs[win_idx+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd]
+                                    if False: #ibd == 0:
+                                        print str(win_idx) + " top level ems probs " + str(win_idx) + " " + str(admx_idx1) + " " +  str(admx_idx2) + " " +  str(admx_idx3) + " " +  str(admx_idx4) + " " +  str(ibd) + ": " + str(self._top_level_ems_prob[win_idx+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd])
+                                        print str(win_idx) + " top level ibd prior and alphas: " + str(win_idx) + " " + str(admx_idx1) + " " +  str(admx_idx2) + " " +  str(admx_idx3) + " " +  str(admx_idx4) + " " +  str(ibd) + ": " + str(self._ibd_prior[0]) + " " + str(self._alphas[admx_idx1]) + " " + str(self._alphas[admx_idx2]) + " " + str(self._alphas[admx_idx3]) + " "  + str(self._alphas[admx_idx4])
+                                        print str(win_idx) + " top level ibd trans: " + str(win_idx) + " " + str(admx_idx1) + " " +  str(admx_idx2) + " " +  str(admx_idx3) + " " +  str(admx_idx4) + " " +  str(ibd) + ": " + str(self._s[admx_idx1][win_idx][0][0]) + " " + str(self._s[admx_idx1][win_idx][0][1]) + " " + str(self._s[admx_idx1][win_idx][1][0]) + " " + str(self._s[admx_idx1][win_idx][1][1])
+                                        for prev_admx_idx1 in range(self.K):
+                                            for prev_admx_idx2 in range(self.K):
+                                                for prev_admx_idx3 in range(self.K):
+                                                    for prev_admx_idx4 in range(self.K):
+                                                        print str(win_idx) + " top level anc trans: " + str(win_idx) + " " + str(admx_idx1) + " " +  str(admx_idx2) + " " +  str(admx_idx3) + " " +  str(admx_idx4) + ": " + str(self._anc_trans[win_idx][prev_admx_idx1][prev_admx_idx2][prev_admx_idx3][prev_admx_idx4][admx_idx1][admx_idx2][admx_idx3][admx_idx4])
+                                        print str(win_idx) + " top level forward probs " + str(win_idx) + " " + str(admx_idx1) + " " +  str(admx_idx2) + " " +  str(admx_idx3) + " " +  str(admx_idx4) + " " +  str(ibd) + ": " + str(self._top_level_forward_probs[win_idx+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd])
+                
+                scale = 1.0                                        
+                if sum == 0:
+                    scale = 1.0
+                else:
+                    scale = 1.0/sum
+                    if not c_isfinite(scale):
+                        scale = 1.0 
+                for admx_idx1 in range(self.K):
+                    for admx_idx2 in range(self.K):
+                        for admx_idx3 in range(self.K):
+                            for admx_idx4 in range(self.K):
+                                for ibd in range(2):
+                                    self._top_level_forward_probs[win_idx+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = \
+                                    self._top_level_forward_probs[win_idx+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] * scale
+                                    if not c_isfinite(self._top_level_forward_probs[win_idx+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd]):
+                                        self._top_level_forward_probs[win_idx+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = 0.0 
                                 
     
     cpdef calc_top_level_backward_probs(self):
@@ -1313,59 +1455,62 @@ cdef class LDModel(object):
         cdef int nxt_admx_idx4
         cdef int nxt_ibd
          
-        for admx_idx1 in range(self.K):
-            for admx_idx2 in range(admx_idx1+1):
-                for admx_idx3 in range(self.K):
-                    for admx_idx4 in range(admx_idx3+1):
-                        for ibd in range(2):
-                            self._top_level_backward_probs[self.get_num_windows()-1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = 1
-         
         for win_idx in reversed(range(self.get_num_windows()-1)):
-            print "calculating top level forward probs for window: " + str(win_idx)
-            sum = 0
-            for admx_idx1 in range(self.K):
-                for admx_idx2 in range(admx_idx1+1):
-                    for admx_idx3 in range(self.K):
-                        for admx_idx4 in range(admx_idx3+1):
-                            for ibd in range(2):
-                                for nxt_admx_idx1 in range(self.K):
-                                    for nxt_admx_idx2 in range(nxt_admx_idx1+1):
-                                        for nxt_admx_idx3 in range(self.K):
-                                            for nxt_admx_idx4 in range(nxt_admx_idx3+1):
-                                                for nxt_ibd in range(2):
-                                                    self._top_level_backward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] += \
-                                                    self._top_level_backward_probs[win_idx+1][nxt_admx_idx1][nxt_admx_idx2][nxt_admx_idx3][nxt_admx_idx4][nxt_ibd] * \
-                                                    self._top_level_ems_prob[win_idx+1][nxt_admx_idx1][nxt_admx_idx2][nxt_admx_idx3][nxt_admx_idx4][nxt_ibd] * \
-                                                    self._s[win_idx][ibd][nxt_ibd] * \
-                                                    self._anc_trans[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][nxt_admx_idx1][nxt_admx_idx2][nxt_admx_idx3][nxt_admx_idx4] * \
-                                                    self._alphas[nxt_admx_idx1] * self._alphas[nxt_admx_idx2] * self._alphas[nxt_admx_idx3] * self._alphas[nxt_admx_idx4]
-                                                    #print ">backward " + str(win_idx) + " " + str(admx_idx1) + " " + str(admx_idx2) + " " + str(admx_idx3) + " " + str(admx_idx4) + " " + str(ibd) + " " + str(nxt_admx_idx1) + " " + str(nxt_admx_idx2) + " " + str(nxt_admx_idx3) + " " + str(nxt_admx_idx4) + " " + str(nxt_ibd) + " ems_prob: " + str(self._top_level_ems_prob[win_idx+1][nxt_admx_idx1][nxt_admx_idx2][nxt_admx_idx3][nxt_admx_idx4][nxt_ibd])
-                                                    #print ">backward " + str(win_idx) + " " + str(admx_idx1) + " " + str(admx_idx2) + " " + str(admx_idx3) + " " + str(admx_idx4) + " " + str(ibd) + " " + str(nxt_admx_idx1) + " " + str(nxt_admx_idx2) + " " + str(nxt_admx_idx3) + " " + str(nxt_admx_idx4) + " " + str(nxt_ibd) + " _s: " + str(self._s[win_idx][ibd][nxt_ibd])
-                                                    #print ">backward " + str(win_idx) + " " + str(admx_idx1) + " " + str(admx_idx2) + " " + str(admx_idx3) + " " + str(admx_idx4) + " " + str(ibd) + " " + str(nxt_admx_idx1) + " " + str(nxt_admx_idx2) + " " + str(nxt_admx_idx3) + " " + str(nxt_admx_idx4) + " " + str(nxt_ibd) + " _anc_trans: " + str(self._anc_trans[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][nxt_admx_idx1][nxt_admx_idx2][nxt_admx_idx3][nxt_admx_idx4])
-                                                    #print ">backward " + str(win_idx) + " " + str(admx_idx1) + " " + str(admx_idx2) + " " + str(admx_idx3) + " " + str(admx_idx4) + " " + str(ibd) + " " + str(nxt_admx_idx1) + " " + str(nxt_admx_idx2) + " " + str(nxt_admx_idx3) + " " + str(nxt_admx_idx4) + " " + str(nxt_ibd) + " _backward prob i+1: " + str(self._top_level_backward_probs[win_idx+1][nxt_admx_idx1][nxt_admx_idx2][nxt_admx_idx3][nxt_admx_idx4][nxt_ibd])
-                                                    #print "yyyyyyyyyyyyyyyyyyyy " + str(win_idx) + " " + str(admx_idx1) + " " +  str(admx_idx2) + " " +  str(admx_idx3) + " " +  str(admx_idx4) + " " +  str(ibd) + str(self._top_level_backward_probs[win_idx+1][nxt_admx_idx1][nxt_admx_idx2][nxt_admx_idx3][nxt_admx_idx4][nxt_ibd])
-                                sum += self._top_level_backward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd]
-                                #if ibd == 0:
-                                #    print "back top level params: " + str(self._ibd_prior[ibd]) + " " + str(self._alphas[admx_idx1]) + " " + str(self._alphas[admx_idx2]) + " " + str(self._alphas[admx_idx3]) + " "  + str(self._alphas[admx_idx4])
-                                #    print "back top level forward probs " + str(admx_idx1) + " " +  str(admx_idx2) + " " +  str(admx_idx3) + " " +  str(admx_idx4) + " " +  str(ibd) + ": " + str(self._top_level_backward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd])
-                                                    
-            scale = 1.0                                        
-            if sum == 0:
-                scale = 1.0
-            else:
-                scale = 1.0/sum
-                if not c_isfinite(scale):
-                    scale = 1.0 
-            for admx_idx1 in range(self.K):
-                for admx_idx2 in range(admx_idx1+1):
-                    for admx_idx3 in range(self.K):
-                        for admx_idx4 in range(admx_idx3+1):
-                            for ibd in range(2):
-                                self._top_level_backward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = \
-                                self._top_level_backward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] * scale
-                                if not c_isfinite(self._top_level_backward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd]):
-                                    self._top_level_backward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = 0.0
-                                                    
+            if self._ibs[win_idx+1]:
+                print "calculating top level forward probs for window: " + str(win_idx)
+                
+                if win_idx == self.get_num_windows()-2 or (self._ibs[win_idx+1] and not self._ibs[win_idx+2]):
+                    for admx_idx1 in range(self.K):
+                        for admx_idx2 in range(self.K):
+                            for admx_idx3 in range(self.K):
+                                for admx_idx4 in range(self.K):
+                                    for ibd in range(2):
+                                        self._top_level_backward_probs[win_idx+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = 1
+                
+                sum = 0
+                for admx_idx1 in range(self.K):
+                    for admx_idx2 in range(self.K):
+                        for admx_idx3 in range(self.K):
+                            for admx_idx4 in range(self.K):
+                                for ibd in range(2):
+                                    for nxt_admx_idx1 in range(self.K):
+                                        for nxt_admx_idx2 in range(self.K):
+                                            for nxt_admx_idx3 in range(self.K):
+                                                for nxt_admx_idx4 in range(self.K):
+                                                    for nxt_ibd in range(2):
+                                                        self._top_level_backward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] += \
+                                                        self._top_level_backward_probs[win_idx+1][nxt_admx_idx1][nxt_admx_idx2][nxt_admx_idx3][nxt_admx_idx4][nxt_ibd] * \
+                                                        self._top_level_ems_prob[win_idx+1][nxt_admx_idx1][nxt_admx_idx2][nxt_admx_idx3][nxt_admx_idx4][nxt_ibd] * \
+                                                        self._s[admx_idx1][win_idx][ibd][nxt_ibd] * \
+                                                        self._anc_trans[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][nxt_admx_idx1][nxt_admx_idx2][nxt_admx_idx3][nxt_admx_idx4] * \
+                                                        self._alphas[nxt_admx_idx1] * self._alphas[nxt_admx_idx2] * self._alphas[nxt_admx_idx3] * self._alphas[nxt_admx_idx4]
+                                                        #print ">backward " + str(win_idx) + " " + str(admx_idx1) + " " + str(admx_idx2) + " " + str(admx_idx3) + " " + str(admx_idx4) + " " + str(ibd) + " " + str(nxt_admx_idx1) + " " + str(nxt_admx_idx2) + " " + str(nxt_admx_idx3) + " " + str(nxt_admx_idx4) + " " + str(nxt_ibd) + " ems_prob: " + str(self._top_level_ems_prob[win_idx+1][nxt_admx_idx1][nxt_admx_idx2][nxt_admx_idx3][nxt_admx_idx4][nxt_ibd])
+                                                        #print ">backward " + str(win_idx) + " " + str(admx_idx1) + " " + str(admx_idx2) + " " + str(admx_idx3) + " " + str(admx_idx4) + " " + str(ibd) + " " + str(nxt_admx_idx1) + " " + str(nxt_admx_idx2) + " " + str(nxt_admx_idx3) + " " + str(nxt_admx_idx4) + " " + str(nxt_ibd) + " _s: " + str(self._s[win_idx][ibd][nxt_ibd])
+                                                        #print ">backward " + str(win_idx) + " " + str(admx_idx1) + " " + str(admx_idx2) + " " + str(admx_idx3) + " " + str(admx_idx4) + " " + str(ibd) + " " + str(nxt_admx_idx1) + " " + str(nxt_admx_idx2) + " " + str(nxt_admx_idx3) + " " + str(nxt_admx_idx4) + " " + str(nxt_ibd) + " _anc_trans: " + str(self._anc_trans[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][nxt_admx_idx1][nxt_admx_idx2][nxt_admx_idx3][nxt_admx_idx4])
+                                                        #print ">backward " + str(win_idx) + " " + str(admx_idx1) + " " + str(admx_idx2) + " " + str(admx_idx3) + " " + str(admx_idx4) + " " + str(ibd) + " " + str(nxt_admx_idx1) + " " + str(nxt_admx_idx2) + " " + str(nxt_admx_idx3) + " " + str(nxt_admx_idx4) + " " + str(nxt_ibd) + " _backward prob i+1: " + str(self._top_level_backward_probs[win_idx+1][nxt_admx_idx1][nxt_admx_idx2][nxt_admx_idx3][nxt_admx_idx4][nxt_ibd])
+                                                        #print "yyyyyyyyyyyyyyyyyyyy " + str(win_idx) + " " + str(admx_idx1) + " " +  str(admx_idx2) + " " +  str(admx_idx3) + " " +  str(admx_idx4) + " " +  str(ibd) + str(self._top_level_backward_probs[win_idx+1][nxt_admx_idx1][nxt_admx_idx2][nxt_admx_idx3][nxt_admx_idx4][nxt_ibd])
+                                    sum += self._top_level_backward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd]
+                                    #if ibd == 0:
+                                    #    print "back top level params: " + str(self._ibd_prior[ibd]) + " " + str(self._alphas[admx_idx1]) + " " + str(self._alphas[admx_idx2]) + " " + str(self._alphas[admx_idx3]) + " "  + str(self._alphas[admx_idx4])
+                                    #    print "back top level forward probs " + str(admx_idx1) + " " +  str(admx_idx2) + " " +  str(admx_idx3) + " " +  str(admx_idx4) + " " +  str(ibd) + ": " + str(self._top_level_backward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd])
+                                                        
+                scale = 1.0                                        
+                if sum == 0:
+                    scale = 1.0
+                else:
+                    scale = 1.0/sum
+                    if not c_isfinite(scale):
+                        scale = 1.0 
+                for admx_idx1 in range(self.K):
+                    for admx_idx2 in range(self.K):
+                        for admx_idx3 in range(self.K):
+                            for admx_idx4 in range(self.K):
+                                for ibd in range(2):
+                                    self._top_level_backward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = \
+                                    self._top_level_backward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] * scale
+                                    if not c_isfinite(self._top_level_backward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd]):
+                                        self._top_level_backward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = 0.0
+                                                        
     cpdef posterior_top_level_decoding(self):
         cdef int win_idx
         cdef int admx_idx1
@@ -1384,58 +1529,84 @@ cdef class LDModel(object):
         a2 = ""
         a3 = ""
         a4 = ""
+        a1_filt = ''
+        a2_filt = ''
+        a3_filt = ''
+        a4_filt = ''
+        i_filt = ''
         i = ""
+        ibd_probs = []
+        non_ibd_probs = []
         
         for win_idx in range(self.get_num_windows()):
-            max_admx_idx1 = -1
-            max_admx_idx2 = -1
-            max_admx_idx3 = -1
-            max_admx_idx4 = -1
-            max_ibd = -1
-            max_gamma = -DBL_MAX
-            print "top level decoding in window %d" % win_idx
-            for admx_idx1 in range(self.K):
-                for admx_idx2 in range(admx_idx1+1):
-                    for admx_idx3 in range(self.K):
-                        for admx_idx4 in range(admx_idx3+1):
-                            for ibd in range(2):
-                                curr_gamma = self._top_level_forward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] * \
-                                self._top_level_backward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd]
-                                print str(win_idx) + " " + str(admx_idx1) + " " +  str(admx_idx2) + " " +  str(admx_idx3) + " " +  str(admx_idx4) + " " +  str(ibd) + ": " + str(self._top_level_forward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd]) + " " + str(self._top_level_backward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd]) + " " + str(curr_gamma)
-                                if curr_gamma  > max_gamma:
-                                    max_gamma = curr_gamma
-                                    max_admx_idx1 = admx_idx1
-                                    max_admx_idx2 = admx_idx2
-                                    max_admx_idx3 = admx_idx3
-                                    max_admx_idx4 = admx_idx4
-                                    max_ibd = ibd
-            a1 += str(max_admx_idx1)
-            a2 += str(max_admx_idx2)
-            a3 += str(max_admx_idx3)
-            a4 += str(max_admx_idx4)
-            i += str(max_ibd)
-            
-            a1_filt = ''
-            a2_filt = ''
-            a3_filt = ''
-            a4_filt = ''
-            i_filt = ''
-            for ind in range(len(a1)):
-                start = max(0,ind-3)
-                end = min(ind+4,len(a1))
-                a1_filt += str(int(np.median([int(x) for x in a1[start:end]])))
-                a2_filt += str(int(np.median([int(x) for x in a2[start:end]])))
-                a3_filt += str(int(np.median([int(x) for x in a3[start:end]])))
-                a4_filt += str(int(np.median([int(x) for x in a4[start:end]])))
-                i_filt += str(int(np.median([int(x) for x in i[start:end]])))
+            if self._ibs[win_idx]:
+                max_admx_idx1 = -1
+                max_admx_idx2 = -1
+                max_admx_idx3 = -1
+                max_admx_idx4 = -1
+                max_ibd = -1
+                max_gamma = -DBL_MAX
+                curr_ibd_prob = 0
+                curr_non_ibd_prob = 0
+                print "top level decoding in window %d" % win_idx
+                for admx_idx1 in range(self.K):
+                    for admx_idx2 in range(self.K):
+                        for admx_idx3 in range(self.K):
+                            for admx_idx4 in range(self.K):
+                                for ibd in range(2):
+                                    curr_gamma = self._top_level_forward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] * \
+                                    self._top_level_backward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd]
+                                    #print str(win_idx) + " " + str(admx_idx1) + " " +  str(admx_idx2) + " " +  str(admx_idx3) + " " +  str(admx_idx4) + " " +  str(ibd) + ": " + str(self._top_level_forward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd]) + " " + str(self._top_level_backward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd]) + " " + str(curr_gamma)
+                                    
+                                    if ibd == 0:
+                                        curr_non_ibd_prob += curr_gamma
+                                    else:
+                                        curr_ibd_prob += curr_gamma
+                                        
+                                    if curr_gamma  > max_gamma:
+                                        max_gamma = curr_gamma
+                                        max_admx_idx1 = admx_idx1
+                                        max_admx_idx2 = admx_idx2
+                                        max_admx_idx3 = admx_idx3
+                                        max_admx_idx4 = admx_idx4
+                                        max_ibd = ibd
+                a1 += str(max_admx_idx1)
+                a2 += str(max_admx_idx2)
+                a3 += str(max_admx_idx3)
+                a4 += str(max_admx_idx4)
+                i += str(max_ibd)
+                ibd_probs.append(curr_ibd_prob)
+                non_ibd_probs.append(curr_non_ibd_prob)
                 
-            pairIBD=cPairIBD()
-            for win_i in range(len(i_filt)):
-                if i[win_i] == '1':
-                    pairIBD.add_interval(win_i*self._win_size,(win_i+1)*self._win_size)
-            pairIBD.merge_intervals()
+                a1_filt = ''
+                a2_filt = ''
+                a3_filt = ''
+                a4_filt = ''
+                i_filt = ''
+                for ind in range(len(a1)):
+                    start = max(0,ind-3)
+                    end = min(ind+4,len(a1))
+                    a1_filt += str(int(np.median([int(x) for x in a1[start:end]])))
+                    a2_filt += str(int(np.median([int(x) for x in a2[start:end]])))
+                    a3_filt += str(int(np.median([int(x) for x in a3[start:end]])))
+                    a4_filt += str(int(np.median([int(x) for x in a4[start:end]])))
+                    i_filt += str(int(np.median([int(x) for x in i[start:end]])))
+                    
+                pairIBD=cPairIBD()
+                for win_i in range(len(i_filt)):
+                    if i[win_i] == '1':
+                        pairIBD.add_interval(win_i*self._win_size,(win_i+1)*self._win_size)
+                pairIBD.merge_intervals()
+            else:
+                a1_filt+='0'
+                a2_filt+='0'
+                a3_filt+='0'
+                a4_filt+='0'
+                i_filt+='0'
+                ibd_probs.append(0)
+                non_ibd_probs.append(0)
         
-        return (a1_filt,a2_filt,a3_filt,a4_filt,i_filt,pairIBD)
+        return (a1_filt,a2_filt,a3_filt,a4_filt,i_filt,pairIBD,ibd_probs,non_ibd_probs)
     
     cdef int start_snp(self, int win_idx):
         return win_idx * self._win_size

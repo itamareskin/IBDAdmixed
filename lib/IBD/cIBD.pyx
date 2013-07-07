@@ -168,6 +168,26 @@ cdef class cPairIBD:
                     if inter[1]-inter[0] > min_ibd_length:
                         self.add_interval(inter[0], inter[1])
         self.merge_intervals()
+        
+    cpdef add_ibd_from_containers_only_admixed(cPairIBD self, f1, f2, min_ibd_length, f1_other, f2_other, ceu_inds, yri_inds): 
+        for founder in f1._founder_to_tree.keys():
+            if f2._founder_to_tree.has_key(founder):
+                intersection =\
+                iu.IntersectIntervalTrees(f1._founder_to_tree[founder], iu.get_interval_list(f2._founder_to_tree[founder]))
+                for inter in intersection:
+                    if inter[1]-inter[0] > min_ibd_length:
+                        f1_other_founders = f1.get_founders_in_interval(inter[0], inter[1])
+                        f2_other_founders = f2.get_founders_in_interval(inter[0], inter[1])
+                        anc = int(f1 in yri_inds)
+                        for other in f1_other_founders:
+                            print other, int(other in yri_inds), int(other in yri_inds)
+                            if int(other in yri_inds) != int(founder in yri_inds):
+                                self.add_interval(inter[0], inter[1])
+                        for other in f2_other_founders:
+                            print other, int(other in yri_inds), int(other in yri_inds)
+                            if int(other in yri_inds) != int(founder in yri_inds):
+                                self.add_interval(inter[0], inter[1])
+        self.merge_intervals()
 
 cdef class cPopulationIBD:
     
@@ -177,7 +197,10 @@ cdef class cPopulationIBD:
         self._ibd_dic = {}
 
     cpdef add_human_pair(self, pair, pairIBD):
-        self._ibd_dic[pair] = pairIBD
+        if self.has_key(pair):
+            self._ibd_dic[pair].update(pairIBD)
+        else:
+            self._ibd_dic[pair] = pairIBD
               
     cpdef add_interval_to_pair(self, pair, start, end):
         self._ibd_dic[pair].add_interval(start,end)
