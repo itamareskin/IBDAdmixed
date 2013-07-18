@@ -15,20 +15,23 @@ import string
 from itertools import combinations
 import sys
 from bx.intervals import Interval, IntervalTree
+import subprocess
 
 num_snps = 1000
-dir="../data/"
-file_name = "../data/AfricanAmericans8"
+dir="/home/eskin/Data/IBDAdmixed/"
+file_name = "/home/eskin/Data/IBDAdmixed/AfricanAmericans8"
 
 h = LDModel(num_snps,2,8,25,dir)
 h.set_alphas([0.2,0.8])
-h.read_from_bgl_file("/home/eskin/Data/HapMap/HapMap3_CEU_chr1.bgl.dag",0)
-h.read_from_bgl_file("/home/eskin/Data/HapMap/HapMap3_YRI_chr1.bgl.dag",1)
+h.set_ibd_trans_rate(0,1e-5,1)
+h.set_ibd_trans_rate(1,2e-4,1)
+h.read_from_bgl_file("/home/eskin/Data/IBDAdmixed/HapMap.HapMap3_CEU_chr1.bgl.dag",0)
+h.read_from_bgl_file("/home/eskin/Data/IBDAdmixed/HapMap.HapMap3_YRI_chr1.bgl.dag",1)
 #h.read_from_bgl_file("hapmap.chr1.ceu.hapmap3_r2_b36_fwd.consensus.qc.poly.chr1_ceu.unr.phased.all.bgl.dag",0)
 #h.read_from_bgl_file("hapmap.chr1.yri.hapmap3_r2_b36_fwd.consensus.qc.poly.chr1_yri.unr.phased.all.bgl.dag",1)
 h.read_haplos(file_name + ".genos.dat",200)
 #h.read_from_bgl_file("example.data.bgl.dag",1)
-h.read_genetic_map("/home/eskin/Data/HapMap/genetic_map_chr1_b36.txt")
+h.read_genetic_map("/home/eskin/Data/IBDAdmixed/genetic_map_chr1_b36.txt")
 #ldu.draw_HMM(h,start_level=90,level_num=100)
 
 h.calc_ibd_prior()
@@ -49,9 +52,13 @@ popIBD = cPopulationIBD()
 ##    pairs = combinations(range(h.get_haplo_num()/2),2)
 #pairs = combinations(range(5),2)
 
-germline = open(file_name + ".germline11.match")
+germline_input = open(file_name + ".germline.run","w")
+germline_input.writelines(["1\n",file_name+".genos.map\n",file_name+".genos.ped\n",file_name+".generated\n"])
+germline_input.close()
+retcode = subprocess.call("/home/eskin/Software/germline-1-5-1/germline -silent -bits 50 -min_m 2 -err_hom 0 -err_het 0 < " + file_name + ".germline.run > " + file_name + ".generated.out 2> " + ".generated.err", shell=True)
+germline = open(file_name + ".generated.match")
 pairs = {}
-while True:
+for counter in range(30):
     line = germline.readline()
     if not line:
         break

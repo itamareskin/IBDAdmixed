@@ -6,3 +6,10 @@ awk 'BEGIN{split("",ibd)}{split($1,a,"."); split($2,b,"."); h1=int((a[2]-3)/2); 
 awk '{sum_l=0; split($1,a,":"); split(a[2],b,";"); for (i=1;i<=length(b);i++) {split(b[i],c,","); l=c[2]-c[1]; sum_l=sum_l+l;} if (sum_l > 1000) print a[1]}' AfricanAmericans4.trueibd.dat | head -100 > AfricanAmericans4.100ibdpairs.txt
 
 awk 'BEGIN{split("",ibd)}{split($1,a,":"); p=a[1];v=a[2]; if (p in ibd) ibd[p]=ibd[p]";"v; else ibd[p]=v}END{for (i in ibd) print i":"ibd[i]}' *.dat > ibdadmixed.ibd.txt
+
+
+~/Software/phasing_pipeline/ped_to_bgl HapMap3_CEU_chr1.ped HapMap3_CEU_chr1.map > HapMap3_CEU_chr1.bgl
+~/Software/phasing_pipeline/ped_to_bgl HapMap3_YRI_chr1.ped HapMap3_YRI_chr1.map > HapMap3_YRI_chr1.bgl
+java -Xmx3000m -jar ~/Software/beagle.jar data=HapMap3_YRI_chr1.bgl out=HapMap
+java -Xmx3000m -jar ~/Software/beagle.jar data=HapMap3_CEU_chr1.bgl out=HapMap
+wget -v ftp://ftp.ncbi.nlm.nih.gov/hapmap/recombination/2008-03_rel22_B36/rates/genetic_map_chr1_b36.txt

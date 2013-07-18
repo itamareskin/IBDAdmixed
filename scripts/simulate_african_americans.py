@@ -31,12 +31,12 @@ def demo(gen, pop):
 
 if __name__ == '__main__':
     
-    filename="../data/AfricanAmericans8"
+    filename="/home/eskin/Data/IBDAdmixed/AfricanAmericans8"
     num_snps=1000
     
     if not os.path.isfile(filename + ".pop"):
     # Get the hapmap population samples
-        pop = getHapMapMarkers('~/Data/HapMap', 
+        pop = getHapMapMarkers('~/Data/IBDAdmixed', 
             names = [],
             chroms=[1], 
             HapMap_pops=['CEU', 'YRI'],

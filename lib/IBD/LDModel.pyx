@@ -155,6 +155,13 @@ cdef class LDModel(object):
         self._probs_file.close()
         self._trans_file.close()
     
+    cpdef set_ibd_trans_rate(self, anc, t_0_1, t_1_0):
+        self._t_0_1[anc] = t_0_1
+        self._t_1_0[anc] = t_1_0
+        
+        self._ibd_prior[anc][1] = self._t_0_1[anc] / (self._t_0_1[anc] + self._t_1_0[anc])
+        self._ibd_prior[anc][0] = 1-self._ibd_prior[anc][1]
+            
     cpdef set_alphas(self, alphas):
         if len(alphas) != self.K:
             print "wrong number of alphas"

@@ -134,6 +134,8 @@ cdef class LDModel(object):
     # methods
     ###########
     
+    cpdef set_ibd_trans_rate(self, anc, t_0_1, t_1_0)
+    
     cpdef set_alphas(self, alphas)
     
     cpdef generate_random_hap(self, int anc)
