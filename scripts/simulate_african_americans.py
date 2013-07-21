@@ -31,8 +31,12 @@ def demo(gen, pop):
 
 if __name__ == '__main__':
     
-    filename="/home/eskin/Data/IBDAdmixed/AfricanAmericans8"
-    num_snps=1000
+    if len(sys.argv) != 3:
+        print "usage: " + sys.argv[0] + " <filename> <num_snps>";
+        exit(-1);
+    
+    filename = sys.argv[1]
+    num_snps = int(sys.argv[2])
     
     if not os.path.isfile(filename + ".pop"):
     # Get the hapmap population samples

@@ -65,6 +65,15 @@ cdef class cPairIBD:
             self.add_interval(interval[0], interval[1])
         self.merge_intervals()
     
+    cpdef to_string(cPairIBD self):
+        s = []
+        intervals = self.to_list()
+        for inter in intervals:
+            s += [str(inter[0]),",",str(inter[1]),";"]
+        if len(intervals)>0:
+            s.pop()
+        return "".join(s)
+    
     cpdef list to_list(cPairIBD self):
     #    return self._intervals
         #l = []; self._tree.traverse(lambda x: l.append((x.start,x.end)))

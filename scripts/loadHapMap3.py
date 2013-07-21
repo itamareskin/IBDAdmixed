@@ -337,8 +337,10 @@ if __name__ == '__main__':
         'recombination map and saves the genetic distance of each marker in\n'
         'a dictionary (geneticMap) in the population\'s local namespace.',
         __doc__)
-    if not pars.getParam():
-        sys.exit(1)
+    #if not pars.getParam():
+    #    sys.exit(1)
+    #pars.saveConfig("hapmap.config")
+    pars.loadConfig("hapmap.config")
     import logging
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('loadHapMap3')
