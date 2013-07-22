@@ -26,8 +26,8 @@ def runPair(args):
     
     chr_pairs = [(0,1,0,1),(0,1,1,0),(1,0,0,1),(1,0,1,0)]
     
-    if len(sys.argv) >= 4:
-        chr_pairs = [chr_pairs[int(sys.argv[3])]]
+#     if len(sys.argv) >= 4:
+#         chr_pairs = [chr_pairs[int(sys.argv[3])]]
         
     h.top_level_init()
     h.set_prefix_string(str(ind1) + " " + str(ind2))
@@ -59,8 +59,8 @@ h = LDModel(num_snps,2,8,25,dir)
 h.set_alphas([0.2,0.8])
 h.set_ibd_trans_rate(0,1e-5,1)
 h.set_ibd_trans_rate(1,2e-4,1)
-h.read_from_bgl_file(dir + "/HapMap.HapMap3_CEU_chr1.bgl.dag",0)
-h.read_from_bgl_file(dir + "/HapMap.HapMap3_YRI_chr1.bgl.dag",1)
+h.read_from_bgl_file(dir + "/HapMap.HapMap3_CEU_chr1.bgl.01.dag",0)
+h.read_from_bgl_file(dir + "/HapMap.HapMap3_YRI_chr1.bgl.01.dag",1)
 #h.read_from_bgl_file("hapmap.chr1.ceu.hapmap3_r2_b36_fwd.consensus.qc.poly.chr1_ceu.unr.phased.all.bgl.dag",0)
 #h.read_from_bgl_file("hapmap.chr1.yri.hapmap3_r2_b36_fwd.consensus.qc.poly.chr1_yri.unr.phased.all.bgl.dag",1)
 h.read_haplos(file_name + ".genos.dat",200)
@@ -86,13 +86,13 @@ h.top_level_alloc_mem()
 ##    pairs = combinations(range(h.get_haplo_num()/2),2)
 #pairs = combinations(range(5),2)
 
-germline_input = open(file_name + ".germline.run","w")
-germline_input.writelines(["1\n",file_name+".genos.map\n",file_name+".genos.ped\n",file_name+".generated\n"])
-germline_input.close()
-retcode = subprocess.call("germline -silent -bits 50 -min_m 2 -err_hom 0 -err_het 0 < " + file_name + ".germline.run > " + file_name + ".generated.out 2> " + ".generated.err", shell=True)
+# germline_input = open(file_name + ".germline.run","w")
+# germline_input.writelines(["1\n",file_name+".genos.map\n",file_name+".genos.ped\n",file_name+".generated\n"])
+# germline_input.close()
+# retcode = subprocess.call("germline -silent -bits 50 -min_m 2 -err_hom 0 -err_het 0 < " + file_name + ".germline.run > " + file_name + ".generated.out 2> " + ".generated.err", shell=True)
 germline = open(file_name + ".generated.match")
 pairs = {}
-for counter in range(5):
+for counter in range(5000):
     line = germline.readline()
     if not line:
         break

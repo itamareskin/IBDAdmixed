@@ -36,11 +36,11 @@ gen_map_entry create_gen_map_entry(int position, double recomb_rate, double gene
 }
 
 
-char get_likely_allele(state s)
+bool get_likely_allele(state s)
 {
 	if (s.prob_em[0] > 0.5)
-		return '0';
+		return 0;
 	else
-        return '1';
+        return 1;
 }
 

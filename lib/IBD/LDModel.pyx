@@ -1,8 +1,4 @@
-'''
-Created on May 15, 2012
- 
-@author: eskin3
-'''
+#cython: profile=True
 
 from __future__ import division
 import random
@@ -52,7 +48,7 @@ cdef extern from "structs.h":
     
     gen_map_entry create_gen_map_entry(int position, double recomb_rate, double genetic_dist)
     
-    char get_likely_allele(state s)
+    bool get_likely_allele(state s)
 
 cdef read_until_blank_line(file_name, first_line = None):
         buffer_size = 100
@@ -149,6 +145,11 @@ cdef class LDModel(object):
         self._ibs = <bool *> malloc(self.get_num_windows() * sizeof(bool))
         for win_idx in range(self.get_num_windows()):
             self._ibs[win_idx] = True
+            
+        self._chr1 = <bool *> malloc(self._snp_num * sizeof(bool))
+        self._chr2 = <bool *> malloc(self._snp_num * sizeof(bool))
+        self._chr3 = <bool *> malloc(self._snp_num * sizeof(bool))
+        self._chr4 = <bool *> malloc(self._snp_num * sizeof(bool))
                 
     def __dealloc__(self):
         self._inner_probs_file.close()
@@ -168,6 +169,47 @@ cdef class LDModel(object):
             return 
         for i in range(self.K):
             self._alphas[i] = alphas[i]
+            
+    cpdef set_chrs(self, char* chr1, char* chr2, char* chr3, char* chr4):
+    
+        print ">>>> alele 0: " + str(self._allele_0)
+        print ">>>> alele 1: " + str(self._allele_1)
+        print ">>>> alele 0: " + str(int(self._allele_0))
+        print ">>>> alele 1: " + str(int(self._allele_1))
+        for snp_idx in range(self._snp_num):
+            if int(chr(chr1[snp_idx])) == int(self._allele_0):
+                self._chr1[snp_idx] = 0
+            else:
+                if int(chr(chr1[snp_idx])) == int(self._allele_1):
+                    self._chr1[snp_idx] = 1
+                else:
+                    print "unidentified allele: " + str(int(chr(chr1[snp_idx])))
+                    exit(-1)
+            if int(chr(chr2[snp_idx])) == int(self._allele_0):
+                self._chr2[snp_idx] = 0
+            else:
+                if int(chr(chr2[snp_idx])) == int(self._allele_1):
+                    self._chr2[snp_idx] = 1
+                else:
+                    print "unidentified allele: " + str(int(chr(chr2[snp_idx])))
+                    exit(-1)
+            if int(chr(chr3[snp_idx])) == int(self._allele_0):
+                self._chr3[snp_idx] = 0
+            else:
+                if int(chr(chr3[snp_idx])) == int(self._allele_1):
+                    self._chr3[snp_idx] = 1
+                else:
+                    print "unidentified allele: " + str(int(chr(chr3[snp_idx])))
+                    exit(-1)
+            if int(chr(chr4[snp_idx])) == int(self._allele_0):
+                self._chr4[snp_idx] = 0
+            else:
+                if int(chr(chr4[snp_idx])) == int(self._allele_1):
+                    self._chr4[snp_idx] = 1
+                else:
+                    print "unidentified allele: " + str(int(chr(chr4[snp_idx])))
+                    exit(-1)
+            
     
     def set_prefix_string(self, char* new_prefix_string):
         self._prefix_string = <char *> malloc(strlen(new_prefix_string) * sizeof(char))
@@ -216,6 +258,7 @@ cdef class LDModel(object):
         
     
     def read_haplos(self, file_name, nr_haplos):
+    
         if not os.path.exists(file_name):
             print "the file: " + file_name + " does not exist!"
             return
@@ -268,26 +311,24 @@ cdef class LDModel(object):
         print "reading from bgl model file: " + file_name
         
         # identify allele coding
-        allele_0 = '' 
-        allele_1 = ''
         with open(file_name) as model_file:
             model_file.readline()
             model_file.readline()
             line = model_file.readline()
             node = line.split("\t")
-            allele_0 = node[4]
+            self._allele_0 = int(node[4])
             while True:
                 line = model_file.readline()
                 if len(line) > 0:
                     node = line.split("\t")
                     if len(node) > 4:
                         curr_allele = node[4]
-                        if curr_allele != allele_0:
-                            allele_1 = curr_allele
+                        if int(curr_allele) != self._allele_0:
+                            self._allele_1 = int(curr_allele)
                             break;
         
-        print "allele_0: " + allele_0 + "\n"
-        print "allele_1: " + allele_1 + "\n"
+        print "allele_0: " + str(self._allele_0) + "\n"
+        print "allele_1: " + str(self._allele_1) + "\n"
                 
         with open(file_name) as model_file:
             
@@ -354,7 +395,7 @@ cdef class LDModel(object):
                                     edges_num += 1
                             # create states and set emission probability
                             error_eps = 1e-5  
-                            if nodes_curr[j][4] == allele_0:
+                            if int(nodes_curr[j][4]) == self._allele_0:
                                 self._states[anc][layer][j] = create_state(1 - error_eps, error_eps, 0, edges_num)
                                 #self._states[anc][layer][j] = create_state(1, 0, 0, edges_num)
                             else: 
@@ -625,7 +666,7 @@ cdef class LDModel(object):
         cdef int admx_idx2
         cdef int admx_idx3
         cdef int admx_idx4
-        cdef snp_idx_win
+        cdef int snp_idx_win
         #cdef double sum
         
         snp_idx_win = 0
@@ -658,7 +699,7 @@ cdef class LDModel(object):
         cdef int admx_idx2
         cdef int admx_idx3
         cdef int admx_idx4
-        cdef snp_idx_win
+        cdef int snp_idx_win
         #cdef double sum
         
         snp_idx_win = 0
@@ -681,7 +722,7 @@ cdef class LDModel(object):
             snp_idx_win += 1
         free(self._emission_prob_ibd_admx)
     
-    cpdef calc_emission_probs_ibd_admx(self, char* chr1, char* chr2, char* chr3, char* chr4, int win_idx):
+    cpdef calc_emission_probs_ibd_admx(self, int win_idx):
         
         cdef int snp_idx 
         cdef int node_idx1
@@ -695,7 +736,7 @@ cdef class LDModel(object):
         cdef int admx_idx4
         cdef frst_ems
         cdef scnd_emd
-        cdef snp_idx_win
+        cdef int snp_idx_win
         #cdef double sum
         
         snp_idx_win = 0
@@ -712,8 +753,8 @@ cdef class LDModel(object):
                                             #print "admx_idx1: " + str(admx_idx1) + " admx_idx2: " + str(admx_idx2) + " admx_idx3: " + str(admx_idx3) + " admx_idx4: " + str(admx_idx4) + " snp_idx: " + str(snp_idx) + " node_idx1: " + str(node_idx1) + " node_idx2: " + str(node_idx2) + " node_idx3: " + str(node_idx3) + " node_idx4: " + str(node_idx4)
                                             #if chr1[snp_idx] == chr2[snp_idx]:
                                             self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4] = \
-                                            self._states[admx_idx1][snp_idx][node_idx1].prob_em[int(chr(chr1[snp_idx]))] * \
-                                            self._states[admx_idx2][snp_idx][node_idx2].prob_em[int(chr(chr2[snp_idx]))]
+                                            self._states[admx_idx1][snp_idx][node_idx1].prob_em[self._chr1[snp_idx]] * \
+                                            self._states[admx_idx2][snp_idx][node_idx2].prob_em[self._chr2[snp_idx]]
                                             #else:
                                             #    self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4] = \
                                             #    self._states[admx_idx1][snp_idx][node_idx1].prob_em[int(chr(chr1[snp_idx]))] * self._states[admx_idx2][snp_idx][node_idx2].prob_em[int(chr(chr2[snp_idx]))] + \
@@ -721,8 +762,8 @@ cdef class LDModel(object):
                                                 
                                             #if chr3[snp_idx] == chr4[snp_idx]:
                                             self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4] *= \
-                                            self._states[admx_idx3][snp_idx][node_idx3].prob_em[int(chr(chr3[snp_idx]))] * \
-                                            self._states[admx_idx4][snp_idx][node_idx4].prob_em[int(chr(chr4[snp_idx]))]
+                                            self._states[admx_idx3][snp_idx][node_idx3].prob_em[self._chr3[snp_idx]] * \
+                                            self._states[admx_idx4][snp_idx][node_idx4].prob_em[self._chr4[snp_idx]]
                                             #else:
                                             #    self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4] *= \
                                             #    self._states[admx_idx3][snp_idx][node_idx3].prob_em[int(chr(chr3[snp_idx]))] * self._states[admx_idx4][snp_idx][node_idx4].prob_em[int(chr(chr4[snp_idx]))] + \
@@ -740,7 +781,7 @@ cdef class LDModel(object):
         cdef int admx_idx2
         cdef int admx_idx3
         cdef int admx_idx4
-        cdef snp_idx_win
+        cdef int snp_idx_win
         
         snp_idx_win = 0
         self._forward_probs_ibd_admx = <double **********> malloc(self._win_size * sizeof(double *********))
@@ -777,7 +818,7 @@ cdef class LDModel(object):
         cdef int admx_idx2
         cdef int admx_idx3
         cdef int admx_idx4
-        cdef snp_idx_win
+        cdef int snp_idx_win
         
         snp_idx_win = 0
         for snp_idx in range(self.start_snp(win_idx), self.end_snp(win_idx)):
@@ -813,7 +854,7 @@ cdef class LDModel(object):
         cdef int admx_idx2
         cdef int admx_idx3
         cdef int admx_idx4
-        cdef snp_idx_win
+        cdef int snp_idx_win
     
         snp_idx_win = 0
         for snp_idx in range(self.start_snp(win_idx), self.end_snp(win_idx)):
@@ -829,7 +870,7 @@ cdef class LDModel(object):
                                                 self._forward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd] = 0
             snp_idx_win += 1
     
-    cpdef calc_forward_probs_ibd_admx(self, char* chr1, char* chr2, char* chr3, char* chr4, int win_idx):
+    cpdef calc_forward_probs_ibd_admx(self, int win_idx):
         
         cdef int snp_idx 
         cdef int node_idx1
@@ -856,7 +897,7 @@ cdef class LDModel(object):
         cdef int prev_admx_idx4
         cdef double sum
         cdef double eps_or_1_eps
-        cdef snp_idx_win
+        cdef int snp_idx_win
         cdef int start_snp = self.start_snp(win_idx)
 
         # first layer
@@ -919,7 +960,7 @@ cdef class LDModel(object):
                                                                         
                                                                     else:
                                                                         # node_idx1 == node_idx3: #chr(get_likely_allele(self._states[admx_idx1][snp_idx+1][node_idx1])) == chr(get_likely_allele(self._states[admx_idx3][snp_idx+1][node_idx3])): #chr1[snp_idx+1] == chr3[snp_idx+1]:
-                                                                        if admx_idx1 == admx_idx3 and chr(get_likely_allele(self._states[admx_idx1][snp_idx+1][node_idx1])) == chr(get_likely_allele(self._states[admx_idx3][snp_idx+1][node_idx3])):
+                                                                        if admx_idx1 == admx_idx3 and get_likely_allele(self._states[admx_idx1][snp_idx+1][node_idx1]) == get_likely_allele(self._states[admx_idx3][snp_idx+1][node_idx3]):
                                                                             eps_or_1_eps = 1 - eps
                                                                         else:
                                                                             eps_or_1_eps = eps
@@ -965,7 +1006,7 @@ cdef class LDModel(object):
         cdef int admx_idx2
         cdef int admx_idx3
         cdef int admx_idx4
-        cdef snp_idx_win
+        cdef int snp_idx_win
         
         snp_idx_win = 0
         self._backward_probs_ibd_admx = <double **********> malloc(self._win_size * sizeof(double *********))
@@ -1002,7 +1043,7 @@ cdef class LDModel(object):
         cdef int admx_idx2
         cdef int admx_idx3
         cdef int admx_idx4
-        cdef snp_idx_win
+        cdef int snp_idx_win
         
         snp_idx_win = 0
         for snp_idx in range(self.start_snp(win_idx), self.end_snp(win_idx)):
@@ -1018,7 +1059,7 @@ cdef class LDModel(object):
                                                 self._backward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd] = 0
             snp_idx_win += 1
                              
-    cpdef calc_backward_probs_ibd_admx(self, char* chr1, char* chr2, char* chr3, char* chr4, int win_idx):
+    cpdef calc_backward_probs_ibd_admx(self, int win_idx):
         
         cdef int snp_idx 
         cdef int node_idx1
@@ -1045,7 +1086,7 @@ cdef class LDModel(object):
         cdef int nxt_admx_idx4
         cdef double sum
         cdef double eps_or_1_eps
-        cdef snp_idx_win
+        cdef int snp_idx_win
         
         # last layer
         for admx_idx1 in range(self.K):
@@ -1097,7 +1138,7 @@ cdef class LDModel(object):
                                                                         self._emission_prob_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][nxt_node1][nxt_node2][nxt_node3][nxt_node4] #* \
                                                                         #self._s[snp_idx][ibd][nxt_ibd] 
                                                                     else:
-                                                                        if chr1[snp_idx+1] == chr3[snp_idx+1]:
+                                                                        if self._chr1[snp_idx+1] == self._chr3[snp_idx+1]:
                                                                             eps_or_1_eps = 1 - eps
                                                                         else:
                                                                             eps_or_1_eps = eps                                
@@ -1245,7 +1286,7 @@ cdef class LDModel(object):
 #        cdef int ibd
 #        cdef double max_gamma
 #        cdef double curr_gamma
-#        cdef snp_idx_win
+#        cdef int snp_idx_win
 #        a1 = ""
 #        a2 = ""
 #        a3 = ""
@@ -1328,7 +1369,7 @@ cdef class LDModel(object):
                                                           str(self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4]) + "\n")
             snp_idx_win+=1
     
-    cpdef calc_top_level_ems_probs_inner(self, char* chr1, char* chr2, char* chr3, char* chr4):
+    cpdef calc_top_level_ems_probs_inner(self):
         cdef int win_idx
         cdef int node_idx1
         cdef int node_idx2
@@ -1348,11 +1389,11 @@ cdef class LDModel(object):
                 print "calculating top level ems probs for window: " + str(win_idx)
                 last_snp_win = self.end_snp(win_idx) - self.start_snp(win_idx)
                 self.emission_prob_ibd_admx_mem_alloc(win_idx)
-                self.calc_emission_probs_ibd_admx(chr1,chr2,chr3,chr4,win_idx)
+                self.calc_emission_probs_ibd_admx(win_idx)
                 self.forward_probs_mem_alloc(win_idx)
-                self.calc_forward_probs_ibd_admx(chr1,chr2,chr3,chr4,win_idx)
+                self.calc_forward_probs_ibd_admx(win_idx)
                 
-                self.print_inner_probs(win_idx)
+                #self.print_inner_probs(win_idx)
                 #self.backward_probs_mem_alloc(win_idx)
                 #self.calc_backward_probs_ibd_admx(chr1,chr2,chr3,chr4,win_idx)
                 for admx_idx1 in range(self.K):
@@ -1372,7 +1413,8 @@ cdef class LDModel(object):
                 self.forward_probs_mem_free(win_idx)
            
     cpdef calc_top_level_ems_probs(self, int hap_idx1, int hap_idx2, int hap_idx3, int hap_idx4):
-        self.calc_top_level_ems_probs_inner(self._haplos[hap_idx1],self._haplos[hap_idx2],self._haplos[hap_idx3],self._haplos[hap_idx4])
+        self.set_chrs(self._haplos[hap_idx1],self._haplos[hap_idx2],self._haplos[hap_idx3],self._haplos[hap_idx4])
+        self.calc_top_level_ems_probs_inner()
     
     cpdef calc_top_level_forward_probs(self):
         cdef int win_idx

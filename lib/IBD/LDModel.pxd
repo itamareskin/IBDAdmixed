@@ -1,8 +1,4 @@
-'''
-Created on May 15, 2012
-
-@author: eskin3
-'''
+#cython: profile=True
 
 from libcpp cimport bool
 
@@ -129,6 +125,14 @@ cdef class LDModel(object):
     cdef char* _prefix_string
     
     cdef bool* _ibs
+    
+    cdef bool* _chr1
+    cdef bool* _chr2
+    cdef bool* _chr3
+    cdef bool* _chr4
+    
+    cdef char _allele_0
+    cdef char _allele_1
             
     ########
     # methods
@@ -137,6 +141,8 @@ cdef class LDModel(object):
     cpdef set_ibd_trans_rate(self, anc, t_0_1, t_1_0)
     
     cpdef set_alphas(self, alphas)
+    
+    cpdef set_chrs(self, char* chr1, char* chr2, char* chr3, char* chr4)
     
     cpdef generate_random_hap(self, int anc)
     
@@ -148,7 +154,7 @@ cdef class LDModel(object):
     
     cpdef emission_prob_ibd_admx_mem_free(self, int win_idx)
     
-    cpdef calc_emission_probs_ibd_admx(self, char* chr1, char* chr2, char* chr3, char* chr4, int win_idx)
+    cpdef calc_emission_probs_ibd_admx(self, int win_idx)
     
     cpdef forward_probs_mem_alloc(self, int win_idx)
     
@@ -156,13 +162,13 @@ cdef class LDModel(object):
     
     cdef forward_probs_init(self, int win_idx)
     
-    cpdef calc_forward_probs_ibd_admx(self, char* chr1, char* chr2, char* chr3, char* chr4, int win_idx)
+    cpdef calc_forward_probs_ibd_admx(self, int win_idx)
     
     cpdef backward_probs_mem_alloc(self, int win_idx)
     
     cdef backward_probs_init(self, int win_idx)
     
-    cpdef calc_backward_probs_ibd_admx(self, char* chr1, char* chr2, char* chr3, char* chr4, int win_idx)
+    cpdef calc_backward_probs_ibd_admx(self, int win_idx)
     
     #cpdef posterior_decoding_ibd_admx(self, int win_idx)
     
@@ -180,7 +186,7 @@ cdef class LDModel(object):
     
     cpdef print_inner_probs(self, win_idx)
     
-    cpdef calc_top_level_ems_probs_inner(self, char* chr1, char* chr2, char* chr3, char* chr4)
+    cpdef calc_top_level_ems_probs_inner(self)
     
     cpdef calc_top_level_ems_probs(self, int hap_idx1, int hap_idx2, int hap_idx3, int hap_idx4)
     
