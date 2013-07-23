@@ -118,7 +118,7 @@ cdef class LDModel(object):
         
         # allocate memory
         self._snp_ids = <char **> malloc(self._snp_num * sizeof(char *))
-        
+        self._position = <int *> malloc(self._snp_num * sizeof(int))
         self._states = <state ***> malloc(self.K * sizeof(state **))
         self._pi = <double ***> malloc(self.K * sizeof(double **))
         self._layer_state_nums = <int **> malloc(self.K * sizeof(int*))
@@ -219,13 +219,55 @@ cdef class LDModel(object):
         strncpy(self._prefix_string, new_prefix_string, strlen(new_prefix_string)) 
         self._prefix_string[strlen(new_prefix_string)] = '\0'
         
+    
+    def read_map(self, map_file_name):
+        '''
+        read the (PLINK) map file
+        '''
+        if not os.path.exists(map_file_name):
+            print "the file: " + map_file_name + " does not exist!"
+            exit(-1)
+        
+        print "reading from map file: " + map_file_name
+        
+        with open(map_file_name) as map_file:
+            
+            first_read = True
+            done = False
+            buffer_size = 100
+            snp_idx = 0
+            
+            while True:
+                
+                if done:
+                    break
+                # read next buffer_size lines from the file
+                if not first_read:
+                    lines = list(islice(map_file, buffer_size))
+                else:
+                    lines = list(islice(map_file, 1, buffer_size))
+                    first_read = False
+                
+                if len(lines) == 0:
+                    done = True
+                
+                for line in lines:
+                    #print "line: " + line
+                    line = line.split(" ")
+                    #print "pos: " + line[0]
+                    self._position[snp_idx] = int(line[3])
+                    snp_idx += 1
+                    if snp_idx >= self._snp_num:
+                        done = True;
+                        break
+        
     def read_genetic_map(self, genetic_map_file_name):
         '''
         read the genetic map from hapmap format file
         '''
         if not os.path.exists(genetic_map_file_name):
             print "the file: " + genetic_map_file_name + " does not exist!"
-            return
+            exit(-1)
         
         print "reading from genetic map file: " + genetic_map_file_name
         
@@ -254,6 +296,7 @@ cdef class LDModel(object):
                     #print "line: " + line
                     line = line.split(" ")
                     #print "pos: " + line[0]
+                    # TODO: this is a bug - need to read only positions that are in _position
                     self._genetic_map[snp_idx] = create_gen_map_entry(int(line[0]),float(line[1]),float(line[2]))
                     snp_idx += 1
                     if snp_idx >= self._snp_num:
@@ -265,7 +308,7 @@ cdef class LDModel(object):
     
         if not os.path.exists(file_name):
             print "the file: " + file_name + " does not exist!"
-            return
+            exit(-1)
         
         count = 0
         with open(file_name) as haplos_file:
@@ -470,7 +513,7 @@ cdef class LDModel(object):
         if self._debug: 
             self._ibs_file.write(self._prefix_string + " ")
         for win_idx in range(self.get_num_windows()):
-            inter = ibs_dic.find(self._genetic_map[self.start_snp(win_idx)].position,self._genetic_map[self.end_snp(win_idx)].position)
+            inter = ibs_dic.find(self._position[self.start_snp(win_idx)],self._position[self.end_snp(win_idx)])
             if len(inter) > 0:
                 self._ibs[win_idx] = True
             else:
@@ -1404,7 +1447,8 @@ cdef class LDModel(object):
         cdef int ibd
         cdef last_snp_win
         
-        self._inner_probs_file.write("ind1 ind2 snp admx1 admx2 admx3 admx4 node1 node2 node3 node4 ibd forward emission\n")
+        if self._debug:
+            self._inner_probs_file.write("ind1 ind2 snp admx1 admx2 admx3 admx4 node1 node2 node3 node4 ibd forward emission\n")
             
         for win_idx in range(self.get_num_windows()):
             if self._ibs[win_idx]:
@@ -1601,11 +1645,6 @@ cdef class LDModel(object):
         a2 = ""
         a3 = ""
         a4 = ""
-        a1_filt = ''
-        a2_filt = ''
-        a3_filt = ''
-        a4_filt = ''
-        i_filt = ''
         i = ""
         ibd_probs = []
         non_ibd_probs = []
@@ -1646,38 +1685,46 @@ cdef class LDModel(object):
                 a2 += str(max_admx_idx2)
                 a3 += str(max_admx_idx3)
                 a4 += str(max_admx_idx4)
-                i += str(max_ibd)
+                #i += str(max_ibd)
+                
+                #print "win idx: " + str(win_idx) + " ibd_prob: " + str(curr_ibd_prob) +  " no ibd_prob: " + str(curr_non_ibd_prob)
+                if curr_ibd_prob > curr_non_ibd_prob:
+                    #print "win idx: " + str(win_idx) + " ibd"
+                    i += '1'
+                else:
+                    #print "win idx: " + str(win_idx) + " no ibd"
+                    i += '0'
+                    
                 ibd_probs.append(curr_ibd_prob)
                 non_ibd_probs.append(curr_non_ibd_prob)
-                
-                a1_filt = ''
-                a2_filt = ''
-                a3_filt = ''
-                a4_filt = ''
-                i_filt = ''
-                for ind in range(len(a1)):
-                    start = max(0,ind-3)
-                    end = min(ind+4,len(a1))
-                    a1_filt += str(int(np.median([int(x) for x in a1[start:end]])))
-                    a2_filt += str(int(np.median([int(x) for x in a2[start:end]])))
-                    a3_filt += str(int(np.median([int(x) for x in a3[start:end]])))
-                    a4_filt += str(int(np.median([int(x) for x in a4[start:end]])))
-                    i_filt += str(int(np.median([int(x) for x in i[start:end]])))
-                    
-                pairIBD=cPairIBD()
-                for win_i in range(len(i_filt)):
-                    if i[win_i] == '1':
-                        pairIBD.add_interval(win_i*self._win_size,(win_i+1)*self._win_size)
-                pairIBD.merge_intervals()
             else:
-                a1_filt+='0'
-                a2_filt+='0'
-                a3_filt+='0'
-                a4_filt+='0'
-                i_filt+='0'
+                a1+='0'
+                a2+='0'
+                a3+='0'
+                a4+='0'
+                i+='0'
                 ibd_probs.append(0)
                 non_ibd_probs.append(0)
         
+        a1_filt = ''
+        a2_filt = ''
+        a3_filt = ''
+        a4_filt = ''
+        i_filt = ''
+        for ind in range(len(a1)):
+            start = max(0,ind-3)
+            end = min(ind+4,len(a1))
+            a1_filt += str(int(np.median([int(x) for x in a1[start:end]])))
+            a2_filt += str(int(np.median([int(x) for x in a2[start:end]])))
+            a3_filt += str(int(np.median([int(x) for x in a3[start:end]])))
+            a4_filt += str(int(np.median([int(x) for x in a4[start:end]])))
+            i_filt += str(int(np.median([int(x) for x in i[start:end]])))
+        
+        pairIBD=cPairIBD()
+        for win_i in range(len(i_filt)):
+            if i[win_i] == '1':
+                pairIBD.add_interval(win_i*self._win_size,(win_i+1)*self._win_size)
+        pairIBD.merge_intervals()
         if self._debug:
             self.top_level_print()
         

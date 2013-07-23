@@ -92,7 +92,9 @@ h.read_from_bgl_file(dir + "/HapMap.HapMap3_YRI_chr1.bgl.01.dag",1)
 nr_haplos = h.read_haplos(file_name + ".genos.dat")
 nr_inds = nr_haplos/2
 #h.read_from_bgl_file("example.data.bgl.dag",1)
-#h.read_genetic_map(dir + "/genetic_map_chr1_b36.txt")
+h.read_map(file_name + ".genos.map")
+h.read_genetic_map(dir + "/genetic_map_chr1_b36.txt")
+
 #ldu.draw_HMM(h,start_level=90,level_num=100)
 
 h.calc_ibd_prior()

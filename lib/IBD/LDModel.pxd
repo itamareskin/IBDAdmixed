@@ -94,6 +94,9 @@ cdef class LDModel(object):
     # number of nodes in each layer (SNP) - size of _layer_state_nums is _snp_num
     cdef int **_layer_state_nums
     
+    # physical positions
+    cdef int *_position
+    
     # number of snps (layers) in the model
     cdef int _snp_num
     
