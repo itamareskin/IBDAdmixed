@@ -17,6 +17,14 @@ awk 'BEGIN{OFS="      "}{if ($5 == '1') $5=0; else {if ($5 == '2' ) $5=1;}; prin
 wget -v ftp://ftp.ncbi.nlm.nih.gov/hapmap/recombination/2008-03_rel22_B36/rates/genetic_map_chr1_b36.txt
 
 
+# profiling
+python -m cProfile -o prof.out runIBDAdmixed.py 1 1000 /home/eskin/Data/IBDAdmixed AfricanAmericans8
+python /usr/local/lib/python2.7/dist-packages/RunSnakeRun-2.0.2b1-py2.7.egg/runsnakerun/runsnake.py prof.out
+
+
+
 # trash
 awk '{sum_l=0; split($1,a,":"); split(a[2],b,";"); for (i=1;i<=length(b);i++) {split(b[i],c,","); l=c[2]-c[1]; sum_l=sum_l+l;} if (sum_l > 1000) print a[1]}' AfricanAmericans4.trueibd.dat | head -100 > AfricanAmericans4.100ibdpairs.txt
 awk 'BEGIN{split("",ibd)}{split($1,a,":"); p=a[1];v=a[2]; if (p in ibd) ibd[p]=ibd[p]";"v; else ibd[p]=v}END{for (i in ibd) print i":"ibd[i]}' *.dat > ibdadmixed.ibd.txt
+
+

@@ -22,6 +22,7 @@ import time
 def runPair(args):
     
     (ind1,ind2) = args[0]
+    print "running pair: " + str(ind1) + "," + str(ind2)
     queue = args[1]
     
     chr_pairs = [(0,1,0,1),(0,1,1,0),(1,0,0,1),(1,0,1,0)]
@@ -39,7 +40,7 @@ def runPair(args):
     h.calc_top_level_forward_probs()
     h.calc_top_level_backward_probs()
     (a1,a2,a3,a4,i,ibd,ibd_probs,no_ibd_probs) = h.posterior_top_level_decoding()
-    h.top_level_print()
+    #h.top_level_print()
     
         #popIBD.add_human_pair((ind1,ind2),ibd)
     queue.put(((ind1,ind2),ibd.to_list(),ibd_probs,no_ibd_probs))
@@ -92,7 +93,7 @@ h.top_level_alloc_mem()
 # retcode = subprocess.call("germline -silent -bits 50 -min_m 2 -err_hom 0 -err_het 0 < " + file_name + ".germline.run > " + file_name + ".generated.out 2> " + ".generated.err", shell=True)
 germline = open(file_name + ".generated.match")
 pairs = {}
-for counter in range(5000):
+for counter in range(100):
     line = germline.readline()
     if not line:
         break
@@ -141,6 +142,7 @@ while processed < len(pairs.keys()):
                 out_windows.write(" " + str(win_ibd))
             out_windows.write("\n") 
             out_windows.flush()
+            out.flush()
         processed+=1
     
 out.close()

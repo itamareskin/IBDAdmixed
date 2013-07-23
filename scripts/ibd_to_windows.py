@@ -15,7 +15,7 @@ from itertools import product
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger()
 
-if len(sys.argv != 4):
+if len(sys.argv) != 4:
     print "usage: " + sys.argv[0] + " <num_snps> <inputfile> <outputfile>"
     exit(-1) 
 

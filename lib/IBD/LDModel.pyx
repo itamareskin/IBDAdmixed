@@ -138,9 +138,9 @@ cdef class LDModel(object):
         for snp_idx in range(self._snp_num):
             self._genetic_map[snp_idx] = create_gen_map_entry(snp_idx,1.63936,0.0010840)
             
-        self._inner_probs_file = open(self._log_dir+"inner.probs.txt","w")
-        self._probs_file = open(self._log_dir+"probs.txt","w")
-        self._trans_file = open(self._log_dir+"trans.txt","w")
+        #self._inner_probs_file = open(self._log_dir+"inner.probs.txt","w")
+        #self._probs_file = open(self._log_dir+"probs.txt","w")
+        #self._trans_file = open(self._log_dir+"trans.txt","w")
         
         self._ibs = <bool *> malloc(self.get_num_windows() * sizeof(bool))
         for win_idx in range(self.get_num_windows()):
@@ -152,9 +152,10 @@ cdef class LDModel(object):
         self._chr4 = <bool *> malloc(self._snp_num * sizeof(bool))
                 
     def __dealloc__(self):
-        self._inner_probs_file.close()
-        self._probs_file.close()
-        self._trans_file.close()
+        pass
+        #self._inner_probs_file.close()
+        #self._probs_file.close()_inner_probs_file
+        #self._trans_file.close()
     
     cpdef set_ibd_trans_rate(self, anc, t_0_1, t_1_0):
         self._t_0_1[anc] = t_0_1
@@ -172,10 +173,6 @@ cdef class LDModel(object):
             
     cpdef set_chrs(self, char* chr1, char* chr2, char* chr3, char* chr4):
     
-        print ">>>> alele 0: " + str(self._allele_0)
-        print ">>>> alele 1: " + str(self._allele_1)
-        print ">>>> alele 0: " + str(int(self._allele_0))
-        print ">>>> alele 1: " + str(int(self._allele_1))
         for snp_idx in range(self._snp_num):
             if int(chr(chr1[snp_idx])) == int(self._allele_0):
                 self._chr1[snp_idx] = 0
@@ -327,8 +324,8 @@ cdef class LDModel(object):
                             self._allele_1 = int(curr_allele)
                             break;
         
-        print "allele_0: " + str(self._allele_0) + "\n"
-        print "allele_1: " + str(self._allele_1) + "\n"
+        #print "allele_0: " + str(self._allele_0) + "\n"
+        #print "allele_1: " + str(self._allele_1) + "\n"
                 
         with open(file_name) as model_file:
             
@@ -361,7 +358,7 @@ cdef class LDModel(object):
                         nodes_prev = nodes_curr
                         nodes_curr = nodes
                         nodes = []
-                        print "reading layer: " + str(layer) + ", snp id: " + nodes_curr[0][1]
+                        #print "reading layer: " + str(layer) + ", snp id: " + nodes_curr[0][1]
                         
                         # allocate memory for transition probabilities
                         if layer % self._win_size == 0:
@@ -447,6 +444,7 @@ cdef class LDModel(object):
                         if layer >= self._snp_num:
                             done = True;
                             break
+        print "Finished reading beagle file."
                 #p = [self._pi[anc][i] for i in xrange(self._layer_state_nums[anc][0])]
                 #print "pi: " + str(p)  
     
@@ -584,9 +582,9 @@ cdef class LDModel(object):
                 self._s[anc][win_idx][0][0] = exp(-self._t_0_1[anc] * d)
                 self._s[anc][win_idx][1][0] = 1 - self._s[anc][win_idx][1][1]
                 self._s[anc][win_idx][0][1] = 1 - self._s[anc][win_idx][0][0]
-                for i in range(2):
-                    for j in range(2):
-                        print "ibd trans: " + str(anc) + " " + str(win_idx) + " " + str(i) + " " + str(j) + " : " + str(self._s[anc][win_idx][i][j])
+                #for i in range(2):
+                #    for j in range(2):
+                #        print "ibd trans: " + str(anc) + " " + str(win_idx) + " " + str(i) + " " + str(j) + " : " + str(self._s[anc][win_idx][i][j])
             
         #self._s[self.get_num_windows()-1][0][0] = 1
         #self._s[self.get_num_windows()-1][0][1] = 1
@@ -1382,11 +1380,11 @@ cdef class LDModel(object):
         cdef int ibd
         cdef last_snp_win
         
-        self._inner_probs_file.write("ind1 ind2 snp admx1 admx2 admx3 admx4 node1 node2 node3 node4 ibd forward emission\n")
+        #self._inner_probs_file.write("ind1 ind2 snp admx1 admx2 admx3 admx4 node1 node2 node3 node4 ibd forward emission\n")
             
         for win_idx in range(self.get_num_windows()):
             if self._ibs[win_idx]:
-                print "calculating top level ems probs for window: " + str(win_idx)
+                #print "calculating top level ems probs for window: " + str(win_idx)
                 last_snp_win = self.end_snp(win_idx) - self.start_snp(win_idx)
                 self.emission_prob_ibd_admx_mem_alloc(win_idx)
                 self.calc_emission_probs_ibd_admx(win_idx)
@@ -1432,7 +1430,7 @@ cdef class LDModel(object):
        
         for win_idx in range(self.get_num_windows()-1):
             if self._ibs[win_idx]:
-                print "calculating top level forward probs for window: " + str(win_idx)
+                #print "calculating top level forward probs for window: " + str(win_idx)
                 
                 if win_idx == 0 or (win_idx > 0 and self._ibs[win_idx] and not self._ibs[win_idx-1]):
                     for admx_idx1 in range(self.K):
@@ -1506,7 +1504,7 @@ cdef class LDModel(object):
          
         for win_idx in reversed(range(self.get_num_windows()-1)):
             if self._ibs[win_idx+1]:
-                print "calculating top level forward probs for window: " + str(win_idx)
+                #print "calculating top level forward probs for window: " + str(win_idx)
                 
                 if win_idx == self.get_num_windows()-2 or (self._ibs[win_idx+1] and not self._ibs[win_idx+2]):
                     for admx_idx1 in range(self.K):
@@ -1597,7 +1595,7 @@ cdef class LDModel(object):
                 max_gamma = -DBL_MAX
                 curr_ibd_prob = 0
                 curr_non_ibd_prob = 0
-                print "top level decoding in window %d" % win_idx
+                #print "top level decoding in window %d" % win_idx
                 for admx_idx1 in range(self.K):
                     for admx_idx2 in range(self.K):
                         for admx_idx3 in range(self.K):
