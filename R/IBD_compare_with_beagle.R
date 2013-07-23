@@ -2,18 +2,18 @@
 library(data.table)
 library(reshape)
 dir = '/home/eskin/Data/IBDAdmixed/fromLecs'
-ibd.admixed = fread(paste(dir,'AfricanAmericans8.IBDAdmixed3.dat',sep="/"))
+ibd.admixed = fread(paste(dir,'AfricanAmericans8.IBDAdmixed3.windows.dat',sep="/"))
 setnames(ibd.admixed, colnames(ibd.admixed), c("ind1","ind2",seq(length(colnames(ibd.admixed))-2)))
 ibd.admixed <- melt(ibd.admixed, id=c("ind1","ind2"))
 setnames(ibd.admixed, colnames(ibd.admixed), c("ind1","ind2","window","ibd"))
 
-beagle = fread(paste(dir,'beagle2.ibd.windows.txt',sep='/'))
+beagle = fread(paste(dir,'beagle.ibd.windows.filt.txt',sep='/'))
 setnames(beagle, colnames(beagle), c("ind1","ind2",seq(length(colnames(beagle))-2)))
 beagle = beagle[]
 beagle <- melt(beagle, id=c("ind1","ind2"))
 setnames(beagle, colnames(beagle), c("ind1","ind2","window","ibd"))
 
-true.ibd = fread(paste(dir,'AfricanAmericans8.trueibd.windows.dat',sep='/'))
+true.ibd = fread(paste(dir,'AfricanAmericans8.trueibd.windows.filt.dat',sep='/'))
 setnames(true.ibd, colnames(true.ibd), c("ind1","ind2",seq(length(colnames(true.ibd))-2)))
 true.ibd <- melt(true.ibd, id=c("ind1","ind2"))
 setnames(true.ibd, colnames(true.ibd), c("ind1","ind2","window","ibd"))

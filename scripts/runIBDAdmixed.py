@@ -18,6 +18,7 @@ from bx.intervals import Interval, IntervalTree
 import subprocess
 import multiprocessing
 import time
+import argparse
 
 def runPair(args):
     
@@ -45,18 +46,42 @@ def runPair(args):
         #popIBD.add_human_pair((ind1,ind2),ibd)
     queue.put(((ind1,ind2),ibd.to_list(),ibd_probs,no_ibd_probs))
 
+
+parser = argparse.ArgumentParser()
+parser.add_argument("filename", type=str, help="input file name (without suffixes)")
+parser.add_argument("-p", "--num-cpus", action="store", dest='num_cpus',help="number of cpus to be used")
+parser.add_argument("-n", "--num-snps", action="store", dest='num_snps',help="number of snps to be used")
+parser.add_argument("-d", "--working-dir", action='store', dest='dir', help='path to directory containing the input/output files')
+parser.add_argument("--pairs-file", action='store', dest='pairs_file', help='file containing pairs of individuals to process')
+parser.add_argument("-g", "--debug", action='store_true', default=False, dest='debug', help='print debugging information')
+
+args = parser.parse_args()
+    
 num_cpus = 1
+if args.num_cpus != None:
+    num_cpus = int(args.num_cpus)
+    
+num_snps = 1000
+if args.num_snps != None:
+    num_snps = int(args.num_snps)
 
-if len(sys.argv) != 5:
-    print "usage: " + sys.argv[0] + " <num_cpus> <num-snps> <dir> <filename>"
-    exit(-1)
+dir = "~/Data/IBDAdmixed"
+if args.dir != None:
+    dir = args.dir
+dir = os.path.expanduser(dir)
 
-num_cpus = int(sys.argv[1])
-num_snps = int(sys.argv[2])
-dir=sys.argv[3]
-file_name = dir + "/" + sys.argv[4]
+pair_list = []
+if args.pairs_file != None:
+    pairs_f = open(dir + "/" + args.pairs_file)
+    pair_list = pairs_f.readlines()
+    pair_list = [x.strip("\n") for x in pair_list]
+    pair_list = [x.split(",") for x in pair_list]
+    pair_list = [(int(x[0]),int(x[1])) for x in pair_list]
+    pairs_f.close()
 
-h = LDModel(num_snps,2,8,25,dir)
+file_name = dir + "/" + args.filename
+
+h = LDModel(num_snps,2,8,25,dir,args.debug)
 h.set_alphas([0.2,0.8])
 h.set_ibd_trans_rate(0,1e-5,1)
 h.set_ibd_trans_rate(1,2e-4,1)
@@ -64,9 +89,10 @@ h.read_from_bgl_file(dir + "/HapMap.HapMap3_CEU_chr1.bgl.01.dag",0)
 h.read_from_bgl_file(dir + "/HapMap.HapMap3_YRI_chr1.bgl.01.dag",1)
 #h.read_from_bgl_file("hapmap.chr1.ceu.hapmap3_r2_b36_fwd.consensus.qc.poly.chr1_ceu.unr.phased.all.bgl.dag",0)
 #h.read_from_bgl_file("hapmap.chr1.yri.hapmap3_r2_b36_fwd.consensus.qc.poly.chr1_yri.unr.phased.all.bgl.dag",1)
-h.read_haplos(file_name + ".genos.dat",200)
+nr_haplos = h.read_haplos(file_name + ".genos.dat")
+nr_inds = nr_haplos/2
 #h.read_from_bgl_file("example.data.bgl.dag",1)
-h.read_genetic_map(dir + "/genetic_map_chr1_b36.txt")
+#h.read_genetic_map(dir + "/genetic_map_chr1_b36.txt")
 #ldu.draw_HMM(h,start_level=90,level_num=100)
 
 h.calc_ibd_prior()
@@ -93,13 +119,15 @@ h.top_level_alloc_mem()
 # retcode = subprocess.call("germline -silent -bits 50 -min_m 2 -err_hom 0 -err_het 0 < " + file_name + ".germline.run > " + file_name + ".generated.out 2> " + ".generated.err", shell=True)
 germline = open(file_name + ".generated.match")
 pairs = {}
-for counter in range(100):
+for counter in range(nr_inds*(nr_inds-1)/2):
     line = germline.readline()
     if not line:
         break
     line = line.replace('\t',' ')
     line = line.split(' ')
     pair = (int(line[0]),int(line[2]))
+    if len(pair_list) > 0 and not pair in pair_list:
+        continue
     if not pairs.has_key(pair):
         pairs[pair] = IntervalTree()
     pairs[pair].add_interval(Interval(long(line[5]),long(line[6])))
@@ -122,26 +150,26 @@ while processed < len(pairs.keys()):
     time.sleep(0.5)
     if not q.empty():
         ((ind1,ind2),ibd,ibd_probs,no_ibd_probs) = q.get()
+        out_windows.write(str(ind1) + " " + str(ind2))
+        out_ibdprobs.write(str(ind1) + " " + str(ind2) + " " + string.join([str(x) for x in ibd_probs]," ") + "\n")
+        out_ibdprobs.flush()
+        out_no_ibdprobs.write(str(ind1) + " " + str(ind2) + " " + string.join([str(x) for x in no_ibd_probs]," ") + "\n")
+        out_no_ibdprobs.flush()
+        #popIBD.add_human_pair((ind1,ind2),cPairIBD.from_list(ibd))
+        
+        for win_idx in range(num_win):
+            start_snp = win_idx * 25
+            end_snp = min((win_idx + 1) * 25, num_snps)
+            intersect = cPairIBD.from_list(ibd).find(start_snp,end_snp)
+            win_ibd = 0
+            if len(intersect) > 0:
+                if (intersect[0].end - intersect[0].start) > 15:
+                    win_ibd = 1
+            out_windows.write(" " + str(win_ibd))
+        out_windows.write("\n") 
+        out_windows.flush()
         if len(ibd) > 0:
             out.write(str(ind1) + "," + str(ind2) + ":" + cPairIBD.from_list(ibd).to_string() + "\n")
-            out_windows.write(str(ind1) + " " + str(ind2))
-            out_ibdprobs.write(str(ind1) + " " + str(ind2) + " " + string.join([str(x) for x in ibd_probs]," ") + "\n")
-            out_ibdprobs.flush()
-            out_no_ibdprobs.write(str(ind1) + " " + str(ind2) + " " + string.join([str(x) for x in no_ibd_probs]," ") + "\n")
-            out_no_ibdprobs.flush()
-            #popIBD.add_human_pair((ind1,ind2),cPairIBD.from_list(ibd))
-            
-            for win_idx in range(num_win):
-                start_snp = win_idx * 25
-                end_snp = min((win_idx + 1) * 25, num_snps)
-                intersect = cPairIBD.from_list(ibd).find(start_snp,end_snp)
-                win_ibd = 0
-                if len(intersect) > 0:
-                    if (intersect[0].end - intersect[0].start) > 15:
-                        win_ibd = 1
-                out_windows.write(" " + str(win_ibd))
-            out_windows.write("\n") 
-            out_windows.flush()
             out.flush()
         processed+=1
     
@@ -149,6 +177,4 @@ out.close()
 out_windows.close()
 out_ibdprobs.close()
 out_no_ibdprobs.close()
-
-
 

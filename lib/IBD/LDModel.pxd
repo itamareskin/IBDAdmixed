@@ -121,6 +121,7 @@ cdef class LDModel(object):
     cdef _inner_probs_file
     cdef _probs_file
     cdef _trans_file
+    cdef _ibs_file
     
     cdef char* _prefix_string
     
@@ -133,6 +134,8 @@ cdef class LDModel(object):
     
     cdef char _allele_0
     cdef char _allele_1
+    
+    cdef bool _debug
             
     ########
     # methods

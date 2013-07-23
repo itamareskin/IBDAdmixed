@@ -74,7 +74,7 @@ cdef class LDModel(object):
     Hidden Markov Model for a single ancestral population
     '''
      
-    def __cinit__(self, int snp_num, int k, int g, int win_size, char* log_dir):
+    def __cinit__(self, int snp_num, int k, int g, int win_size, char* log_dir, bool debug=False):
         
         # total number of SNPs to be analyzed
         self._snp_num = snp_num
@@ -94,6 +94,8 @@ cdef class LDModel(object):
         self._win_size = win_size 
         
         self._log_dir = log_dir
+        
+        self._debug = debug
         
         # rate of transition from IBD to No-IBD and vice-versa (notation from the Browning paper)
         self._t_0_1 = <double *> malloc(self.K * sizeof(double))
@@ -138,9 +140,12 @@ cdef class LDModel(object):
         for snp_idx in range(self._snp_num):
             self._genetic_map[snp_idx] = create_gen_map_entry(snp_idx,1.63936,0.0010840)
             
-        #self._inner_probs_file = open(self._log_dir+"inner.probs.txt","w")
-        #self._probs_file = open(self._log_dir+"probs.txt","w")
-        #self._trans_file = open(self._log_dir+"trans.txt","w")
+        if self._debug:
+            print "DEBUG!"
+            self._inner_probs_file = open(self._log_dir+"/inner.probs.txt","w")
+            self._probs_file = open(self._log_dir+"/probs.txt","w")
+            self._trans_file = open(self._log_dir+"/trans.txt","w")
+            self._ibs_file = open(self._log_dir+"/ibs.txt","w")
         
         self._ibs = <bool *> malloc(self.get_num_windows() * sizeof(bool))
         for win_idx in range(self.get_num_windows()):
@@ -152,10 +157,11 @@ cdef class LDModel(object):
         self._chr4 = <bool *> malloc(self._snp_num * sizeof(bool))
                 
     def __dealloc__(self):
-        pass
-        #self._inner_probs_file.close()
-        #self._probs_file.close()_inner_probs_file
-        #self._trans_file.close()
+        if self._debug:
+            self._inner_probs_file.close()
+            self._probs_file.close() 
+            self._trans_file.close()
+            self._ibs_file.close()
     
     cpdef set_ibd_trans_rate(self, anc, t_0_1, t_1_0):
         self._t_0_1[anc] = t_0_1
@@ -209,8 +215,9 @@ cdef class LDModel(object):
             
     
     def set_prefix_string(self, char* new_prefix_string):
-        self._prefix_string = <char *> malloc(strlen(new_prefix_string) * sizeof(char))
+        self._prefix_string = <char *> malloc((strlen(new_prefix_string) + 1) * sizeof(char))
         strncpy(self._prefix_string, new_prefix_string, strlen(new_prefix_string)) 
+        self._prefix_string[strlen(new_prefix_string)] = '\0'
         
     def read_genetic_map(self, genetic_map_file_name):
         '''
@@ -254,18 +261,27 @@ cdef class LDModel(object):
                         break
         
     
-    def read_haplos(self, file_name, nr_haplos):
+    def read_haplos(self, file_name):
     
         if not os.path.exists(file_name):
             print "the file: " + file_name + " does not exist!"
             return
         
-        self._nr_haplos = nr_haplos
+        count = 0
+        with open(file_name) as haplos_file:
+            for line in haplos_file.xreadlines(  ): 
+                count += 1
+                
+        if count == 0 or count % 2 == 1:
+            print "bad number of haplotypes. quitting..."
+            exit(-1)
+        
+        self._nr_haplos = count
         
         print "reading from haplos file: " + file_name
-        self._haplos = <char **> malloc(nr_haplos * sizeof(char *)) 
+        self._haplos = <char **> malloc(self._nr_haplos * sizeof(char *)) 
         
-        with open(file_name) as bgl_file:
+        with open(file_name) as haplos_file:
             
             first_read = True
             done = False
@@ -277,7 +293,7 @@ cdef class LDModel(object):
                 if done:
                     break
                 # read next buffer_size lines from the file
-                lines = list(islice(bgl_file, buffer_size))
+                lines = list(islice(haplos_file, buffer_size))
                 
                 if len(lines) == 0:
                     done = True
@@ -292,9 +308,11 @@ cdef class LDModel(object):
                     #self._haplos[hap_idx] = py_bytes
                     #print self._haplos[hap_idx]
                     hap_idx += 1
-                    if hap_idx >= nr_haplos:
+                    if hap_idx >= self._nr_haplos:
                         done = True;
                         break
+        
+        return self._nr_haplos
     
     def read_from_bgl_file(self, file_name, anc):
         '''
@@ -449,12 +467,18 @@ cdef class LDModel(object):
                 #print "pi: " + str(p)  
     
     def set_ibs(self, ibs_dic):
+        if self._debug: 
+            self._ibs_file.write(self._prefix_string + " ")
         for win_idx in range(self.get_num_windows()):
             inter = ibs_dic.find(self._genetic_map[self.start_snp(win_idx)].position,self._genetic_map[self.end_snp(win_idx)].position)
             if len(inter) > 0:
                 self._ibs[win_idx] = True
             else:
                 self._ibs[win_idx] = False
+            if self._debug:
+                self._ibs_file.write(str(int(self._ibs[win_idx])) + " ")
+        if self._debug:
+            self._ibs_file.write("\n") 
         
     def get_haplo_num(self):
         return self._nr_haplos
@@ -1380,7 +1404,7 @@ cdef class LDModel(object):
         cdef int ibd
         cdef last_snp_win
         
-        #self._inner_probs_file.write("ind1 ind2 snp admx1 admx2 admx3 admx4 node1 node2 node3 node4 ibd forward emission\n")
+        self._inner_probs_file.write("ind1 ind2 snp admx1 admx2 admx3 admx4 node1 node2 node3 node4 ibd forward emission\n")
             
         for win_idx in range(self.get_num_windows()):
             if self._ibs[win_idx]:
@@ -1391,7 +1415,8 @@ cdef class LDModel(object):
                 self.forward_probs_mem_alloc(win_idx)
                 self.calc_forward_probs_ibd_admx(win_idx)
                 
-                #self.print_inner_probs(win_idx)
+                if self._debug:
+                    self.print_inner_probs(win_idx)
                 #self.backward_probs_mem_alloc(win_idx)
                 #self.calc_backward_probs_ibd_admx(chr1,chr2,chr3,chr4,win_idx)
                 for admx_idx1 in range(self.K):
@@ -1652,6 +1677,9 @@ cdef class LDModel(object):
                 i_filt+='0'
                 ibd_probs.append(0)
                 non_ibd_probs.append(0)
+        
+        if self._debug:
+            self.top_level_print()
         
         return (a1_filt,a2_filt,a3_filt,a4_filt,i_filt,pairIBD,ibd_probs,non_ibd_probs)
     
