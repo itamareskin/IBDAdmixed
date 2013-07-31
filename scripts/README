@@ -1,8 +1,9 @@
 
 # run beagle
 ~/Software/phasing_pipeline/ped_to_bgl AfricanAmericans.genos.ped AfricanAmericans.genos.map > AfricanAmericans.genos.bgl
+awk '{print $2,$4,"1","2"}' AfricanAmericans8.genos.map > AfricanAmericans8.genos.markers
 java -Xmx3000m -jar ~/Software/beagle/beagle.jar lowmem=true unphased=AfricanAmericans.genos.bgl missing=? fastibd=true out=AfricanAmericans fastibdthreshold=1e-11
-awk 'BEGIN{split("",ibd)}{split($1,a,"."); split($2,b,"."); h1=int((a[2]-3)/2); h2=int((b[2]-3)/2); p=h1","h2; v=$3","$4; if (p in ibd) ibd[p]=ibd[p]";"v; else ibd[p]=v}END{for (i in ibd) print i":"ibd[i]}' AfricanAmericans.AfricanAmericans.genos.bgl.fibd > beagle.ibd.txt
+awk 'BEGIN{split("",ibd)}{split($1,a,"."); split($2,b,"."); h1=int((a[2]-3)/2); h2=int((b[2]-3)/2); p=h1","h2; v=$3","$4","$5; if (p in ibd) ibd[p]=ibd[p]";"v; else ibd[p]=v}END{for (i in ibd) print i":"ibd[i]}' AfricanAmericans.AfricanAmericans.genos.bgl.fibd > beagle.ibd.txt
 export PYTHONPATH=$PYTHONPATH:~/git/ibdadmixed/lib/IBD
 python ~/git/ibdadmixed/scripts/ibd_to_windows.py beagle2.ibd.txt beagle2.ibd.windows.txt
 
@@ -28,3 +29,4 @@ awk '{sum_l=0; split($1,a,":"); split(a[2],b,";"); for (i=1;i<=length(b);i++) {s
 awk 'BEGIN{split("",ibd)}{split($1,a,":"); p=a[1];v=a[2]; if (p in ibd) ibd[p]=ibd[p]";"v; else ibd[p]=v}END{for (i in ibd) print i":"ibd[i]}' *.dat > ibdadmixed.ibd.txt
 
 
+awk 'NR==FNR{a[$1" "$2]; next}{if ($1" "$2 in a) print}' AfricanAmericans8.IBDAdmixed3.windows.dat beagle.ibd.windows.long.txt > beagle.ibd.windows.long.filt.txt

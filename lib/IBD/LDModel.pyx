@@ -18,7 +18,7 @@ cdef double eps = 1e-4
  
 cdef extern from "string.h":
     char *strncpy(char *dest, char *src, size_t n)
-    int strlen(char *s)
+    int strlen(char *s) 
 
 cdef extern from "structs.h":
     int c_isfinite(double x)

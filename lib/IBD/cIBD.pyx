@@ -13,7 +13,18 @@ import numpy
 import string
 from libcpp.pair cimport pair as cpp_pair
 from libcpp.vector cimport vector as cpp_vector
-#from libcpp.map cimport map as cpp_map
+#from libcpp.map cimport map as cpp_map 
+
+cdef extern from "intervalItem.h":
+    
+    cdef struct struct_interval_item:
+        int start
+        int end
+        float value
+
+    ctypedef struct_interval_item interval_item
+    
+    interval_item create_interval_item(int start, int end, float value)
 
 cdef class cPairIBD:
     '''
@@ -21,10 +32,10 @@ cdef class cPairIBD:
     Implemented using a IntervalTree to allow fast intersection queries
     '''
     
-    cdef cpp_vector[cpp_pair[int,int]] *_intervals
+    cdef cpp_vector[interval_item] *_intervals
     
     def __cinit__(self): 
-        self._intervals = new cpp_vector[cpp_pair[int,int]]()
+        self._intervals = new cpp_vector[interval_item]()
         #self._tree = IntervalTree()
         #if intervals != None:
         #    for interval in intervals: 
@@ -39,17 +50,32 @@ cdef class cPairIBD:
         #for interval in self._intervals:
         #    tree.add_interval(Interval(interval.first,interval.second))   
         #cdef cpp_list[cpp_pair[int,int]].iterator i = self._intervals.begin()
-        cdef cpp_pair[int,int] p 
+        cdef interval_item p 
         #while i != self._intervals.end():
         for i in range(self._intervals.size()):
             p = self._intervals.at(i)
-            tree.add_interval(Interval(<int>p.first,<int>p.second)) 
+            tree.add_interval(Interval(<int>p.start,<int>p.end)) 
+            #tree.insert(p.start,p.end,p.value)
+        return tree
+    
+    cdef __get_values_interval_tree(cPairIBD self):
+        tree = IntervalTree()
+        #for interval in self._intervals:
+        #    tree.add_interval(Interval(interval.first,interval.second))   
+        #cdef cpp_list[cpp_pair[int,int]].iterator i = self._intervals.begin()
+        cdef interval_item p 
+        #while i != self._intervals.end():
+        for i in range(self._intervals.size()):
+            p = self._intervals.at(i)
+            #tree.add_interval(Interval(<int>p.start,<int>p.end)) 
+            tree.insert(p.start,p.end,p.value)
         return tree
         
-    cpdef add_interval(cPairIBD self, int start, int end):
-        cdef cpp_pair[int, int] p 
-        p.first = start 
-        p.second = end 
+    cpdef add_interval(cPairIBD self, int start, int end, float value=0):
+        cdef interval_item p 
+        p.start = start 
+        p.end = end
+        p.value = value
         self._intervals.push_back(p)
         #self._tree.add_interval(Interval(start,end))
     
@@ -57,7 +83,13 @@ cdef class cPairIBD:
         del self._intervals
     
     cpdef find(cPairIBD self,int start,int end):
+        intervals = self._tree.find(start,end)
         return self._tree.find(start,end)
+    
+    cpdef find_with_values(cPairIBD self,int start,int end):
+        intervals = self._tree.find(start,end)
+        values = self.__get_values_interval_tree().find(start,end)
+        return zip(intervals,values)
     
     cpdef update(cPairIBD self, cPairIBD other_ibd):
         cdef list intervals = other_ibd.to_list()
@@ -79,11 +111,11 @@ cdef class cPairIBD:
         #l = []; self._tree.traverse(lambda x: l.append((x.start,x.end)))
         #return l
         cdef list result = [] 
-        cdef cpp_pair[int,int] p
+        cdef interval_item p
         #while i != self._intervals.end():
         for i in range(self._intervals.size()):
             p = self._intervals.at(i)
-            result.append((<int>p.first,<int>p.second)) 
+            result.append((<int>p.start,<int>p.end)) 
         return result
     
     @classmethod
@@ -116,10 +148,10 @@ cdef class cPairIBD:
                 new_tree.add_interval(Interval(interval[0],interval[1]))
         self._intervals.erase(self._intervals.begin(),self._intervals.end())
         l = cPairIBD._get_tree_list(new_tree)
-        cdef cpp_pair[int, int] p
+        cdef interval_item p
         for interval in l:
-            p.first = <int>interval[0]
-            p.second = <int>interval[1]
+            p.start = <int>interval[0]
+            p.end = <int>interval[1]
             self._intervals.push_back(p)
     
     @classmethod
@@ -211,8 +243,8 @@ cdef class cPopulationIBD:
         else:
             self._ibd_dic[pair] = pairIBD
               
-    cpdef add_interval_to_pair(self, pair, start, end):
-        self._ibd_dic[pair].add_interval(start,end)
+    cpdef add_interval_to_pair(self, pair, start, end, value=0):
+        self._ibd_dic[pair].add_interval(start,end,value)
         
     cpdef clear(self):
         for pair in self._ibd_dic.keys():
@@ -380,7 +412,10 @@ cdef class cPopulationIBD:
             pairIBD = cPairIBD()
             for inter in temp[1].split(";"):
                 points = inter.split(",")
-                pairIBD.add_interval(int(points[0]),int(points[1]))
+                if len(points) > 2:
+                    pairIBD.add_interval(int(points[0]),int(points[1]),float(points[2]))
+                else:
+                    pairIBD.add_interval(int(points[0]),int(points[1]))
             p.add_human_pair(pair,pairIBD)
         return p
     
