@@ -10,9 +10,11 @@ from libc.stdlib cimport malloc, free
 from itertools import islice
 from libc.math cimport exp, log
 from libc.float cimport DBL_MIN, DBL_MAX
+from libc.limits cimport ULONG_MAX
 from libcpp cimport bool
 from IBD.cIBD import cPairIBD
 from bx.intervals import Interval, IntervalTree
+from sys import stdout
 
 cdef double eps = 1e-4
  
@@ -74,10 +76,12 @@ cdef class LDModel(object):
     Hidden Markov Model for a single ancestral population
     '''
      
-    def __cinit__(self, int snp_num, int k, int g, int win_size, char* log_dir, bool debug=False):
+    def __cinit__(self, map_file_name, char* log_dir, int k=1, int g=8, int win_size=25, int max_snp_num=1000000000, bool debug=False):
         
         # total number of SNPs to be analyzed
-        self._snp_num = snp_num
+        with open(map_file_name) as map_file:
+            data = map_file.readlines()
+            self._snp_num = len(data) if len(data) <= max_snp_num else max_snp_num
         
         # number of haplotypes to analyze
         self._nr_haplos = 0
@@ -119,6 +123,7 @@ cdef class LDModel(object):
         # allocate memory
         self._snp_ids = <char **> malloc(self._snp_num * sizeof(char *))
         self._position = <int *> malloc(self._snp_num * sizeof(int))
+        self._genetic_dist = <double *> malloc(self._snp_num * sizeof(double))
         self._states = <state ***> malloc(self.K * sizeof(state **))
         self._pi = <double ***> malloc(self.K * sizeof(double **))
         self._layer_state_nums = <int **> malloc(self.K * sizeof(int*))
@@ -135,10 +140,10 @@ cdef class LDModel(object):
             self._back_trans_idx[i] = <int ***> malloc((self._snp_num) * sizeof(int **))
             self._pi[i] = <double **> malloc(self.get_num_windows() * sizeof(double *))
             
-        self._genetic_map = <gen_map_entry *> malloc(self._snp_num * sizeof(gen_map_entry))
-        print "allocated mem"
-        for snp_idx in range(self._snp_num):
-            self._genetic_map[snp_idx] = create_gen_map_entry(snp_idx,1.63936,0.0010840)
+        #self._genetic_map = <gen_map_entry *> malloc(self._snp_num * sizeof(gen_map_entry))
+        #print "allocated mem"
+        #for snp_idx in range(self._snp_num):
+        #    self._genetic_map[snp_idx] = create_gen_map_entry(snp_idx,1.63936,0.0010840)
             
         if self._debug:
             print "DEBUG!"
@@ -155,6 +160,8 @@ cdef class LDModel(object):
         self._chr2 = <bool *> malloc(self._snp_num * sizeof(bool))
         self._chr3 = <bool *> malloc(self._snp_num * sizeof(bool))
         self._chr4 = <bool *> malloc(self._snp_num * sizeof(bool))
+        
+        self.read_map(map_file_name)
                 
     def __dealloc__(self):
         if self._debug:
@@ -255,53 +262,54 @@ cdef class LDModel(object):
                     #print "line: " + line
                     line = line.split(" ")
                     #print "pos: " + line[0]
+                    self._genetic_dist[snp_idx] = float(line[2])
                     self._position[snp_idx] = int(line[3])
                     snp_idx += 1
                     if snp_idx >= self._snp_num:
                         done = True;
                         break
         
-    def read_genetic_map(self, genetic_map_file_name):
-        '''
-        read the genetic map from hapmap format file
-        '''
-        if not os.path.exists(genetic_map_file_name):
-            print "the file: " + genetic_map_file_name + " does not exist!"
-            exit(-1)
-        
-        print "reading from genetic map file: " + genetic_map_file_name
-        
-        with open(genetic_map_file_name) as genetic_map_file:
-            
-            first_read = True
-            done = False
-            buffer_size = 100
-            snp_idx = 0
-            
-            while True:
-                
-                if done:
-                    break
-                # read next buffer_size lines from the file
-                if not first_read:
-                    lines = list(islice(genetic_map_file, buffer_size))
-                else:
-                    lines = list(islice(genetic_map_file, 1, buffer_size))
-                    first_read = False
-                
-                if len(lines) == 0:
-                    done = True
-                
-                for line in lines:
-                    #print "line: " + line
-                    line = line.split(" ")
-                    #print "pos: " + line[0]
-                    # TODO: this is a bug - need to read only positions that are in _position
-                    self._genetic_map[snp_idx] = create_gen_map_entry(int(line[0]),float(line[1]),float(line[2]))
-                    snp_idx += 1
-                    if snp_idx >= self._snp_num:
-                        done = True;
-                        break
+#     def read_genetic_map(self, genetic_map_file_name):
+#         '''
+#         read the genetic map from hapmap format file
+#         '''
+#         if not os.path.exists(genetic_map_file_name):
+#             print "the file: " + genetic_map_file_name + " does not exist!"
+#             exit(-1)
+#         
+#         print "reading from genetic map file: " + genetic_map_file_name
+#         
+#         with open(genetic_map_file_name) as genetic_map_file:
+#             
+#             first_read = True
+#             done = False
+#             buffer_size = 100
+#             snp_idx = 0
+#             
+#             while True:
+#                 
+#                 if done:
+#                     break
+#                 # read next buffer_size lines from the file
+#                 if not first_read:
+#                     lines = list(islice(genetic_map_file, buffer_size))
+#                 else:
+#                     lines = list(islice(genetic_map_file, 1, buffer_size))
+#                     first_read = False
+#                 
+#                 if len(lines) == 0:
+#                     done = True
+#                 
+#                 for line in lines:
+#                     #print "line: " + line
+#                     line = line.split(" ")
+#                     #print "pos: " + line[0]
+#                     # TODO: this is a bug - need to read only positions that are in _position
+#                     self._genetic_map[snp_idx] = create_gen_map_entry(int(line[0]),float(line[1]),float(line[2]))
+#                     snp_idx += 1
+#                     if snp_idx >= self._snp_num:
+#                         done = True;
+#                         break
         
     
     def read_haplos(self, file_name):
@@ -374,15 +382,15 @@ cdef class LDModel(object):
             model_file.readline()
             line = model_file.readline()
             node = line.split("\t")
-            self._allele_0 = int(node[4])
+            self._allele_0 = int(node[4])-1 
             while True:
                 line = model_file.readline()
                 if len(line) > 0:
                     node = line.split("\t")
                     if len(node) > 4:
                         curr_allele = node[4]
-                        if int(curr_allele) != self._allele_0:
-                            self._allele_1 = int(curr_allele)
+                        if int(curr_allele)-1 != self._allele_0:
+                            self._allele_1 = int(curr_allele)-1
                             break;
         
         #print "allele_0: " + str(self._allele_0) + "\n"
@@ -644,7 +652,7 @@ cdef class LDModel(object):
                     self._s[anc][win_idx][j] = <double *> malloc(2 * sizeof(double))
             
             for win_idx in range(self.get_num_windows()):
-                d = self._genetic_map[self.end_snp(win_idx)].genetic_dist - self._genetic_map[self.start_snp(win_idx)].genetic_dist
+                d = self._genetic_dist[self.end_snp(win_idx)] - self._genetic_dist[self.start_snp(win_idx)]
                 self._s[anc][win_idx][1][1] = exp(-self._t_1_0[anc] * d)  
                 self._s[anc][win_idx][0][0] = exp(-self._t_0_1[anc] * d)
                 self._s[anc][win_idx][1][0] = 1 - self._s[anc][win_idx][1][1]
@@ -669,13 +677,12 @@ cdef class LDModel(object):
         cdef int nxt_admx_idx3
         cdef int nxt_admx_idx4
         
-        cdef double *sum_recomb
-        sum_recomb = <double *> malloc((self.get_num_windows()) * sizeof(double))
+        cdef double *win_recomb
+        win_recomb = <double *> malloc((self.get_num_windows()) * sizeof(double))
         for win_idx in range(self.get_num_windows()):
-            sum_recomb[win_idx] = 0
-        for snp_idx in range(self._snp_num):
-            sum_recomb[int(snp_idx/self._win_size)] += self._genetic_map[snp_idx].recomb_rate #* 1e-6
-        
+            # the approximated recombination rate accross the window: for smnll distances, r = d/100 (approx.) where d is genetic distance (cM) and r is recombination rate (M/b) 
+            win_recomb[win_idx] = (self._genetic_dist[self.end_snp(win_idx)] - self._genetic_dist[self.start_snp(win_idx)])
+
         self._anc_trans = <double *********> malloc((self.get_num_windows()) * sizeof(double ********))
         for win_idx in range(self.get_num_windows()):
             sum = 0
@@ -696,8 +703,8 @@ cdef class LDModel(object):
                                     for nxt_admx_idx3 in range(self.K):
                                         self._anc_trans[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][nxt_admx_idx1][nxt_admx_idx2][nxt_admx_idx3] = <double *> malloc(self.K * sizeof(double))
                                         for nxt_admx_idx4 in range(self.K):
-                                            if sum_recomb[win_idx] > 0:
-                                                self._anc_trans[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][nxt_admx_idx1][nxt_admx_idx2][nxt_admx_idx3][nxt_admx_idx4] = (self.g - 1) * sum_recomb[win_idx]
+                                            if win_recomb[win_idx] > 0:
+                                                self._anc_trans[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][nxt_admx_idx1][nxt_admx_idx2][nxt_admx_idx3][nxt_admx_idx4] = (self.g - 1) * win_recomb[win_idx]
                                             else:
                                                 self._anc_trans[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][nxt_admx_idx1][nxt_admx_idx2][nxt_admx_idx3][nxt_admx_idx4] = 1
                                             sum += self._anc_trans[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][nxt_admx_idx1][nxt_admx_idx2][nxt_admx_idx3][nxt_admx_idx4]
@@ -1742,7 +1749,45 @@ cdef class LDModel(object):
         if self._snp_num % self._win_size > 0:
             num_win += 1
         return num_win
+    
+    cpdef generate_composite_individuals(self, num_inds):
+    
+        new_haplos = <char **> malloc(2 * num_inds * sizeof(char *))
+        for hap_idx in range(2 * num_inds):
+            new_haplos[hap_idx] = <char *> malloc(self._snp_num * sizeof(char))
+    
+        for i in range(num_inds*2):
+            print "composing individual " + str(i)
+            print "first position: " + str(self._position[0])
+            print "last position: " + str(self._position[self._snp_num-1])
+            start = 0
+            end = 0
+            length = int(200 * (self._position[self._snp_num-1] - self._position[0]) / self._snp_num) 
+            same_j = 0
+            last_j = -1
+            while end < self._snp_num - 1:
+                stdout.write("%d," % start)
+                stdout.flush()
+                start = end 
+                end = min(self._snp_num-1,start+length) 
+                #dists_c = [abs(x-self._genetic_dist[start]-length) for x in self._genetic_dist]
+                #end = dists_c.index(min(dists_c))
+                j = random.randint(0, self._nr_haplos)
+                if last_j == j:
+                    same_j+=1
+                    if same_j >= 8:
+                        while True:
+                            j = random.randint(0, self._nr_haplos)
+                            if last_j != j:
+                                same_j = 0
+                                break
+                else:
+                    same_j = 0 
+                    
+                last_j = j
+                #strncpy(self._haplos[hap_idx], line_trunc,self._snp_num)
+                #new_haplos[i][start:end] = self._haplos[j][start:end]
         
-        
+        self._haplos = new_haplos
         
         

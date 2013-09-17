@@ -97,6 +97,9 @@ cdef class LDModel(object):
     # physical positions
     cdef int *_position
     
+    # genetic distances (cM from 5' end)
+    cdef double *_genetic_dist
+    
     # number of snps (layers) in the model
     cdef int _snp_num
     
@@ -204,6 +207,7 @@ cdef class LDModel(object):
     
     cpdef int get_num_windows(self)
     
+    cpdef generate_composite_individuals(self, num_inds)
     
         
         

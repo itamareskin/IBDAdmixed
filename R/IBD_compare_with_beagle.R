@@ -56,3 +56,19 @@ roc$method = c("beagle","ibd.admixed")
 library(ggplot2)
 p <- ggplot(roc, aes(FP, Power, shape=method))
 p + geom_point(size=5) + xlim(0,1) + ylim(0,1) + theme_bw() + opts(legend.text = element_text(size = 16, face = "bold"))
+
+
+data = read.table("~/Data/IBDAdmixed/fromLecs/artificial3.parente.txt")
+colnames(data) = c("score","sensitivity (\\%)","FPR (\\%)")
+data$sensitivity = data$sensitivity*100
+data$FPR = data$FPR*100
+plot(data$FPR, data$sensitivity)
+xtable(data,digits=5,)
+
+data = read.table("~/Dropbox/Computational Biology/IBDAdmixed/figures/AfricanAmericans.regularFPR.txt")
+colnames(data) = c("method","sensitivity","FDR","FPR")
+data$sensitivity = data$sensitivity*100
+data$FDR = data$FDR*100
+data$FPR = data$FPR*100
+colnames(data) = c("method","sensitivity (\\%)","FDR (\\%)","FPR (\\%)")
+xtable(data,digits=5,caption="African Americans - default parameters (FPR not controlled)")

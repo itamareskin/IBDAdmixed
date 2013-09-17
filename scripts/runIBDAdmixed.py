@@ -48,12 +48,17 @@ def runPair(args):
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("filename", type=str, help="input file name (without suffixes)")
+parser.add_argument("mapfile", type=str, help="PLINK-format map file name")
+parser.add_argument("germlinefile", type=str, help="germline results file")
+parser.add_argument("genofile", type=str, help="genomtypes file name (IBDAdmixed/LAMP format)")
+parser.add_argument("hapmodelfile", nargs='*', type=str, help=".dag beagle model file name (one for each ancestry)")
+parser.add_argument("out", type=str, help="output prefix")
+parser.add_argument("-k", "--num-anc", action='store', dest='K', required=True, help='set number of ancestries')
+parser.add_argument("-a", "--set-alphas", nargs='+', dest='alphas', required=True, default=[],help="set the alphas")
 parser.add_argument("-p", "--num-cpus", action="store", dest='num_cpus',help="number of cpus to be used")
-parser.add_argument("-n", "--num-snps", action="store", dest='num_snps',help="number of snps to be used")
-parser.add_argument("-d", "--working-dir", action='store', dest='dir', help='path to directory containing the input/output files')
-parser.add_argument("--pairs-file", action='store', dest='pairs_file', help='file containing pairs of individuals to process')
+parser.add_argument("-n", "--max-snps", action="store", dest='num_snps',help="maximal number of snps to be used")
 parser.add_argument("-g", "--debug", action='store_true', default=False, dest='debug', help='print debugging information')
+parser.add_argument("--pairs-file", action='store', dest='pairs_file', help='file containing pairs of individuals to process')
 
 args = parser.parse_args()
     
@@ -61,14 +66,9 @@ num_cpus = 1
 if args.num_cpus != None:
     num_cpus = int(args.num_cpus)
     
-num_snps = 1000
+num_snps = 1000000000
 if args.num_snps != None:
     num_snps = int(args.num_snps)
-
-dir = "~/Data/IBDAdmixed"
-if args.dir != None:
-    dir = args.dir
-dir = os.path.expanduser(dir)
 
 pair_list = []
 if args.pairs_file != None:
@@ -79,21 +79,27 @@ if args.pairs_file != None:
     pair_list = [(int(x[0]),int(x[1])) for x in pair_list]
     pairs_f.close()
 
-file_name = dir + "/" + args.filename
+K = 1
+if args.K != None:
+    K = int(args.K)
+h = LDModel(map_file_name = args.mapfile,log_dir = ".",k = K,g = 8,max_snp_num = num_snps,debug = args.debug)
 
-h = LDModel(num_snps,2,8,25,dir,args.debug)
-h.set_alphas([0.2,0.8])
+if args.alphas != None:
+    if len(args.alphas) > 0:
+        alphas = [float(x) for x in args.alphas]
+        h.set_alphas(alphas)
 h.set_ibd_trans_rate(0,1e-5,1)
 h.set_ibd_trans_rate(1,2e-4,1)
-h.read_from_bgl_file(dir + "/HapMap.HapMap3_CEU_chr1.bgl.01.dag",0)
-h.read_from_bgl_file(dir + "/HapMap.HapMap3_YRI_chr1.bgl.01.dag",1)
+
+for anc in range(K):
+    h.read_from_bgl_file(args.hapmodelfile[anc],anc)
+
 #h.read_from_bgl_file("hapmap.chr1.ceu.hapmap3_r2_b36_fwd.consensus.qc.poly.chr1_ceu.unr.phased.all.bgl.dag",0)
 #h.read_from_bgl_file("hapmap.chr1.yri.hapmap3_r2_b36_fwd.consensus.qc.poly.chr1_yri.unr.phased.all.bgl.dag",1)
-nr_haplos = h.read_haplos(file_name + ".genos.dat")
+nr_haplos = h.read_haplos(args.genofile)
 nr_inds = nr_haplos/2
 #h.read_from_bgl_file("example.data.bgl.dag",1)
-h.read_map(file_name + ".genos.map")
-h.read_genetic_map(dir + "/genetic_map_chr1_b36.txt")
+#h.read_genetic_map(dir + "/genetic_map_chr1_b36.txt")
 
 #ldu.draw_HMM(h,start_level=90,level_num=100)
 
@@ -115,29 +121,29 @@ h.top_level_alloc_mem()
 ##    pairs = combinations(range(h.get_haplo_num()/2),2)
 #pairs = combinations(range(5),2)
 
-# germline_input = open(file_name + ".germline.run","w")
-# germline_input.writelines(["1\n",file_name+".genos.map\n",file_name+".genos.ped\n",file_name+".generated\n"])
+# germline_input = open(args.genofile + ".germline.run","w")
+# germline_input.writelines(["1\n",aergs.mapfile+"\n",file_name+".genos.ped\n",file_name+".generated\n"])
 # germline_input.close()
 # retcode = subprocess.call("germline -silent -bits 50 -min_m 2 -err_hom 0 -err_het 0 < " + file_name + ".germline.run > " + file_name + ".generated.out 2> " + ".generated.err", shell=True)
-germline = open(file_name + ".generated.match")
-pairs = {}
-for counter in range(nr_inds*(nr_inds-1)/2):
-    line = germline.readline()
-    if not line:
-        break
-    line = line.replace('\t',' ')
-    line = line.split(' ')
-    pair = (int(line[0]),int(line[2]))
-    if len(pair_list) > 0 and not pair in pair_list:
-        continue
-    if not pairs.has_key(pair):
-        pairs[pair] = IntervalTree()
-    pairs[pair].add_interval(Interval(long(line[5]),long(line[6])))
+with open(args.germlinefile) as germline:
+    pairs = {}
+    for counter in range(nr_inds*(nr_inds-1)/2):
+        line = germline.readline()
+        if not line:
+            break
+        line = line.replace('\t',' ')
+        line = line.split(' ')
+        pair = (int(line[0]),int(line[2]))
+        if len(pair_list) > 0 and not pair in pair_list:
+            continue
+        if not pairs.has_key(pair):
+            pairs[pair] = IntervalTree()
+        pairs[pair].add_interval(Interval(long(line[5]),long(line[6])))
     
-out = open(file_name + ".IBDAdmixed3.dat", 'w')
-out_windows = open(file_name + ".IBDAdmixed3.windows.dat", 'w')
-out_ibdprobs = open(file_name + ".IBDAdmixed3.ibdprobs.dat", 'w')
-out_no_ibdprobs = open(file_name + ".IBDAdmixed3.noibdprobs.dat", 'w')
+out = open(args.out + ".IBDAdmixed3.dat", 'w')
+out_windows = open(args.out + ".IBDAdmixed3.windows.dat", 'w')
+out_ibdprobs = open(args.out + ".IBDAdmixed3.ibdprobs.dat", 'w')
+out_no_ibdprobs = open(args.out + ".IBDAdmixed3.noibdprobs.dat", 'w')
 num_win = int(num_snps / 25)
 
 manager = multiprocessing.Manager()

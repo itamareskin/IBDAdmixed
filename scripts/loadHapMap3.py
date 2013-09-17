@@ -57,15 +57,13 @@ from simuPOP import *
 
 import os, sys, urllib, gzip, tempfile, shutil, time
 
-HapMap3_pops = ['CEU', 'YRI']
+HapMap3_pops = ['TSI']
 HapMap3_pop_types = {
-    'CEU': ('TRIOS', 'DUOS', 'UNRELATED'),
-    'YRI': ('TRIOS', 'DUOS', 'UNRELATED'),
+    'TSI': ('','TRIOS')
 }
 
 HapMap3_pop_sizes = {
-    'CEU': 113,
-    'YRI': 113
+    'TSI': 200
 }
 
 

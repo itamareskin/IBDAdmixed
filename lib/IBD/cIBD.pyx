@@ -21,10 +21,11 @@ cdef extern from "intervalItem.h":
         int start
         int end
         float value
+        float length
 
     ctypedef struct_interval_item interval_item
     
-    interval_item create_interval_item(int start, int end, float value)
+    interval_item create_interval_item(int start, int end, float value, float length)
 
 cdef class cPairIBD:
     '''
@@ -71,11 +72,12 @@ cdef class cPairIBD:
             tree.insert(p.start,p.end,p.value)
         return tree
         
-    cpdef add_interval(cPairIBD self, int start, int end, float value=0):
+    cpdef add_interval(cPairIBD self, int start, int end, float value=0, float length=0):
         cdef interval_item p 
         p.start = start 
         p.end = end
         p.value = value
+        p.length = length
         self._intervals.push_back(p)
         #self._tree.add_interval(Interval(start,end))
     
@@ -115,7 +117,7 @@ cdef class cPairIBD:
         #while i != self._intervals.end():
         for i in range(self._intervals.size()):
             p = self._intervals.at(i)
-            result.append((<int>p.start,<int>p.end)) 
+            result.append((<int>p.start,<int>p.end,<float>p.value,<float>p.length)) 
         return result
     
     @classmethod
@@ -167,38 +169,93 @@ cdef class cPairIBD:
             total_length += (segment[1]-segment[0])
         return total_length
     
+    cpdef get_num_windows(self, int window_size):
+        l = self.to_list()
+        total_length = 0
+        for segment in l:
+            total_length += round((segment[1]-segment[0])/float(window_size))
+        return total_length
+    
     cpdef get_IBD_percent(cPairIBD self, int snp_num):
         return  100 * float(sum([i[1]-i[0] for i in self.to_list()])) / snp_num
     
-    cpdef calc_accuracy(cPairIBD self, cPairIBD true_ibd, int snp_num):
+#     cpdef calc_accuracy(cPairIBD self, cPairIBD true_ibd, int snp_num):
+#         if true_ibd == None:
+#             return 0
+#         intersections = iu.IntersectIntervalTrees(self._tree, true_ibd.to_list())
+#         TP = sum([i[1]-i[0] for i in intersections])
+#         FP = sum([i[1]-i[0] for i in self.to_list()]) - TP
+#         FN = sum([i[1]-i[0] for i in true_ibd.to_list()]) - TP
+#         TN = snp_num - (TP + FP + FN)
+#         accuracy = 100 * float(TP + TN) / snp_num
+#         return accuracy
+   
+    cpdef stats(cPairIBD self, cPairIBD true_ibd, int snp_num):
         if true_ibd == None:
             return 0
-        intersections = iu.IntersectIntervalTrees(self._tree, true_ibd.to_list())
-        TP = sum([i[1]-i[0] for i in intersections])
-        FP = sum([i[1]-i[0] for i in self.to_list()]) - TP
-        FN = sum([i[1]-i[0] for i in true_ibd.to_list()]) - TP
-        TN = snp_num - (TP + FP + FN)
-        accuracy = 100 * float(TP + TN) / snp_num
-        return accuracy
-   
-    cpdef get_detected_segments(cPairIBD self, cPairIBD true_ibd):
+        self.merge_intervals()
+        true_ibd.merge_intervals()
         true_segments = true_ibd.to_list()
-        cdef list detected = []
         tree = self._tree
-        for segment in true_segments:
-            intersections = tree.find(segment[0],segment[1])
-            if len(intersections) > 0:
-                detected.append(segment)
-        return detected
+        TP = 0
+        FP = 0
+        TN = 0
+        FN = 0
+        intersections = iu.IntersectIntervalTrees(self._tree, true_ibd.to_list()) 
+        if len(intersections) > 0:
+            for inter in intersections:
+                TP += inter[1] - inter[0]
+        FP = self.get_total_segments_length() - TP
+        FN = true_ibd.get_total_segments_length() - TP
+        TN = snp_num - (TP + FP + FN)
+        power = TP/(TP+FN)
+        specificity = TN/(TN+FP)
+        FPR = 1 - specificity
+        FDR = FP/(TP+FP)
+        return (TP,FP,TN,FN,power,FDR,FPR)
     
-    cpdef get_detected_segments_inv(cPairIBD self, cPairIBD true_ibd):
-        self_segments = self.to_list()
-        cdef list detected = []
-        for segment in self_segments:
-            intersections = true_ibd.find(segment[0],segment[1])
-            if len(intersections) > 0:
-                detected.append(segment)
-        return detected
+    cpdef stats_win(cPairIBD self, cPairIBD true_ibd, int snp_num, int window_size):
+        if true_ibd == None:
+            return 0
+        self.merge_intervals()
+        true_ibd.merge_intervals()
+        true_segments = true_ibd.to_list()
+        tree = self._tree
+        TP = 0
+        FP = 0
+        TN = 0
+        FN = 0
+        intersections = iu.IntersectIntervalTrees(self._tree, true_ibd.to_list()) 
+        if len(intersections) > 0:
+            for inter in intersections:
+                TP += round((inter[1] - inter[0])/float(window_size))
+        FP = self.get_num_windows(window_size) - TP
+        FN = true_ibd.get_num_windows(window_size) - TP
+        TN = snp_num/window_size - (TP + FP + FN)
+        power = TP/(TP+FN) if TP+FN>0 else 0
+        specificity = TN/(TN+FP) if TN+FP>0 else 1
+        FPR = 1 - specificity
+        FDR = FP/(TP+FP)
+        return (TP,FP,TN,FN,power,FDR,FPR)
+   
+#     cpdef get_detected_segments(cPairIBD self, cPairIBD true_ibd):
+#         true_segments = true_ibd.to_list()
+#         cdef list detected = []
+#         tree = self._tree
+#         for segment in true_segments:
+#             intersections = tree.find(segment[0],segment[1])
+#             if len(intersections) > 0:
+#                 detected.append(segment)
+#         return detected
+#     
+#     cpdef get_detected_segments_inv(cPairIBD self, cPairIBD true_ibd):
+#         self_segments = self.to_list()
+#         cdef list detected = []
+#         for segment in self_segments:
+#             intersections = true_ibd.find(segment[0],segment[1])
+#             if len(intersections) > 0:
+#                 detected.append(segment)
+#         return detected
     
     cpdef add_ibd_from_containers(cPairIBD self, f1, f2, min_ibd_length = 0): 
         for founder in f1._founder_to_tree.keys():
@@ -229,6 +286,34 @@ cdef class cPairIBD:
                             if int(other in yri_inds) != int(founder in yri_inds):
                                 self.add_interval(inter[0], inter[1])
         self.merge_intervals()
+        
+    cpdef filter_by_length(self, min_length, max_length):
+    
+        cdef cpp_vector[interval_item] *new_intervals = new cpp_vector[interval_item]()
+        cdef interval_item p
+        #while i != self._intervals.end():
+        for i in range(self._intervals.size()):
+            p = self._intervals.at(i)
+            if p.length >= min_length and p.length <= max_length:
+                new_intervals.push_back(p) 
+        self._intervals = new_intervals
+        
+    cpdef filter_by_score(self, min_score, max_score):
+    
+        cdef cpp_vector[interval_item] *new_intervals = new cpp_vector[interval_item]()
+        cdef interval_item p
+        #while i != self._intervals.end():
+        for i in range(self._intervals.size()):
+            p = self._intervals.at(i)
+            if p.value >= min_score and p.value <= max_score:
+                new_intervals.push_back(p) 
+        self._intervals = new_intervals
+    
+    cpdef calc_dists(self, dists):
+        cdef interval_item p
+        #while i != self._intervals.end():
+        for i in range(self._intervals.size()):
+            self._intervals.at(i).length = dists[self._intervals.at(i).end] - dists[self._intervals.at(i).start] 
 
 cdef class cPopulationIBD:
     
@@ -276,85 +361,115 @@ cdef class cPopulationIBD:
         for pair in self.keys():
             self.get_value(pair).merge_intervals()
     
-    cpdef calc_accuracy(self):
-        acc = []
-        for pair in self._ibd_dic.keys():
-            acc.append(self._ibd_dic[pair].calc_accuracy())
-        return acc
+    cpdef stats(self, true_ibd, snp_num):
+        stats = []
+        for pair in true_ibd.keys():
+            if self.has_key(pair):
+                stats.append(self.get_value(pair).stats(true_ibd.get_value(pair),snp_num))
+            else:
+                TN = snp_num - true_ibd.get_value(pair).get_total_segments_length()
+                FN = true_ibd.get_value(pair).get_total_segments_length()
+                stats.append((0,0,TN,FN,0,0,0))
+        #print stats 
+        power = numpy.mean([x[4] for x in stats])
+        FDR = numpy.mean([x[5] for x in stats])
+        FPR = numpy.mean([x[6] for x in stats])
+        f = open("stats.txt","w")
+        f.writelines(string.join([str(x) for x in stats],"\n"))
+        f.close()
+        return (power,FDR,FPR)
+    
+    cpdef stats_win(self, true_ibd, snp_num, window_size):
+        stats = []
+        for pair in true_ibd.keys():
+            if self.has_key(pair):
+                stats.append(self.get_value(pair).stats_win(true_ibd.get_value(pair),snp_num,window_size))
+            else:
+                TN = snp_num/window_size - true_ibd.get_value(pair).get_num_windows(window_size)
+                FN = true_ibd.get_value(pair).get_num_windows(window_size)
+                stats.append((0,0,TN,FN,0,0,0))
+        #print stats 
+        power = numpy.mean([x[4] for x in stats])
+        FDR = numpy.mean([x[5] for x in stats])
+        FPR = numpy.mean([x[6] for x in stats])
+        f = open("stats.txt","w")
+        f.writelines(string.join([str(x) for x in stats],"\n"))
+        f.close()
+        return (power,FDR,FPR)
     
     cpdef get_all_segments(self):
         segments = []
         for pair in self._ibd_dic.keys():
-            segments.append(self._ibd_dic[pair].to_list())
+            segments.append(self.get_value(pair).to_list())
         return segments 
     
-    cpdef calc_power_intervals(self, true_ibd, bins=[0,500,1000,1500,2000,2500,10000]):
-        '''
-        bins defines the bin edges, inluding the leftmost and rightmost edges.
-        Returns an array of size len(bins)-1 with the power values:
-        power[i] is the power to detect a segment of length >= bins[i-1] and <bins[i]  
-        '''
-        assert isinstance(true_ibd, cPopulationIBD)
-        detected_all = []
-        detected_segments_lengths = []
-        all_segments_lengths = []
-        for pair in true_ibd.keys():
-            if self.has_key(pair):
-                detected = self._ibd_dic[pair].get_detected_segments(true_ibd.get_value(pair))
-                detected_all += detected
-                detected_segments_lengths += [x[1]-x[0] for x in detected]
-                all_segments_lengths += [x[1]-x[0] for x in true_ibd.get_value(pair).to_list()]
-         
-        (detected_hist, dummy) = numpy.histogram(detected_segments_lengths, bins)
-        (all_hist, dummy) = numpy.histogram(all_segments_lengths, bins)
-        return (numpy.nan_to_num(detected_hist/all_hist)).tolist()
-    
-    cpdef calc_power(self, true_ibd):
-        assert isinstance(true_ibd, cPopulationIBD)
-        detected_all = []
-        for pair in true_ibd.keys():
-            if self.has_key(pair):
-                detected = self._ibd_dic[pair].get_detected_segments(true_ibd.get_value(pair))
-                detected_all += detected
-         
-        if len(detected_all) == 0:
-            return 1
-        return float(len(detected_all)) / len(true_ibd.get_all_segments())
-    
-    cpdef calc_false_positives(self, true_ibd):
-        total_segments_num = 0
-        false_positives = 0
-        for pair in self.keys():
-            segments_num = len(self._ibd_dic[pair].to_list())
-            total_segments_num += segments_num
-            if true_ibd.has_key(pair):
-                detected = self._ibd_dic[pair].get_detected_segments(true_ibd.get_value(pair))
-                false_positives += segments_num - len(detected)
-            else:
-                false_positives += segments_num
-         
-        if total_segments_num == 0:
-            return 1
-        return float(false_positives) / total_segments_num
-    
-    cpdef calc_false_positives_intervals(self, true_ibd, bins=[0,500,1000,1500,2000,2500,10000]):
-        all_segments = []
-        false_positives = []
-        for pair in self.keys():
-            segments = self._ibd_dic[pair].to_list()
-            all_segments += segments
-            if true_ibd.has_key(pair):
-                detected = self._ibd_dic[pair].get_detected_segments_inv(true_ibd.get_value(pair))
-                for seg in detected:
-                    if seg in segments:
-                        segments.remove(seg)
-            false_positives += segments
-         
-        all_segments_lengths = [x[1] - x[0] for x in all_segments]
-        false_positives_lengths = [x[1] - x[0] for x in false_positives]
-        (false_positives_hist, dummy) = numpy.histogram(false_positives_lengths, bins)
-        (all_hist, dummy) = numpy.histogram(all_segments_lengths, bins)
-        return (numpy.nan_to_num(false_positives_hist / all_hist)).tolist()
+#     cpdef calc_power_intervals(self, true_ibd, bins=[0,500,1000,1500,2000,2500,10000]):
+#         '''
+#         bins defines the bin edges, inluding the leftmost and rightmost edges.
+#         Returns an array of size len(bins)-1 with the power values:
+#         power[i] is the power to detect a segment of length >= bins[i-1] and <bins[i]  
+#         '''
+#         assert isinstance(true_ibd, cPopulationIBD)
+#         detected_all = []
+#         detected_segments_lengths = []
+#         all_segments_lengths = []
+#         for pair in true_ibd.keys():
+#             if self.has_key(pair):
+#                 detected = self._ibd_dic[pair].get_detected_segments(true_ibd.get_value(pair))
+#                 detected_all += detected
+#                 detected_segments_lengths += [x[1]-x[0] for x in detected]
+#                 all_segments_lengths += [x[1]-x[0] for x in true_ibd.get_value(pair).to_list()]
+#          
+#         (detected_hist, dummy) = numpy.histogram(detected_segments_lengths, bins)
+#         (all_hist, dummy) = numpy.histogram(all_segments_lengths, bins)
+#         return (numpy.nan_to_num(detected_hist/all_hist)).tolist()
+#     
+#     cpdef calc_power(self, true_ibd):
+#         assert isinstance(true_ibd, cPopulationIBD)
+#         detected_all = []
+#         for pair in true_ibd.keys():
+#             if self.has_key(pair):
+#                 detected = self._ibd_dic[pair].get_detected_segments(true_ibd.get_value(pair))
+#                 detected_all += detected
+#          
+#         if len(detected_all) == 0:
+#             return 1
+#         return float(len(detected_all)) / len(true_ibd.get_all_segments())
+#     
+#     cpdef calc_false_positives(self, true_ibd):
+#         total_segments_num = 0
+#         false_positives = 0
+#         for pair in self.keys():
+#             segments_num = len(self._ibd_dic[pair].to_list())
+#             total_segments_num += segments_num
+#             if true_ibd.has_key(pair):
+#                 detected = self._ibd_dic[pair].get_detected_segments(true_ibd.get_value(pair))
+#                 false_positives += segments_num - len(detected)
+#             else:
+#                 false_positives += segments_num
+#          
+#         if total_segments_num == 0:
+#             return 1
+#         return float(false_positives) / total_segments_num
+#     
+#     cpdef calc_false_positives_intervals(self, true_ibd, bins=[0,500,1000,1500,2000,2500,10000]):
+#         all_segments = []
+#         false_positives = []
+#         for pair in self.keys():
+#             segments = self._ibd_dic[pair].to_list()
+#             all_segments += segments
+#             if true_ibd.has_key(pair):
+#                 detected = self._ibd_dic[pair].get_detected_segments_inv(true_ibd.get_value(pair))
+#                 for seg in detected:
+#                     if seg in segments:
+#                         segments.remove(seg)
+#             false_positives += segments
+#          
+#         all_segments_lengths = [x[1] - x[0] for x in all_segments]
+#         false_positives_lengths = [x[1] - x[0] for x in false_positives]
+#         (false_positives_hist, dummy) = numpy.histogram(false_positives_lengths, bins)
+#         (all_hist, dummy) = numpy.histogram(all_segments_lengths, bins)
+#         return (numpy.nan_to_num(false_positives_hist / all_hist)).tolist()
          
     cpdef filter_by_human_ids(self, human_ids):
         for pair in self.keys():
@@ -365,6 +480,27 @@ cdef class cPopulationIBD:
         for pair in self.keys():
             if pair[0] not in human_ids and pair[1] not in human_ids:
                 self._ibd_dic.pop(pair)
+    
+    cpdef filter_by_human_pairs(self, pairs):
+        for pair in self.keys():
+            if pair not in pairs:
+                self._ibd_dic.pop(pair)
+                
+    cpdef filter_by_length(self, min_length, max_length):
+        for pair in self.keys():
+            self._ibd_dic[pair].filter_by_length(min_length, max_length)
+            if len(self._ibd_dic[pair].to_list()) == 0:
+                self._ibd_dic.pop(pair)
+                
+    cpdef filter_by_score(self, min_score, max_score):
+        for pair in self.keys():
+            self._ibd_dic[pair].filter_by_score(min_score,max_score)
+            if len(self._ibd_dic[pair].to_list()) == 0:
+                self._ibd_dic.pop(pair)
+            
+    cpdef calc_dists(self, dists):
+        for pair in self.keys():
+            self._ibd_dic[pair].calc_dists(dists)
     
     cpdef to_dict(self):
         d = {}
@@ -398,7 +534,7 @@ cdef class cPopulationIBD:
         return "".join(s)
     
     @classmethod
-    def from_string(cls, s):
+    def from_string(cls, s, dists=[]):
         assert isinstance(s, (str,list))
         p = cPopulationIBD()
         if type(s) is str:
@@ -412,19 +548,30 @@ cdef class cPopulationIBD:
             pairIBD = cPairIBD()
             for inter in temp[1].split(";"):
                 points = inter.split(",")
+                score = 0
                 if len(points) > 2:
-                    pairIBD.add_interval(int(points[0]),int(points[1]),float(points[2]))
-                else:
-                    pairIBD.add_interval(int(points[0]),int(points[1]))
+                    score = float(points[2])
+                dist = 0
+                if len(dists) > 0:
+                    if int(points[1]) >= len(dists) or int(points[0]) >= len(dists):
+                        print pair, points, len(dists)
+                    dist = dists[int(points[1])] - dists[int(points[0])]
+                pairIBD.add_interval(int(points[0]),int(points[1]),score,dist)
             p.add_human_pair(pair,pairIBD)
+            p.get_value(pair).calc_dists(dists)
         return p
     
     @classmethod
-    def fast_deserialize(cls, file_name):
+    def fast_deserialize(cls, file_name, gm_file_name=None):
+        dists = []
+        if gm_file_name != None:
+            gm_f = open(gm_file_name)
+            data = gm_f.readlines()
+            dists = [float(x.split(" ")[2]) for x in data]
         f = open(file_name)
         s = f.readlines()
-        ibd = cPopulationIBD.from_string(s)
-        ibd.merge_all()
+        ibd = cPopulationIBD.from_string(s,dists)
+        #ibd.merge_all()
         f.close()
         return ibd
     

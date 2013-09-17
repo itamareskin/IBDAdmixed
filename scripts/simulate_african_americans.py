@@ -21,7 +21,6 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger()
 
 '''
-custom population size function
 '''
 def demo(gen, pop):
     if gen<17 and (pop.subPopSizes()[0] < 8000 or pop.subPopSizes()[1] < 8000):
