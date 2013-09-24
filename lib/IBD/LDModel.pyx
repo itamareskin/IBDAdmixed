@@ -13,7 +13,7 @@ from libc.float cimport DBL_MIN, DBL_MAX
 from libc.limits cimport ULONG_MAX
 from libcpp cimport bool
 from IBD.cIBD import cPairIBD
-from bx.intervals import Interval, IntervalTree
+from intersection import Interval, IntervalTree
 from sys import stdout
 
 cdef double eps = 1e-4
@@ -526,6 +526,7 @@ cdef class LDModel(object):
                 self._ibs[win_idx] = True
             else:
                 self._ibs[win_idx] = False
+            #self._ibs[win_idx] = True
             if self._debug:
                 self._ibs_file.write(str(int(self._ibs[win_idx])) + " ")
         if self._debug:
@@ -1728,9 +1729,13 @@ cdef class LDModel(object):
             i_filt += str(int(np.median([int(x) for x in i[start:end]])))
         
         pairIBD=cPairIBD()
+        #print "sdf"
         for win_i in range(len(i_filt)):
             if i[win_i] == '1':
-                pairIBD.add_interval(win_i*self._win_size,(win_i+1)*self._win_size)
+                #pairIBD.add_interval(win_i*self._win_size,(win_i+1)*self._win_size)
+                lod = 2*(log(ibd_probs[win_i]) - log(non_ibd_probs[win_i])) 
+                #print "probs: " + str(ibd_probs[win_i]) + " " + str(non_ibd_probs[win_i]) + " " + str(lod)
+                pairIBD.add_interval(win_i*self._win_size,(win_i+1)*self._win_size,lod)
         pairIBD.merge_intervals()
         if self._debug:
             self.top_level_print()

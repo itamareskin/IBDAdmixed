@@ -14,7 +14,7 @@ import os
 import string
 from itertools import combinations
 import sys
-from bx.intervals import Interval, IntervalTree
+from IBD.intersection import Interval, IntervalTree
 import subprocess
 import multiprocessing
 import time
@@ -23,7 +23,7 @@ import argparse
 def runPair(args):
     
     (ind1,ind2) = args[0]
-    print "running pair: " + str(ind1) + "," + str(ind2)
+    print "running pair " + str(args[2]) + "/" + str(args[3]) + ":" + str(ind1) + "," + str(ind2)
     queue = args[1]
     
     chr_pairs = [(0,1,0,1),(0,1,1,0),(1,0,0,1),(1,0,1,0)]
@@ -72,7 +72,7 @@ if args.num_snps != None:
 
 pair_list = []
 if args.pairs_file != None:
-    pairs_f = open(dir + "/" + args.pairs_file)
+    pairs_f = open(args.pairs_file)
     pair_list = pairs_f.readlines()
     pair_list = [x.strip("\n") for x in pair_list]
     pair_list = [x.split(",") for x in pair_list]
@@ -127,7 +127,8 @@ h.top_level_alloc_mem()
 # retcode = subprocess.call("germline -silent -bits 50 -min_m 2 -err_hom 0 -err_het 0 < " + file_name + ".germline.run > " + file_name + ".generated.out 2> " + ".generated.err", shell=True)
 with open(args.germlinefile) as germline:
     pairs = {}
-    for counter in range(nr_inds*(nr_inds-1)/2):
+    #for counter in range(nr_inds*(nr_inds-1)/2):
+    while True:
         line = germline.readline()
         if not line:
             break
@@ -138,22 +139,25 @@ with open(args.germlinefile) as germline:
             continue
         if not pairs.has_key(pair):
             pairs[pair] = IntervalTree()
+        #print "adding interval: " + line[5] + "," + line[6]
         pairs[pair].add_interval(Interval(long(line[5]),long(line[6])))
     
 out = open(args.out + ".IBDAdmixed3.dat", 'w')
 out_windows = open(args.out + ".IBDAdmixed3.windows.dat", 'w')
 out_ibdprobs = open(args.out + ".IBDAdmixed3.ibdprobs.dat", 'w')
 out_no_ibdprobs = open(args.out + ".IBDAdmixed3.noibdprobs.dat", 'w')
-num_win = int(num_snps / 25)
+num_win = h.get_num_windows()
 
 manager = multiprocessing.Manager()
 q = manager.Queue()
 if num_cpus == 1:
-    result = map(runPair, [(x, q) for x in pairs.keys()])
+    result = map(runPair, [(x, q, ind, len(pairs)) for ind,x in enumerate(pairs.keys())])
 else:
     pool = multiprocessing.Pool(num_cpus)
-    result = pool.map_async(runPair, [(x, q) for x in pairs.keys()])
+    result = pool.map_async(runPair, [(x, q, ind, len(pairs)) for ind,x in enumerate(pairs.keys())])
 processed=0
+
+print "start processing results from individual pairs"
 while processed < len(pairs.keys()):
     time.sleep(0.5)
     if not q.empty():
@@ -165,7 +169,7 @@ while processed < len(pairs.keys()):
         out_no_ibdprobs.flush()
         #popIBD.add_human_pair((ind1,ind2),cPairIBD.from_list(ibd))
         
-        for win_idx in range(num_win):
+        for win_idx in xrange(num_win):
             start_snp = win_idx * 25
             end_snp = min((win_idx + 1) * 25, num_snps)
             intersect = cPairIBD.from_list(ibd).find(start_snp,end_snp)

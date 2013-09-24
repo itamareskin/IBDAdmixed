@@ -60,4 +60,4 @@ awk 'NR==FNR{a[$3]=FNR; next;}{print $1,a[$2],a[$3]}' HapMap3_CEU_chr2.tped arit
 java -Xmx5000m -Djava.io.tmpdir=. -jar ~/Software/beagle.3.3/beagle.jar data=HapMap3_CEU_chr2.bgl out=HapMap3_CEU_chr2
 
 #run germline
-~/Software/germline-1-5-1/germline -silent -bits 50 -min_m 2 -err_hom 0 -err_het 0
+~/Software/germline-1-5-1/germline -silent -bits 64 -min_m 0.1 -err_hom 4 -err_het 2 -map artificial.admixed.test.genos.map -w_extend

@@ -5,7 +5,7 @@ Created on Jan 11, 2012
 '''
 from __future__ import division
 import cPickle
-from bx.intervals import Interval, IntervalTree
+from intersection import Interval, IntervalTree
 import IntervalUtils as iu 
 import os
 import copy
@@ -41,10 +41,26 @@ cdef class cPairIBD:
         #if intervals != None:
         #    for interval in intervals: 
         #        self.add_interval(interval[0],interval[1])
+        
+    def __dealloc__(self):
+        del self._intervals
 
     property _tree:
         def __get__(cPairIBD self):
             return self.__get_interval_tree()
+    
+#     cdef __get_interval_tree(cPairIBD self):
+#         tree = IntervalTree()
+#         #for interval in self._intervals:
+#         #    tree.add_interval(Interval(interval.first,interval.second))   
+#         #cdef cpp_list[cpp_pair[int,int]].iterator i = self._intervals.begin()
+#         cdef interval_item p 
+#         #while i != self._intervals.end():
+#         for i in range(self._intervals.size()):
+#             p = self._intervals.at(i)
+#             tree.add_interval(Interval(<int>p.start,<int>p.end)) 
+#             #tree.insert(p.start,p.end,p.value)
+#         return tree
     
     cdef __get_interval_tree(cPairIBD self):
         tree = IntervalTree()
@@ -55,21 +71,8 @@ cdef class cPairIBD:
         #while i != self._intervals.end():
         for i in range(self._intervals.size()):
             p = self._intervals.at(i)
-            tree.add_interval(Interval(<int>p.start,<int>p.end)) 
-            #tree.insert(p.start,p.end,p.value)
-        return tree
-    
-    cdef __get_values_interval_tree(cPairIBD self):
-        tree = IntervalTree()
-        #for interval in self._intervals:
-        #    tree.add_interval(Interval(interval.first,interval.second))   
-        #cdef cpp_list[cpp_pair[int,int]].iterator i = self._intervals.begin()
-        cdef interval_item p 
-        #while i != self._intervals.end():
-        for i in range(self._intervals.size()):
-            p = self._intervals.at(i)
             #tree.add_interval(Interval(<int>p.start,<int>p.end)) 
-            tree.insert(p.start,p.end,p.value)
+            tree.insert_interval(Interval(p.start,p.end,p.value))
         return tree
         
     cpdef add_interval(cPairIBD self, int start, int end, float value=0, float length=0):
@@ -103,7 +106,7 @@ cdef class cPairIBD:
         s = []
         intervals = self.to_list()
         for inter in intervals:
-            s += [str(inter[0]),",",str(inter[1]),";"]
+            s += [str(inter[0]),",",str(inter[1]),",",str(inter[2]),";"]
         if len(intervals)>0:
             s.pop()
         return "".join(s)
@@ -124,43 +127,42 @@ cdef class cPairIBD:
     def from_list(cls, list l):
         p = cPairIBD()
         for interval in l:
-            p.add_interval(interval[0],interval[1])
+            if len(interval) > 2:
+                p.add_interval(interval[0],interval[1],interval[2])
+            else:
+                p.add_interval(interval[0],interval[1])
         return p
     
-    cpdef merge_intervals(cPairIBD self):
+    cpdef merge_intervals(cPairIBD self, int ovelap = 1):
         tree = self.__get_interval_tree()
         new_tree = IntervalTree()
-        intervals = cPairIBD._get_tree_list(tree)
+        intervals = tree.to_list()
         for interval in intervals:
-            intersections = [(x.start,x.end) for x in new_tree.find(interval[0]-1,interval[1]+1)]
+            intersections = new_tree.find(interval.start-ovelap,interval.end+ovelap)
             if len(intersections) > 0:
                 #non_intersecting = []; 
                 #new_tree.traverse(lambda x: non_intersecting.append((x.start,x.end)))
-                non_intersecting = cPairIBD._get_tree_list(new_tree)
-                for intersection in intersections:
-                    non_intersecting.remove(intersection)
+                non_intersecting = new_tree.to_list()
+                for curr_intersection in intersections:
+                    non_intersecting.remove(curr_intersection)
                     
                 new_tree = IntervalTree()
                 for non in non_intersecting:
-                    new_tree.add_interval(Interval(non[0],non[1]))
+                    new_tree.insert_interval(non)
                 
                 intersections.append(interval)
-                new_tree.add_interval(Interval(min([x[0] for x in intersections]),max([x[1] for x in intersections])))
+                new_int = Interval(min([x.start for x in intersections]),max([x.end for x in intersections]),max([x.value for x in intersections]))
+                new_tree.insert_interval(new_int)
             else:
-                new_tree.add_interval(Interval(interval[0],interval[1]))
+                new_tree.insert_interval(interval)
         self._intervals.erase(self._intervals.begin(),self._intervals.end())
-        l = cPairIBD._get_tree_list(new_tree)
+        l = new_tree.to_list()
         cdef interval_item p
         for interval in l:
-            p.start = <int>interval[0]
-            p.end = <int>interval[1]
+            p.start = <int>interval.start
+            p.end = <int>interval.end
+            p.value = <float>interval.value
             self._intervals.push_back(p)
-    
-    @classmethod
-    def _get_tree_list(cls,tree):
-        l = []
-        tree.traverse(lambda x: l.append((x.start,x.end)))
-        return l
     
     cpdef get_total_segments_length(self):
         l = self.to_list()
@@ -260,9 +262,9 @@ cdef class cPairIBD:
     cpdef add_ibd_from_containers(cPairIBD self, f1, f2, min_ibd_length = 0): 
         for founder in f1._founder_to_tree.keys():
             if f2._founder_to_tree.has_key(founder):
-                intersection =\
+                intersections =\
                 iu.IntersectIntervalTrees(f1._founder_to_tree[founder], iu.get_interval_list(f2._founder_to_tree[founder]))
-                for inter in intersection:
+                for inter in intersections:
                     if inter[1]-inter[0] > min_ibd_length:
                         self.add_interval(inter[0], inter[1])
         self.merge_intervals()
@@ -270,9 +272,9 @@ cdef class cPairIBD:
     cpdef add_ibd_from_containers_only_admixed(cPairIBD self, f1, f2, min_ibd_length, f1_other, f2_other, ceu_inds, yri_inds): 
         for founder in f1._founder_to_tree.keys():
             if f2._founder_to_tree.has_key(founder):
-                intersection =\
+                intersections =\
                 iu.IntersectIntervalTrees(f1._founder_to_tree[founder], iu.get_interval_list(f2._founder_to_tree[founder]))
-                for inter in intersection:
+                for inter in intersections:
                     if inter[1]-inter[0] > min_ibd_length:
                         f1_other_founders = f1.get_founders_in_interval(inter[0], inter[1])
                         f2_other_founders = f2.get_founders_in_interval(inter[0], inter[1])
@@ -313,7 +315,7 @@ cdef class cPairIBD:
         cdef interval_item p
         #while i != self._intervals.end():
         for i in range(self._intervals.size()):
-            self._intervals.at(i).length = dists[self._intervals.at(i).end] - dists[self._intervals.at(i).start] 
+            self._intervals.at(i).length = dists[min(self._intervals.at(i).end,len(dists)-1)] - dists[min(self._intervals.at(i).start,len(dists)-1)] 
 
 cdef class cPopulationIBD:
     
@@ -357,9 +359,9 @@ cdef class cPopulationIBD:
     cpdef keys(self):
         return self._ibd_dic.keys()
         
-    cpdef merge_all(self):
+    cpdef merge_all(self, int overlap = 1):
         for pair in self.keys():
-            self.get_value(pair).merge_intervals()
+            self.get_value(pair).merge_intervals(overlap)
     
     cpdef stats(self, true_ibd, snp_num):
         stats = []
@@ -553,9 +555,11 @@ cdef class cPopulationIBD:
                     score = float(points[2])
                 dist = 0
                 if len(dists) > 0:
-                    if int(points[1]) >= len(dists) or int(points[0]) >= len(dists):
-                        print pair, points, len(dists)
-                    dist = dists[int(points[1])] - dists[int(points[0])]
+                    start = min(int(points[0]),len(dists)-1)
+                    end = min(int(points[1]),len(dists)-1)
+                    #if int(points[1]) >= len(dists) or int(points[0]) >= len(dists):
+                    #print pair, points, len(dists)
+                    dist = end - start
                 pairIBD.add_interval(int(points[0]),int(points[1]),score,dist)
             p.add_human_pair(pair,pairIBD)
             p.get_value(pair).calc_dists(dists)

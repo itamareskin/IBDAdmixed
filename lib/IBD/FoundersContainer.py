@@ -4,7 +4,7 @@ Created on Jan 13, 2012
 @author: itamares
 '''
 
-from bx.intervals import IntervalTree,Interval
+from intersection import IntervalTree,Interval
 import Infra.IntervalUtils as iu 
 
 class FoundersContainer(object):

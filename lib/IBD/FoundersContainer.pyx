@@ -4,7 +4,7 @@ Created on Jan 13, 2012
 @author: itamares
 '''
 
-from bx.intervals import IntervalTree,Interval
+from intersection import IntervalTree,Interval
 import IntervalUtils as iu 
 
 def from_flat_string_m(class_name, char* s, int start_snp, int snp_num):

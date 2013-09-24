@@ -14,6 +14,7 @@ setup(
     cmdclass = {'build_ext': build_ext},
     ext_modules = [Extension("StringUtils", ["StringUtils.pyx"], language="c++", ), 
                    Extension("FoundersContainer", ["FoundersContainer.pyx"], language="c++"), 
+                   Extension("intersection", ["intersection.pyx"], language="c++", include_dirs=['.'], extra_compile_args=["-g"], extra_link_args=["-g"]),
                    Extension("cIBD", ["cIBD.pyx", "intervalItem.cpp"], language="c++", include_dirs=['.'], extra_compile_args=["-g"], extra_link_args=["-g"]), 
                    Extension("LDModel", ['LDModel.pyx', 'structs.cpp'], language="c++", include_dirs=['.', np.get_include()], extra_compile_args=["-g"], extra_link_args=["-g"])
                    ]
