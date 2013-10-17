@@ -35,6 +35,13 @@ awk 'NR==FNR{pos[$4]=NR; next}{print $1,$3,pos[$6],pos[$7],$8}' AfricanAmericans
 awk 'BEGIN{split("",ibd)}NR==FNR{pos[$4]=NR; next}{h1=$1; h2=$3; p=h1","h2; v=pos[$6]","pos[$7]","$8; if (p in ibd) ibd[p]=ibd[p]";"v; else ibd[p]=v}END{for (i in ibd) print i":"ibd[i]}' AfricanAmericans8.genos.map AfricanAmericans.beagle.out.ibd > beagle4.ibd.txt
 awk 'BEGIN{FS=":"}{split($2,a,";"); split($1,b,","); for (i in a) {split(a[i],c,","); print b[1],b[2],c[1],c[2],"0"}}' AfricanAmericans8.trueibd.dat > AfricanAmericans8.trueibd.long.txt
 
+# get lengths (in cM) of segments in trueibd file
+awk 'NR==FNR{dist[NR]=$3; next;}{split($1,a,":"); split(a[2],b,","); print a[1],dist[b[2]+1]-dist[b[1]+1]}' HapMap3_CEU_chr2.map pseudo.admixed.trueibd.txt | less -S
+# get ibd segments in long format for a pair of individuals
+grep "40,70" psuedo.admixed.newmodel2.IBDAdmixed3.dat | awk 'BEGIN{FS=";"}{split($1,a,":"); split(a[2],b,","); print a[1]; print b[1],b[2],b[3]; for (i=2;i<NF;i++) {split($i,a,","); print a[1],a[2],a[3]}}' |  less -S
+# get ibdprobs in long format for a pair of individuals
+grep "33 41 " artificial.admixed.test.fix.ibdprobs.txt | awk '{for (i=3;i<NF;i++) print (i-3)*25,(i-2)*25,$i}' |  less -S
+
 #run beagle version 4
 awk 'BEGIN{OFS=" "}NR==1{$1="I"; $2="id"; print; next}{for (i=3;i<=NF;i++) {if ($i=="1") $i="A"; else $i="G"}; print;}' AfricanAmericans8.genos.bgl > AfricanAmericans8.genos.fixed.bgl
 awk '{print $2,$4,"A","G"}' AfricanAmericans8.genos.map > AfricanAmericans8.genos.fixed.markers
@@ -57,7 +64,17 @@ awk 'BEGIN{split("",ibd)}NR==FNR{pos[$4]=NR-1; next}{h1=$1; h2=$3; p=h1","h2; v=
 awk 'NR==FNR{a[$3]=FNR; next;}{print $1,a[$2],a[$3]}' HapMap3_CEU_chr2.tped aritficial2.fblock | awk 'NR==FNR{a[$1]=$2;b[$1]=$3;next}{print $2,$3,a[$4],b[$4],$5}' - aritficial2.ibd | awk 'BEGIN{split("",ibd)}{h1=$1; h2=$2; p=h1","h2; v=$3","$4","$5; if (p in ibd) ibd[p]=ibd[p]";"v; else ibd[p]=v}END{for (i in ibd) print i":"ibd[i]}' > parente.ibd.txt
 
 #run beagle model
-java -Xmx5000m -Djava.io.tmpdir=. -jar ~/Software/beagle.3.3/beagle.jar data=HapMap3_CEU_chr2.bgl out=HapMap3_CEU_chr2
+java -Xmx5000m -Djava.io.tmpdir=. -jar ~/Software/beagle.3.3/beagle.jar data=HapMap3_CEU_chr2.bgl out=HapMap3_CEU_chr2.bgl scale=2.0 shift=0
 
-#run germline
+#run germline a lot of results (use this one):
 ~/Software/germline-1-5-1/germline -silent -bits 64 -min_m 0.1 -err_hom 4 -err_het 2 -map artificial.admixed.test.genos.map -w_extend
+#run germline less results: 
+~/Software/germline-1-5-1/germline -silent -bits 50 -min_m 2 -err_hom 0 -err_het 0 -map aritficial3.comp.test.genos.map -w_extend
+
+
+#run simple simulation
+python ~/Projects/ibdadmixed/scripts/simple_simulation.py HapMap3_CEU_chr2.pop HapMap3_YRI_chr2.pop HapMap3_CEU_chr2.map new.artificial.admixed -a 0.2 0.8 -n 100 -i 80 -e 0.005
+
+
+#pairs
+awk 'BEGIN{FS=":"}{print $1}' single.test.trueibd.txt > single.test.trueibd.pairs.txt

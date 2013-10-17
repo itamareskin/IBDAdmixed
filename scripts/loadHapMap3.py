@@ -57,13 +57,32 @@ from simuPOP import *
 
 import os, sys, urllib, gzip, tempfile, shutil, time
 
-HapMap3_pops = ['TSI']
+#HapMap3_pops = ['ASW', 'CEU', 'CHD', 'GIH', 'JPT+CHB', 'LWK', 'MEX', 'MKK', 'TSI', 'YRI']
+HapMap3_pops = ['CEU']
 HapMap3_pop_types = {
-    'TSI': ('','TRIOS')
+    'ASW': ('TRIOS', 'DUOS', 'UNRELATED'),
+    'CEU': ('TRIOS', 'DUOS', 'UNRELATED'),
+    'CHD': ('',),
+    'GIH': ('',),
+    'JPT+CHB': ('',),
+    'LWK': ('',),
+    'MEX': ('TRIOS', 'DUOS'),
+    'MKK': ('TRIOS', 'UNRELATED'),
+    'TSI': ('',),
+    'YRI': ('TRIOS', 'DUOS', 'UNRELATED'),
 }
 
 HapMap3_pop_sizes = {
-    'TSI': 200
+    'ASW': 53,
+    'CEU': 113,
+    'CHD': 85,
+    'GIH': 88,
+    'JPT+CHB': 170,
+    'LWK': 90,
+    'MEX': 50,
+    'MKK': 143,
+    'TSI': 88,
+    'YRI': 113
 }
 
 

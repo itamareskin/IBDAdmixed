@@ -7,16 +7,14 @@ cimport numpy as np
 import os
 import math
 from libc.stdlib cimport malloc, free
-from itertools import islice
+from itertools import islice, combinations_with_replacement
 from libc.math cimport exp, log
 from libc.float cimport DBL_MIN, DBL_MAX
-from libc.limits cimport ULONG_MAX
+from libc.limits cimport ULONG_MAX,LONG_MIN
 from libcpp cimport bool
 from IBD.cIBD import cPairIBD
 from intersection import Interval, IntervalTree
 from sys import stdout
-
-cdef double eps = 1e-4
  
 cdef extern from "string.h":
     char *strncpy(char *dest, char *src, size_t n)
@@ -76,12 +74,16 @@ cdef class LDModel(object):
     Hidden Markov Model for a single ancestral population
     '''
      
-    def __cinit__(self, map_file_name, char* log_dir, int k=1, int g=8, int win_size=25, int max_snp_num=1000000000, bool debug=False):
+    def __cinit__(self, map_file_name, char* log_dir, int k=1, int g=8, int win_size=25, int max_snp_num=1000000000, double eps = 1e-4, double min_score = 0, bool debug=False):
         
         # total number of SNPs to be analyzed
         with open(map_file_name) as map_file:
             data = map_file.readlines()
             self._snp_num = len(data) if len(data) <= max_snp_num else max_snp_num
+        
+        self.eps = eps
+        
+        self._min_score = min_score
         
         # number of haplotypes to analyze
         self._nr_haplos = 0
@@ -150,6 +152,7 @@ cdef class LDModel(object):
             self._inner_probs_file = open(self._log_dir+"/inner.probs.txt","w")
             self._probs_file = open(self._log_dir+"/probs.txt","w")
             self._trans_file = open(self._log_dir+"/trans.txt","w")
+            self._ems_file = open(self._log_dir+"/ems.txt","w") 
             self._ibs_file = open(self._log_dir+"/ibs.txt","w")
         
         self._ibs = <bool *> malloc(self.get_num_windows() * sizeof(bool))
@@ -168,6 +171,7 @@ cdef class LDModel(object):
             self._inner_probs_file.close()
             self._probs_file.close() 
             self._trans_file.close()
+            self._ems_file.close()
             self._ibs_file.close()
     
     cpdef set_ibd_trans_rate(self, anc, t_0_1, t_1_0):
@@ -187,34 +191,34 @@ cdef class LDModel(object):
     cpdef set_chrs(self, char* chr1, char* chr2, char* chr3, char* chr4):
     
         for snp_idx in range(self._snp_num):
-            if int(chr(chr1[snp_idx])) == int(self._allele_0):
+            if int(chr(chr1[snp_idx])) == 0:
                 self._chr1[snp_idx] = 0
             else:
-                if int(chr(chr1[snp_idx])) == int(self._allele_1):
+                if int(chr(chr1[snp_idx])) == 1:
                     self._chr1[snp_idx] = 1
                 else:
                     print "unidentified allele: " + str(int(chr(chr1[snp_idx])))
                     exit(-1)
-            if int(chr(chr2[snp_idx])) == int(self._allele_0):
+            if int(chr(chr2[snp_idx])) == 0:
                 self._chr2[snp_idx] = 0
             else:
-                if int(chr(chr2[snp_idx])) == int(self._allele_1):
+                if int(chr(chr2[snp_idx])) == 1:
                     self._chr2[snp_idx] = 1
                 else:
                     print "unidentified allele: " + str(int(chr(chr2[snp_idx])))
                     exit(-1)
-            if int(chr(chr3[snp_idx])) == int(self._allele_0):
+            if int(chr(chr3[snp_idx])) == 0:
                 self._chr3[snp_idx] = 0
             else:
-                if int(chr(chr3[snp_idx])) == int(self._allele_1):
+                if int(chr(chr3[snp_idx])) == 1:
                     self._chr3[snp_idx] = 1
                 else:
                     print "unidentified allele: " + str(int(chr(chr3[snp_idx])))
                     exit(-1)
-            if int(chr(chr4[snp_idx])) == int(self._allele_0):
+            if int(chr(chr4[snp_idx])) == 0:
                 self._chr4[snp_idx] = 0
             else:
-                if int(chr(chr4[snp_idx])) == int(self._allele_1):
+                if int(chr(chr4[snp_idx])) == 1:
                     self._chr4[snp_idx] = 1
                 else:
                     print "unidentified allele: " + str(int(chr(chr4[snp_idx])))
@@ -239,7 +243,6 @@ cdef class LDModel(object):
         
         with open(map_file_name) as map_file:
             
-            first_read = True
             done = False
             buffer_size = 100
             snp_idx = 0
@@ -249,11 +252,7 @@ cdef class LDModel(object):
                 if done:
                     break
                 # read next buffer_size lines from the file
-                if not first_read:
-                    lines = list(islice(map_file, buffer_size))
-                else:
-                    lines = list(islice(map_file, 1, buffer_size))
-                    first_read = False
+                lines = list(islice(map_file, buffer_size))
                 
                 if len(lines) == 0:
                     done = True
@@ -382,19 +381,18 @@ cdef class LDModel(object):
             model_file.readline()
             line = model_file.readline()
             node = line.split("\t")
-            self._allele_0 = int(node[4])-1 
+            self._allele_0 = int(node[4])
             while True:
                 line = model_file.readline()
                 if len(line) > 0:
                     node = line.split("\t")
                     if len(node) > 4:
                         curr_allele = node[4]
-                        if int(curr_allele)-1 != self._allele_0:
-                            self._allele_1 = int(curr_allele)-1
+                        if int(curr_allele) != self._allele_0:
+                            self._allele_1 = int(curr_allele)
                             break;
         
-        #print "allele_0: " + str(self._allele_0) + "\n"
-        #print "allele_1: " + str(self._allele_1) + "\n"
+        print "allele 0 symbol: " + str(self._allele_0) + "  allele 1 symbol: " + str(self._allele_1)
                 
         with open(file_name) as model_file:
             
@@ -460,7 +458,7 @@ cdef class LDModel(object):
                                 if nodes_prev[k][3] == nodes_curr[j][2]:
                                     edges_num += 1
                             # create states and set emission probability
-                            error_eps = 1e-5  
+                            error_eps = self.eps*1e-1  
                             if int(nodes_curr[j][4]) == self._allele_0:
                                 self._states[anc][layer][j] = create_state(1 - error_eps, error_eps, 0, edges_num)
                                 #self._states[anc][layer][j] = create_state(1, 0, 0, edges_num)
@@ -607,6 +605,17 @@ cdef class LDModel(object):
                 layer_probs.append(self._forward_probs[layer][node])
             probs.append(layer_probs)
         return probs
+    
+    def print_emissions(self):
+        self._ems_file.write("snp ancestry node ems_prob0 ems_prob1\n")
+        for snp_idx in range(self._snp_num):
+            for admx_idx in range(self.K):
+                for node_idx in range(self._layer_state_nums[admx_idx][snp_idx]):
+                    self._ems_file.write(str(snp_idx) + " " + 
+                                  str(admx_idx) + " " +
+                                  str(node_idx) + " " + 
+                                  str(self._states[admx_idx][snp_idx][node_idx].prob_em[0]) + " " + 
+                                  str(self._states[admx_idx][snp_idx][node_idx].prob_em[1]) + "\n") 
     
     def print_transitions(self):
         self._trans_file.write("snp ancestry node next_node transition\n")
@@ -1033,15 +1042,15 @@ cdef class LDModel(object):
                                                                         
                                                                     else:
                                                                         # node_idx1 == node_idx3: #chr(get_likely_allele(self._states[admx_idx1][snp_idx+1][node_idx1])) == chr(get_likely_allele(self._states[admx_idx3][snp_idx+1][node_idx3])): #chr1[snp_idx+1] == chr3[snp_idx+1]:
-                                                                        if admx_idx1 == admx_idx3 and get_likely_allele(self._states[admx_idx1][snp_idx+1][node_idx1]) == get_likely_allele(self._states[admx_idx3][snp_idx+1][node_idx3]):
-                                                                            eps_or_1_eps = 1 - eps
+                                                                        #if admx_idx1 == admx_idx3 and get_likely_allele(self._states[admx_idx1][snp_idx+1][node_idx1]) == get_likely_allele(self._states[admx_idx3][snp_idx+1][node_idx3]):
+                                                                        if admx_idx1 == admx_idx3 and node_idx1 == node_idx3 and prev_node1 == prev_node3:
+                                                                            eps_or_1_eps = 1 # - self.eps
                                                                         else:
-                                                                            eps_or_1_eps = eps
+                                                                            eps_or_1_eps = 0 #self.eps
                                                                         
                                                                         self._forward_probs_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd] += \
                                                                         self._forward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][prev_node1][prev_node2][prev_node3][prev_node4][prev_ibd] * \
-                                                                        min(self._back_trans[admx_idx1][snp_idx+1][node_idx1][prev_node_idx1], 
-                                                                            self._back_trans[admx_idx3][snp_idx+1][node_idx3][prev_node_idx3]) * \
+                                                                        self._back_trans[admx_idx1][snp_idx+1][node_idx1][prev_node_idx1] * \
                                                                         self._back_trans[admx_idx2][snp_idx+1][node_idx2][prev_node_idx2] * \
                                                                         self._back_trans[admx_idx4][snp_idx+1][node_idx4][prev_node_idx4] * \
                                                                         self._emission_prob_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4] * eps_or_1_eps
@@ -1212,9 +1221,9 @@ cdef class LDModel(object):
                                                                         #self._s[snp_idx][ibd][nxt_ibd] 
                                                                     else:
                                                                         if self._chr1[snp_idx+1] == self._chr3[snp_idx+1]:
-                                                                            eps_or_1_eps = 1 - eps
+                                                                            eps_or_1_eps = 1 - self.eps
                                                                         else:
-                                                                            eps_or_1_eps = eps                                
+                                                                            eps_or_1_eps = self.eps                                
                                                                         self._backward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd] += \
                                                                         self._backward_probs_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][nxt_node1][nxt_node2][nxt_node3][nxt_node4][nxt_ibd] * \
                                                                         min(self._trans[admx_idx1][snp_idx][node_idx1][nxt_node_idx1], 
@@ -1337,84 +1346,6 @@ cdef class LDModel(object):
                                     str(self._s[0][win_idx][0][1]) + " " + 
                                     str(self._s[0][win_idx][1][0]) + " " + 
                                     str(self._s[0][win_idx][1][1]) + "\n")
-    
-#    cpdef posterior_decoding_ibd_admx(self, int win_idx):
-#        cdef int max_node_idx1
-#        cdef int max_node_idx2
-#        cdef int max_node_idx3
-#        cdef int max_node_idx4
-#        cdef int max_admx_idx1
-#        cdef int max_admx_idx2
-#        cdef int max_admx_idx3
-#        cdef int max_admx_idx4
-#        cdef int max_ibd
-#        cdef int node_idx1
-#        cdef int node_idx2
-#        cdef int node_idx3
-#        cdef int node_idx4
-#        cdef int admx_idx1
-#        cdef int admx_idx2
-#        cdef int admx_idx3
-#        cdef int admx_idx4
-#        cdef int ibd
-#        cdef double max_gamma
-#        cdef double curr_gamma
-#        cdef int snp_idx_win
-#        a1 = ""
-#        a2 = ""
-#        a3 = ""
-#        a4 = ""
-#        d1 = ""
-#        d2 = ""
-#        d3 = ""
-#        d4 = ""  
-#        i = ""
-#        snp_idx_win = 0
-#        for snp_idx in range(self.start_snp(win_idx), self.end_snp(win_idx)):
-#            #print "calculating posterior decoding in layer: " + str(snp_idx)
-#            max_gamma = -DBL_MAX
-#            max_node_idx1 = -1
-#            max_node_idx2 = -1
-#            max_node_idx3 = -1
-#            max_node_idx4 = -1
-#            max_admx_idx1 = -1
-#            max_admx_idx2 = -1
-#            max_admx_idx3 = -1
-#            max_admx_idx4 = -1
-#            max_ibd = -1
-#            for admx_idx1 in range(self.K):
-#                for admx_idx2 in range(self.K):
-#                    for admx_idx3 in range(self.K):
-#                        for admx_idx4 in range(self.K):
-#                            for node_idx1 in range(self._layer_state_nums[admx_idx1][snp_idx]):
-#                                for node_idx2 in range(self._layer_state_nums[admx_idx2][snp_idx]):
-#                                    for node_idx3 in range(self._layer_state_nums[admx_idx3][snp_idx]):
-#                                        for node_idx4 in range(self._layer_state_nums[admx_idx4][snp_idx]):
-#                                            for ibd in range(2):
-#                                                curr_gamma = self._forward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd] * \
-#                                                self._backward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd]
-#                                                if curr_gamma  > max_gamma:
-#                                                    max_gamma = curr_gamma
-#                                                    max_node_idx1 = node_idx1
-#                                                    max_node_idx2 = node_idx2
-#                                                    max_node_idx3 = node_idx3
-#                                                    max_node_idx4 = node_idx4
-#                                                    max_admx_idx1 = admx_idx1
-#                                                    max_admx_idx2 = admx_idx2
-#                                                    max_admx_idx3 = admx_idx3
-#                                                    max_admx_idx4 = admx_idx4
-#                                                    max_ibd = ibd
-#            a1 += str(max_admx_idx1)
-#            a2 += str(max_admx_idx2)
-#            a3 += str(max_admx_idx3)
-#            a4 += str(max_admx_idx4)
-#            d1 += chr(get_likely_allele(self._states[max_admx_idx1][snp_idx][max_node_idx1]))
-#            d2 += chr(get_likely_allele(self._states[max_admx_idx2][snp_idx][max_node_idx2]))
-#            d3 += chr(get_likely_allele(self._states[max_admx_idx3][snp_idx][max_node_idx3]))
-#            d4 += chr(get_likely_allele(self._states[max_admx_idx4][snp_idx][max_node_idx4]))
-#            i += str(max_ibd)
-#            snp_idx_win += 1
-#        return (a1,a2,a3,a4,d1,d2,d3,d4,i)
     
     cpdef print_inner_probs(self, win_idx):
         snp_idx_win = 0
@@ -1642,32 +1573,24 @@ cdef class LDModel(object):
         cdef int admx_idx3
         cdef int admx_idx4
         cdef int ibd
-        cdef int max_admx_idx1
-        cdef int max_admx_idx2
-        cdef int max_admx_idx3
-        cdef int max_admx_idx4
-        cdef int max_ibd
-        cdef double max_gamma
         cdef double curr_gamma
-        a1 = ""
-        a2 = ""
-        a3 = ""
-        a4 = ""
-        i = ""
+#         a1 = ""
+#         a2 = ""
+#         a3 = ""
+#         a4 = ""
+#         i = ""
         ibd_probs = []
         non_ibd_probs = []
         
+#         anc_pairs = list(combinations_with_replacement(range(self.K),2))
+#         curr_anc1 = [0]*len(anc_pairs)
+#         curr_anc2 = [0]*len(anc_pairs)
+        
+        pairIBD = cPairIBD()
         for win_idx in range(self.get_num_windows()):
             if self._ibs[win_idx]:
-                max_admx_idx1 = -1
-                max_admx_idx2 = -1
-                max_admx_idx3 = -1
-                max_admx_idx4 = -1
-                max_ibd = -1
-                max_gamma = -DBL_MAX
                 curr_ibd_prob = 0
                 curr_non_ibd_prob = 0
-                #print "top level decoding in window %d" % win_idx
                 for admx_idx1 in range(self.K):
                     for admx_idx2 in range(self.K):
                         for admx_idx3 in range(self.K):
@@ -1675,78 +1598,65 @@ cdef class LDModel(object):
                                 for ibd in range(2):
                                     curr_gamma = self._top_level_forward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] * \
                                     self._top_level_backward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd]
-                                    #print str(win_idx) + " " + str(admx_idx1) + " " +  str(admx_idx2) + " " +  str(admx_idx3) + " " +  str(admx_idx4) + " " +  str(ibd) + ": " + str(self._top_level_forward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd]) + " " + str(self._top_level_backward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd]) + " " + str(curr_gamma)
-                                    
                                     if ibd == 0:
                                         curr_non_ibd_prob += curr_gamma
                                     else:
                                         curr_ibd_prob += curr_gamma
-                                        
-                                    if curr_gamma  > max_gamma:
-                                        max_gamma = curr_gamma
-                                        max_admx_idx1 = admx_idx1
-                                        max_admx_idx2 = admx_idx2
-                                        max_admx_idx3 = admx_idx3
-                                        max_admx_idx4 = admx_idx4
-                                        max_ibd = ibd
-                a1 += str(max_admx_idx1)
-                a2 += str(max_admx_idx2)
-                a3 += str(max_admx_idx3)
-                a4 += str(max_admx_idx4)
-                #i += str(max_ibd)
-                
-                #print "win idx: " + str(win_idx) + " ibd_prob: " + str(curr_ibd_prob) +  " no ibd_prob: " + str(curr_non_ibd_prob)
-                if curr_ibd_prob > curr_non_ibd_prob:
-                    #print "win idx: " + str(win_idx) + " ibd"
-                    i += '1'
-                else:
-                    #print "win idx: " + str(win_idx) + " no ibd"
-                    i += '0'
+#                                     curr_anc1[anc_pairs.index(min(admx_idx1,admx_idx2),max(admx_idx1,admx_idx2))] += curr_gamma
+#                                     curr_anc2[anc_pairs.index(min(admx_idx3,admx_idx4),max(admx_idx3,admx_idx4))] += curr_gamma
+#                 #if curr_ibd_prob > curr_non_ibd_prob:
+#                 i += '1'
+#                 #else:
+#                 #    i += '0'
+#                     
+# #                 (curr_a1,curr_a2) = anc_pairs[curr_anc1.index(max(curr_anc1))]
+# #                 (curr_a3,curr_a4) = anc_pairs[curr_anc2.index(max(curr_anc2))]
+#                 a1 += '0' #str(curr_a1)
+#                 a2 += '0' #str(curr_a2)
+#                 a3 += '0' #str(curr_a3)
+#                 a4 += '0' #str(curr_a4)
                     
                 ibd_probs.append(curr_ibd_prob)
                 non_ibd_probs.append(curr_non_ibd_prob)
+                lod = 2*(log(ibd_probs[win_idx]) - log(non_ibd_probs[win_idx])) 
+                if lod > self._min_score:
+                    pairIBD.add_interval(win_idx*self._win_size,(win_idx+1)*self._win_size,lod)
             else:
-                a1+='0'
-                a2+='0'
-                a3+='0'
-                a4+='0'
-                i+='0'
-                ibd_probs.append(0)
-                non_ibd_probs.append(0)
+                ibd_probs.append(LONG_MIN)
+                non_ibd_probs.append(LONG_MIN)
+                
         
-        a1_filt = ''
-        a2_filt = ''
-        a3_filt = ''
-        a4_filt = ''
-        i_filt = ''
-        for ind in range(len(a1)):
-            start = max(0,ind-3)
-            end = min(ind+4,len(a1))
-            a1_filt += str(int(np.median([int(x) for x in a1[start:end]])))
-            a2_filt += str(int(np.median([int(x) for x in a2[start:end]])))
-            a3_filt += str(int(np.median([int(x) for x in a3[start:end]])))
-            a4_filt += str(int(np.median([int(x) for x in a4[start:end]])))
-            i_filt += str(int(np.median([int(x) for x in i[start:end]])))
-        
-        pairIBD=cPairIBD()
-        #print "sdf"
-        for win_i in range(len(i_filt)):
-            if i[win_i] == '1':
-                #pairIBD.add_interval(win_i*self._win_size,(win_i+1)*self._win_size)
-                lod = 2*(log(ibd_probs[win_i]) - log(non_ibd_probs[win_i])) 
-                #print "probs: " + str(ibd_probs[win_i]) + " " + str(non_ibd_probs[win_i]) + " " + str(lod)
-                pairIBD.add_interval(win_i*self._win_size,(win_i+1)*self._win_size,lod)
-        pairIBD.merge_intervals()
+#         a1_filt = ''
+#         a2_filt = ''
+#         a3_filt = ''
+#         a4_filt = ''
+#         i_filt = ''
+#         for ind in range(len(i)):
+#             start = max(0,ind-3)
+#             end = min(ind+4,len(i))
+#             a1_filt += str(int(np.median([int(x) for x in a1[start:end]])))
+#             a2_filt += str(int(np.median([int(x) for x in a2[start:end]])))
+#             a3_filt += str(int(np.median([int(x) for x in a3[start:end]])))
+#             a4_filt += str(int(np.median([int(x) for x in a4[start:end]])))
+#             i_filt += str(int(np.median([int(x) for x in i[start:end]])))
+                      
+        #pairIBD.merge_intervals()
         if self._debug:
             self.top_level_print()
         
-        return (a1_filt,a2_filt,a3_filt,a4_filt,i_filt,pairIBD,ibd_probs,non_ibd_probs)
+        return (pairIBD,ibd_probs,non_ibd_probs)
     
     cdef int start_snp(self, int win_idx):
         return win_idx * self._win_size
     
     cdef int end_snp(self, int win_idx):
         return min((win_idx + 1) * self._win_size, self._snp_num)
+    
+    cpdef int start_position(self):
+        return self._position[0] 
+    
+    cpdef int end_position(self):
+        return self._position[self._snp_num-1]
     
     cpdef int get_num_windows(self):
         cdef int num_win

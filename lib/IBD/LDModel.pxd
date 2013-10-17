@@ -40,6 +40,10 @@ cdef class LDModel(object):
     '''
     ## constants
     
+    cdef double eps
+    
+    cdef double _min_score
+    
     # admixture fraction
     cdef double *_alphas
     # number of generations since begining of admixture
@@ -127,6 +131,7 @@ cdef class LDModel(object):
     cdef _inner_probs_file
     cdef _probs_file
     cdef _trans_file
+    cdef _ems_file
     cdef _ibs_file
     
     cdef char* _prefix_string
@@ -204,6 +209,10 @@ cdef class LDModel(object):
     cdef int start_snp(self, int win_idx)
     
     cdef int end_snp(self, int win_idx)
+    
+    cpdef int start_position(self)
+    
+    cpdef int end_position(self)
     
     cpdef int get_num_windows(self)
     
