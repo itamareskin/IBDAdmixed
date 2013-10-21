@@ -27,6 +27,7 @@ cdef extern from "structs.h":
         double prob_em[2]
         int out_trans_num
         int in_trans_num
+        bool likely_allele
 
     ctypedef struct_state state
     
@@ -74,7 +75,7 @@ cdef class LDModel(object):
     Hidden Markov Model for a single ancestral population
     '''
      
-    def __cinit__(self, map_file_name, char* log_dir, int k=1, int g=8, int win_size=25, int max_snp_num=1000000000, double eps = 1e-4, double min_score = 0, bool debug=False):
+    def __cinit__(self, map_file_name, char* log_dir, char* log_prefix, int k=1, int g=8, int win_size=25, int max_snp_num=1000000000, double eps = 1e-4, double min_score = 0, phased=True, bool debug=False):
         
         # total number of SNPs to be analyzed
         with open(map_file_name) as map_file:
@@ -101,7 +102,11 @@ cdef class LDModel(object):
         
         self._log_dir = log_dir
         
+        self._log_prefix = log_prefix
+        
         self._debug = debug
+        
+        self._phased = phased
         
         # rate of transition from IBD to No-IBD and vice-versa (notation from the Browning paper)
         self._t_0_1 = <double *> malloc(self.K * sizeof(double))
@@ -149,11 +154,11 @@ cdef class LDModel(object):
             
         if self._debug:
             print "DEBUG!"
-            self._inner_probs_file = open(self._log_dir+"/inner.probs.txt","w")
-            self._probs_file = open(self._log_dir+"/probs.txt","w")
-            self._trans_file = open(self._log_dir+"/trans.txt","w")
-            self._ems_file = open(self._log_dir+"/ems.txt","w") 
-            self._ibs_file = open(self._log_dir+"/ibs.txt","w")
+            self._inner_probs_file = open(self._log_dir+"/"+self._log_prefix+".inner.probs.txt","w")
+            self._probs_file = open(self._log_dir+"/"+self._log_prefix+".probs.txt","w")
+            self._trans_file = open(self._log_dir+"/"+self._log_prefix+".trans.txt","w")
+            self._ems_file = open(self._log_dir+"/"+self._log_prefix+".ems.txt","w") 
+            self._ibs_file = open(self._log_dir+"/"+self._log_prefix+".ibs.txt","w")
         
         self._ibs = <bool *> malloc(self.get_num_windows() * sizeof(bool))
         for win_idx in range(self.get_num_windows()):
@@ -311,7 +316,7 @@ cdef class LDModel(object):
 #                         break
         
     
-    def read_haplos(self, file_name):
+    def read_haplos(self, file_name, scramble=False):
     
         if not os.path.exists(file_name):
             print "the file: " + file_name + " does not exist!"
@@ -361,6 +366,15 @@ cdef class LDModel(object):
                     if hap_idx >= self._nr_haplos:
                         done = True;
                         break
+        
+        if scramble:
+            for hap_idx in range(0,self._nr_haplos,2):
+                for snp_idx in range(self._snp_num):
+                    switch = random.randint(0, 1)
+                    if switch == 1:
+                        temp_allele = self._haplos[hap_idx][snp_idx]
+                        self._haplos[hap_idx][snp_idx] = self._haplos[hap_idx+1][snp_idx]
+                        self._haplos[hap_idx+1][snp_idx] = temp_allele
         
         return self._nr_haplos
     
@@ -483,7 +497,7 @@ cdef class LDModel(object):
                                 
                                 # set initial probabilities for every window
                                 if layer % self._win_size == 0:
-                                    self._pi[anc][int(layer / self._win_size)][j] = sum_back_trans
+                                    self._pi[anc][int(layer / self._win_size)][j] = 1 #sum_back_trans
                         
                         if layer > 0:
                             for j in range(len(nodes_prev)):
@@ -512,6 +526,8 @@ cdef class LDModel(object):
                             done = True;
                             break
         print "Finished reading beagle file."
+        if self._debug:
+            self.print_transitions()
                 #p = [self._pi[anc][i] for i in xrange(self._layer_state_nums[anc][0])]
                 #print "pi: " + str(p)  
     
@@ -816,8 +832,6 @@ cdef class LDModel(object):
         cdef int admx_idx2
         cdef int admx_idx3
         cdef int admx_idx4
-        cdef frst_ems
-        cdef scnd_emd
         cdef int snp_idx_win
         #cdef double sum
         
@@ -833,23 +847,28 @@ cdef class LDModel(object):
                                     for node_idx3 in range(self._layer_state_nums[admx_idx3][snp_idx]):
                                         for node_idx4 in range(self._layer_state_nums[admx_idx4][snp_idx]):
                                             #print "admx_idx1: " + str(admx_idx1) + " admx_idx2: " + str(admx_idx2) + " admx_idx3: " + str(admx_idx3) + " admx_idx4: " + str(admx_idx4) + " snp_idx: " + str(snp_idx) + " node_idx1: " + str(node_idx1) + " node_idx2: " + str(node_idx2) + " node_idx3: " + str(node_idx3) + " node_idx4: " + str(node_idx4)
-                                            #if chr1[snp_idx] == chr2[snp_idx]:
-                                            self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4] = \
-                                            self._states[admx_idx1][snp_idx][node_idx1].prob_em[self._chr1[snp_idx]] * \
-                                            self._states[admx_idx2][snp_idx][node_idx2].prob_em[self._chr2[snp_idx]]
-                                            #else:
-                                            #    self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4] = \
-                                            #    self._states[admx_idx1][snp_idx][node_idx1].prob_em[int(chr(chr1[snp_idx]))] * self._states[admx_idx2][snp_idx][node_idx2].prob_em[int(chr(chr2[snp_idx]))] + \
-                                            #    self._states[admx_idx1][snp_idx][node_idx1].prob_em[int(chr(chr2[snp_idx]))] * self._states[admx_idx2][snp_idx][node_idx2].prob_em[int(chr(chr1[snp_idx]))] 
-                                                
-                                            #if chr3[snp_idx] == chr4[snp_idx]:
-                                            self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4] *= \
-                                            self._states[admx_idx3][snp_idx][node_idx3].prob_em[self._chr3[snp_idx]] * \
-                                            self._states[admx_idx4][snp_idx][node_idx4].prob_em[self._chr4[snp_idx]]
-                                            #else:
-                                            #    self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4] *= \
-                                            #    self._states[admx_idx3][snp_idx][node_idx3].prob_em[int(chr(chr3[snp_idx]))] * self._states[admx_idx4][snp_idx][node_idx4].prob_em[int(chr(chr4[snp_idx]))] + \
-                                            #    self._states[admx_idx3][snp_idx][node_idx3].prob_em[int(chr(chr4[snp_idx]))] * self._states[admx_idx4][snp_idx][node_idx4].prob_em[int(chr(chr3[snp_idx]))]
+#                                             if not self._phased:
+                                            if self._chr1[snp_idx] == self._chr2[snp_idx]:
+                                                self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4] = \
+                                                self._states[admx_idx1][snp_idx][node_idx1].prob_em[self._chr1[snp_idx]] * self._states[admx_idx2][snp_idx][node_idx2].prob_em[self._chr2[snp_idx]]
+                                            else:
+                                                self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4] = \
+                                                self._states[admx_idx1][snp_idx][node_idx1].prob_em[self._chr1[snp_idx]] * self._states[admx_idx2][snp_idx][node_idx2].prob_em[self._chr2[snp_idx]] + \
+                                                self._states[admx_idx1][snp_idx][node_idx1].prob_em[self._chr2[snp_idx]] * self._states[admx_idx2][snp_idx][node_idx2].prob_em[self._chr1[snp_idx]]
+                                            
+                                            if self._chr3[snp_idx] == self._chr4[snp_idx]:
+                                                self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4] *= \
+                                                self._states[admx_idx3][snp_idx][node_idx3].prob_em[self._chr3[snp_idx]] * self._states[admx_idx4][snp_idx][node_idx4].prob_em[self._chr4[snp_idx]]
+                                            else:
+                                                self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4] *= \
+                                                self._states[admx_idx3][snp_idx][node_idx3].prob_em[self._chr3[snp_idx]] * self._states[admx_idx4][snp_idx][node_idx4].prob_em[self._chr4[snp_idx]] + \
+                                                self._states[admx_idx3][snp_idx][node_idx3].prob_em[self._chr4[snp_idx]] * self._states[admx_idx4][snp_idx][node_idx4].prob_em[self._chr3[snp_idx]]
+#                                             else:
+#                                             self._emission_prob_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4] = \
+#                                             self._states[admx_idx1][snp_idx][node_idx1].prob_em[self._chr1[snp_idx]] * \
+#                                             self._states[admx_idx2][snp_idx][node_idx2].prob_em[self._chr2[snp_idx]] * \
+#                                             self._states[admx_idx3][snp_idx][node_idx3].prob_em[self._chr3[snp_idx]] * \
+#                                             self._states[admx_idx4][snp_idx][node_idx4].prob_em[self._chr4[snp_idx]]
             snp_idx_win += 1                                                     
     
     cpdef forward_probs_mem_alloc(self, int win_idx):
@@ -977,6 +996,7 @@ cdef class LDModel(object):
         cdef int prev_admx_idx2
         cdef int prev_admx_idx3
         cdef int prev_admx_idx4
+        cdef double temp_mult
         cdef double sum
         cdef double eps_or_1_eps
         cdef int snp_idx_win
@@ -1006,7 +1026,6 @@ cdef class LDModel(object):
         for snp_idx in range(self.start_snp(win_idx), self.end_snp(win_idx)-1):
             #print "calculating forward probs in layer: " + str(snp_idx)
             
-            sum = 0              
             # calculate forward probabilities
             for admx_idx1 in range(self.K):
                 for admx_idx2 in range(self.K):
@@ -1029,35 +1048,210 @@ cdef class LDModel(object):
                                                                     prev_node3 = self._back_trans_idx[admx_idx3][snp_idx+1][node_idx3][prev_node_idx3]
                                                                     prev_node4 = self._back_trans_idx[admx_idx4][snp_idx+1][node_idx4][prev_node_idx4]
                                                                     if ibd == 0:
-                                                                        a=1
                                                                         
-                                                                        self._forward_probs_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd] += \
-                                                                        self._forward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][prev_node1][prev_node2][prev_node3][prev_node4][prev_ibd] * \
-                                                                        self._back_trans[admx_idx1][snp_idx+1][node_idx1][prev_node_idx1] * \
-                                                                        self._back_trans[admx_idx2][snp_idx+1][node_idx2][prev_node_idx2] * \
-                                                                        self._back_trans[admx_idx3][snp_idx+1][node_idx3][prev_node_idx3] * \
-                                                                        self._back_trans[admx_idx4][snp_idx+1][node_idx4][prev_node_idx4] * \
-                                                                        self._emission_prob_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4] #* \
-                                                                        #self._s[snp_idx+1][prev_ibd][ibd]
+                                                                        # both individuals are homozygous
+                                                                        if self._phased or (\
+                                                                        self._states[admx_idx1][snp_idx+1][node_idx1].likely_allele == \
+                                                                        self._states[admx_idx2][snp_idx+1][node_idx2].likely_allele and \
+                                                                        self._states[admx_idx3][snp_idx+1][node_idx3].likely_allele == \
+                                                                        self._states[admx_idx4][snp_idx+1][node_idx4].likely_allele):
+                                                                            self._forward_probs_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd] += \
+                                                                            self._forward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][prev_node1][prev_node2][prev_node3][prev_node4][prev_ibd] * \
+                                                                            self._emission_prob_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4] * \
+                                                                            self._back_trans[admx_idx1][snp_idx+1][node_idx1][prev_node_idx1] * \
+                                                                            self._back_trans[admx_idx2][snp_idx+1][node_idx2][prev_node_idx2] * \
+                                                                            self._back_trans[admx_idx3][snp_idx+1][node_idx3][prev_node_idx3] * \
+                                                                            self._back_trans[admx_idx4][snp_idx+1][node_idx4][prev_node_idx4]
+                                                                        
+                                                                        # first genotype is heterozygous, second is homozygous    
+                                                                        if not self._phased and \
+                                                                        self._states[admx_idx1][snp_idx+1][node_idx1].likely_allele != \
+                                                                        self._states[admx_idx2][snp_idx+1][node_idx2].likely_allele and \
+                                                                        self._states[admx_idx3][snp_idx+1][node_idx3].likely_allele == \
+                                                                        self._states[admx_idx4][snp_idx+1][node_idx4].likely_allele:
+                                                                            self._forward_probs_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd] += \
+                                                                            self._forward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][prev_node1][prev_node2][prev_node3][prev_node4][prev_ibd] * \
+                                                                            self._emission_prob_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4] * \
+                                                                            self._back_trans[admx_idx1][snp_idx+1][node_idx1][prev_node_idx1] * \
+                                                                            self._back_trans[admx_idx2][snp_idx+1][node_idx2][prev_node_idx2] * \
+                                                                            self._back_trans[admx_idx3][snp_idx+1][node_idx3][prev_node_idx3] * \
+                                                                            self._back_trans[admx_idx4][snp_idx+1][node_idx4][prev_node_idx4] * 0.5
+                                                                            
+                                                                            self._forward_probs_ibd_admx[snp_idx_win+1][admx_idx2][admx_idx1][admx_idx3][admx_idx4][node_idx2][node_idx1][node_idx3][node_idx4][ibd] += \
+                                                                            self._forward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][prev_node1][prev_node2][prev_node3][prev_node4][prev_ibd] * \
+                                                                            self._emission_prob_ibd_admx[snp_idx_win+1][admx_idx2][admx_idx1][admx_idx3][admx_idx4][node_idx2][node_idx1][node_idx3][node_idx4] * \
+                                                                            self._back_trans[admx_idx1][snp_idx+1][node_idx1][prev_node_idx1] * \
+                                                                            self._back_trans[admx_idx2][snp_idx+1][node_idx2][prev_node_idx2] * \
+                                                                            self._back_trans[admx_idx3][snp_idx+1][node_idx3][prev_node_idx3] * \
+                                                                            self._back_trans[admx_idx4][snp_idx+1][node_idx4][prev_node_idx4] * 0.5 
+                                                                        
+                                                                        # first genotype is homozygous, second is heterozygous
+                                                                        if not self._phased and \
+                                                                        self._states[admx_idx1][snp_idx+1][node_idx1].likely_allele == \
+                                                                        self._states[admx_idx2][snp_idx+1][node_idx2].likely_allele and \
+                                                                        self._states[admx_idx3][snp_idx+1][node_idx3].likely_allele != \
+                                                                        self._states[admx_idx4][snp_idx+1][node_idx4].likely_allele:
+                                                                            self._forward_probs_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd] += \
+                                                                            self._forward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][prev_node1][prev_node2][prev_node3][prev_node4][prev_ibd] * \
+                                                                            self._emission_prob_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4] * \
+                                                                            self._back_trans[admx_idx1][snp_idx+1][node_idx1][prev_node_idx1] * \
+                                                                            self._back_trans[admx_idx2][snp_idx+1][node_idx2][prev_node_idx2] * \
+                                                                            self._back_trans[admx_idx3][snp_idx+1][node_idx3][prev_node_idx3] * \
+                                                                            self._back_trans[admx_idx4][snp_idx+1][node_idx4][prev_node_idx4] * 0.5
+                                                                            
+                                                                            self._forward_probs_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx4][admx_idx3][node_idx1][node_idx2][node_idx4][node_idx3][ibd] += \
+                                                                            self._forward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][prev_node1][prev_node2][prev_node3][prev_node4][prev_ibd] * \
+                                                                            self._emission_prob_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx4][admx_idx3][node_idx1][node_idx2][node_idx4][node_idx3] * \
+                                                                            self._back_trans[admx_idx1][snp_idx+1][node_idx1][prev_node_idx1] * \
+                                                                            self._back_trans[admx_idx2][snp_idx+1][node_idx2][prev_node_idx2] * \
+                                                                            self._back_trans[admx_idx3][snp_idx+1][node_idx3][prev_node_idx3] * \
+                                                                            self._back_trans[admx_idx4][snp_idx+1][node_idx4][prev_node_idx4] * 0.5
+                                                                        
+                                                                        # both genotypes are heterozygous
+                                                                        if not self._phased and \
+                                                                        self._states[admx_idx1][snp_idx+1][node_idx1].likely_allele != \
+                                                                        self._states[admx_idx2][snp_idx+1][node_idx2].likely_allele and \
+                                                                        self._states[admx_idx3][snp_idx+1][node_idx3].likely_allele != \
+                                                                        self._states[admx_idx4][snp_idx+1][node_idx4].likely_allele:
+                                                                            self._forward_probs_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd] += \
+                                                                            self._forward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][prev_node1][prev_node2][prev_node3][prev_node4][prev_ibd] * \
+                                                                            self._emission_prob_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4] * \
+                                                                            self._back_trans[admx_idx1][snp_idx+1][node_idx1][prev_node_idx1] * \
+                                                                            self._back_trans[admx_idx2][snp_idx+1][node_idx2][prev_node_idx2] * \
+                                                                            self._back_trans[admx_idx3][snp_idx+1][node_idx3][prev_node_idx3] * \
+                                                                            self._back_trans[admx_idx4][snp_idx+1][node_idx4][prev_node_idx4] * 0.25
+                                                                            
+                                                                            self._forward_probs_ibd_admx[snp_idx_win+1][admx_idx2][admx_idx1][admx_idx3][admx_idx4][node_idx2][node_idx1][node_idx3][node_idx4][ibd] += \
+                                                                            self._forward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][prev_node1][prev_node2][prev_node3][prev_node4][prev_ibd] * \
+                                                                            self._emission_prob_ibd_admx[snp_idx_win+1][admx_idx2][admx_idx1][admx_idx3][admx_idx4][node_idx2][node_idx1][node_idx3][node_idx4] * \
+                                                                            self._back_trans[admx_idx1][snp_idx+1][node_idx1][prev_node_idx1] * \
+                                                                            self._back_trans[admx_idx2][snp_idx+1][node_idx2][prev_node_idx2] * \
+                                                                            self._back_trans[admx_idx3][snp_idx+1][node_idx3][prev_node_idx3] * \
+                                                                            self._back_trans[admx_idx4][snp_idx+1][node_idx4][prev_node_idx4] * 0.25
+                                                                            
+                                                                            self._forward_probs_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx4][admx_idx3][node_idx1][node_idx2][node_idx4][node_idx3][ibd] += \
+                                                                            self._forward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][prev_node1][prev_node2][prev_node3][prev_node4][prev_ibd] * \
+                                                                            self._emission_prob_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx4][admx_idx3][node_idx1][node_idx2][node_idx4][node_idx3] * \
+                                                                            self._back_trans[admx_idx1][snp_idx+1][node_idx1][prev_node_idx1] * \
+                                                                            self._back_trans[admx_idx2][snp_idx+1][node_idx2][prev_node_idx2] * \
+                                                                            self._back_trans[admx_idx3][snp_idx+1][node_idx3][prev_node_idx3] * \
+                                                                            self._back_trans[admx_idx4][snp_idx+1][node_idx4][prev_node_idx4] * 0.25
+                                                                            
+                                                                            self._forward_probs_ibd_admx[snp_idx_win+1][admx_idx2][admx_idx1][admx_idx4][admx_idx3][node_idx2][node_idx1][node_idx4][node_idx3][ibd] += \
+                                                                            self._forward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][prev_node1][prev_node2][prev_node3][prev_node4][prev_ibd] * \
+                                                                            self._emission_prob_ibd_admx[snp_idx_win+1][admx_idx2][admx_idx1][admx_idx4][admx_idx3][node_idx2][node_idx1][node_idx4][node_idx3] * \
+                                                                            self._back_trans[admx_idx1][snp_idx+1][node_idx1][prev_node_idx1] * \
+                                                                            self._back_trans[admx_idx2][snp_idx+1][node_idx2][prev_node_idx2] * \
+                                                                            self._back_trans[admx_idx3][snp_idx+1][node_idx3][prev_node_idx3] * \
+                                                                            self._back_trans[admx_idx4][snp_idx+1][node_idx4][prev_node_idx4] * 0.25
+                                                                        
                                                                         
                                                                     else:
-                                                                        # node_idx1 == node_idx3: #chr(get_likely_allele(self._states[admx_idx1][snp_idx+1][node_idx1])) == chr(get_likely_allele(self._states[admx_idx3][snp_idx+1][node_idx3])): #chr1[snp_idx+1] == chr3[snp_idx+1]:
-                                                                        #if admx_idx1 == admx_idx3 and get_likely_allele(self._states[admx_idx1][snp_idx+1][node_idx1]) == get_likely_allele(self._states[admx_idx3][snp_idx+1][node_idx3]):
-                                                                        if admx_idx1 == admx_idx3 and node_idx1 == node_idx3 and prev_node1 == prev_node3:
-                                                                            eps_or_1_eps = 1 # - self.eps
-                                                                        else:
-                                                                            eps_or_1_eps = 0 #self.eps
                                                                         
-                                                                        self._forward_probs_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd] += \
-                                                                        self._forward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][prev_node1][prev_node2][prev_node3][prev_node4][prev_ibd] * \
-                                                                        self._back_trans[admx_idx1][snp_idx+1][node_idx1][prev_node_idx1] * \
-                                                                        self._back_trans[admx_idx2][snp_idx+1][node_idx2][prev_node_idx2] * \
-                                                                        self._back_trans[admx_idx4][snp_idx+1][node_idx4][prev_node_idx4] * \
-                                                                        self._emission_prob_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4] * eps_or_1_eps
-                                                                        #self._s[snp_idx+1][prev_ibd][ibd] * \                 
-                                                sum += self._forward_probs_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd]        
+                                                                        # both individuals are homozygous
+                                                                        if (self._phased or (\
+                                                                        self._states[admx_idx1][snp_idx+1][node_idx1].likely_allele == \
+                                                                        self._states[admx_idx2][snp_idx+1][node_idx2].likely_allele and \
+                                                                        self._states[admx_idx3][snp_idx+1][node_idx3].likely_allele == \
+                                                                        self._states[admx_idx4][snp_idx+1][node_idx4].likely_allele)) and \
+                                                                        admx_idx1 == admx_idx3 and self._states[admx_idx1][snp_idx+1][node_idx1].likely_allele == self._states[admx_idx3][snp_idx+1][node_idx3].likely_allele:
+                                                                        #admx_idx1 == admx_idx3 and node_idx1 == node_idx3 and prev_node1 == prev_node3:
+                                                                            self._forward_probs_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd] += \
+                                                                            self._forward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][prev_node1][prev_node2][prev_node3][prev_node4][prev_ibd] * \
+                                                                            self._emission_prob_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4] * \
+                                                                            0.5*(self._back_trans[admx_idx1][snp_idx+1][node_idx1][prev_node_idx1] + self._back_trans[admx_idx3][snp_idx+1][node_idx3][prev_node_idx3]) * \
+                                                                            self._back_trans[admx_idx2][snp_idx+1][node_idx2][prev_node_idx2] * \
+                                                                            self._back_trans[admx_idx4][snp_idx+1][node_idx4][prev_node_idx4]
+                                                                            
+                                                                        # first genotype is heterozygous, second is homozygous
+                                                                        if not self._phased and \
+                                                                        self._states[admx_idx1][snp_idx+1][node_idx1].likely_allele != \
+                                                                        self._states[admx_idx2][snp_idx+1][node_idx2].likely_allele and \
+                                                                        self._states[admx_idx3][snp_idx+1][node_idx3].likely_allele == \
+                                                                        self._states[admx_idx4][snp_idx+1][node_idx4].likely_allele and \
+                                                                        admx_idx2 == admx_idx3 and node_idx2 == node_idx3 and prev_node1 == prev_node3:
+                                                                            self._forward_probs_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd] += \
+                                                                            self._forward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][prev_node1][prev_node2][prev_node3][prev_node4][prev_ibd] * \
+                                                                            self._emission_prob_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4] * \
+                                                                            self._back_trans[admx_idx1][snp_idx+1][node_idx1][prev_node_idx1] * \
+                                                                            self._back_trans[admx_idx2][snp_idx+1][node_idx2][prev_node_idx2] * \
+                                                                            self._back_trans[admx_idx4][snp_idx+1][node_idx4][prev_node_idx4] * 0.5
+                                                                            
+                                                                            self._forward_probs_ibd_admx[snp_idx_win+1][admx_idx2][admx_idx1][admx_idx3][admx_idx4][node_idx2][node_idx1][node_idx3][node_idx4][ibd] += \
+                                                                            self._forward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][prev_node1][prev_node2][prev_node3][prev_node4][prev_ibd] * \
+                                                                            self._emission_prob_ibd_admx[snp_idx_win+1][admx_idx2][admx_idx1][admx_idx3][admx_idx4][node_idx2][node_idx1][node_idx3][node_idx4] * \
+                                                                            self._back_trans[admx_idx1][snp_idx+1][node_idx1][prev_node_idx1] * \
+                                                                            self._back_trans[admx_idx2][snp_idx+1][node_idx2][prev_node_idx2] * \
+                                                                            self._back_trans[admx_idx4][snp_idx+1][node_idx4][prev_node_idx4] * 0.5 
+                                                                        
+                                                                        # first genotype is homozygous, second is heterozygous
+                                                                        if not self._phased and \
+                                                                        self._states[admx_idx1][snp_idx+1][node_idx1].likely_allele == \
+                                                                        self._states[admx_idx2][snp_idx+1][node_idx2].likely_allele and \
+                                                                        self._states[admx_idx3][snp_idx+1][node_idx3].likely_allele != \
+                                                                        self._states[admx_idx4][snp_idx+1][node_idx4].likely_allele and \
+                                                                        admx_idx1 == admx_idx4 and node_idx1 == node_idx4 and prev_node1 == prev_node3:
+                                                                            self._forward_probs_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd] += \
+                                                                            self._forward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][prev_node1][prev_node2][prev_node3][prev_node4][prev_ibd] * \
+                                                                            self._emission_prob_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4] * \
+                                                                            self._back_trans[admx_idx1][snp_idx+1][node_idx1][prev_node_idx1] * \
+                                                                            self._back_trans[admx_idx2][snp_idx+1][node_idx2][prev_node_idx2] * \
+                                                                            self._back_trans[admx_idx4][snp_idx+1][node_idx4][prev_node_idx4] * 0.5
+                                                                            
+                                                                            self._forward_probs_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx4][admx_idx3][node_idx1][node_idx2][node_idx4][node_idx3][ibd] += \
+                                                                            self._forward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][prev_node1][prev_node2][prev_node3][prev_node4][prev_ibd] * \
+                                                                            self._emission_prob_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx4][admx_idx3][node_idx1][node_idx2][node_idx4][node_idx3] * \
+                                                                            self._back_trans[admx_idx1][snp_idx+1][node_idx1][prev_node_idx1] * \
+                                                                            self._back_trans[admx_idx2][snp_idx+1][node_idx2][prev_node_idx2] * \
+                                                                            self._back_trans[admx_idx4][snp_idx+1][node_idx4][prev_node_idx4] * 0.5
+                                                                        
+                                                                        # both genotypes are heterozygous
+                                                                        if not self._phased and \
+                                                                        self._states[admx_idx1][snp_idx+1][node_idx1].likely_allele != \
+                                                                        self._states[admx_idx2][snp_idx+1][node_idx2].likely_allele and \
+                                                                        self._states[admx_idx3][snp_idx+1][node_idx3].likely_allele != \
+                                                                        self._states[admx_idx4][snp_idx+1][node_idx4].likely_allele and \
+                                                                        admx_idx2 == admx_idx3 and node_idx2 == node_idx3 and admx_idx1 == admx_idx4 and node_idx1 == node_idx4 and prev_node1 == prev_node3:
+                                                                            self._forward_probs_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd] += \
+                                                                            self._forward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][prev_node1][prev_node2][prev_node3][prev_node4][prev_ibd] * \
+                                                                            self._emission_prob_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4] * \
+                                                                            self._back_trans[admx_idx1][snp_idx+1][node_idx1][prev_node_idx1] * \
+                                                                            self._back_trans[admx_idx2][snp_idx+1][node_idx2][prev_node_idx2] * \
+                                                                            self._back_trans[admx_idx4][snp_idx+1][node_idx4][prev_node_idx4] * 0.25
+                                                                            
+                                                                            self._forward_probs_ibd_admx[snp_idx_win+1][admx_idx2][admx_idx1][admx_idx3][admx_idx4][node_idx2][node_idx1][node_idx3][node_idx4][ibd] += \
+                                                                            self._forward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][prev_node1][prev_node2][prev_node3][prev_node4][prev_ibd] * \
+                                                                            self._emission_prob_ibd_admx[snp_idx_win+1][admx_idx2][admx_idx1][admx_idx3][admx_idx4][node_idx2][node_idx1][node_idx3][node_idx4] * \
+                                                                            self._back_trans[admx_idx1][snp_idx+1][node_idx1][prev_node_idx1] * \
+                                                                            self._back_trans[admx_idx2][snp_idx+1][node_idx2][prev_node_idx2] * \
+                                                                            self._back_trans[admx_idx4][snp_idx+1][node_idx4][prev_node_idx4] * 0.25
+                                                                            
+                                                                            self._forward_probs_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx4][admx_idx3][node_idx1][node_idx2][node_idx4][node_idx3][ibd] += \
+                                                                            self._forward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][prev_node1][prev_node2][prev_node3][prev_node4][prev_ibd] * \
+                                                                            self._emission_prob_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx4][admx_idx3][node_idx1][node_idx2][node_idx4][node_idx3] * \
+                                                                            self._back_trans[admx_idx1][snp_idx+1][node_idx1][prev_node_idx1] * \
+                                                                            self._back_trans[admx_idx2][snp_idx+1][node_idx2][prev_node_idx2] * \
+                                                                            self._back_trans[admx_idx4][snp_idx+1][node_idx4][prev_node_idx4] * 0.25
+                                                                            
+                                                                            self._forward_probs_ibd_admx[snp_idx_win+1][admx_idx2][admx_idx1][admx_idx4][admx_idx3][node_idx2][node_idx1][node_idx4][node_idx3][ibd] += \
+                                                                            self._forward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][prev_node1][prev_node2][prev_node3][prev_node4][prev_ibd] * \
+                                                                            self._emission_prob_ibd_admx[snp_idx_win+1][admx_idx2][admx_idx1][admx_idx4][admx_idx3][node_idx2][node_idx1][node_idx4][node_idx3] * \
+                                                                            self._back_trans[admx_idx1][snp_idx+1][node_idx1][prev_node_idx1] * \
+                                                                            self._back_trans[admx_idx2][snp_idx+1][node_idx2][prev_node_idx2] * \
+                                                                            self._back_trans[admx_idx4][snp_idx+1][node_idx4][prev_node_idx4] * 0.25
             
             # rescaling to avoid underflow
+            sum = 0
+            for admx_idx1 in range(self.K):
+                for admx_idx2 in range(self.K):
+                    for admx_idx3 in range(self.K):
+                        for admx_idx4 in range(self.K):
+                            for node_idx1 in range(self._layer_state_nums[admx_idx1][snp_idx+1]):
+                                for node_idx2 in range(self._layer_state_nums[admx_idx2][snp_idx+1]):
+                                    for node_idx3 in range(self._layer_state_nums[admx_idx3][snp_idx+1]):
+                                        for node_idx4 in range(self._layer_state_nums[admx_idx4][snp_idx+1]):
+                                            for ibd in range(2):
+                                                sum += self._forward_probs_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd]
             if sum == 0:
                 sum = 1
             for admx_idx1 in range(self.K):

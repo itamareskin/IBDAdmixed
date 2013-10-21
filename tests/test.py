@@ -15,6 +15,7 @@ from itertools import combinations
 
 dir='/home/eskin/workspace/SimulateAdmixedPopulation/SimulateAdmixedPopulation/Testing/'
 h = LDModel(200,1,8,25)
+h = LDModel(map_file_name = args.mapfile,log_dir = ".",k = K,g = 8,max_snp_num = num_snps,eps = epsilon,min_score = min_score,phased = args.phased,debug = args.debug)
 #h.set_alphas([0.2,0.8])
 #h.read_from_bgl_file("../scripts/HapMap3_CEU_chr1.HapMap3_CEU_chr1.01.bgl.dag",0)
 #h.read_from_bgl_file("../scripts/HapMap3_YRI_chr1.HapMap3_YRI_chr1.01.bgl.dag",1)

@@ -12,6 +12,7 @@ cdef extern from "structs.h":
         double prob_em[2]
         int out_trans_num
         int in_trans_num
+        bool likely_allele
 
     ctypedef struct_state state
     
@@ -127,6 +128,9 @@ cdef class LDModel(object):
     # log directory
     cdef char* _log_dir
     
+    # log prefix
+    cdef char* _log_prefix
+    
     # log files
     cdef _inner_probs_file
     cdef _probs_file
@@ -147,6 +151,8 @@ cdef class LDModel(object):
     cdef char _allele_1
     
     cdef bool _debug
+    
+    cdef bool _phased
             
     ########
     # methods

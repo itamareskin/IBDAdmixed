@@ -45,6 +45,17 @@ def create_artificial_pop(pops, alphas, num_composite, num_ibd_pairs, error_rate
     pop_composite.dvars().geneticMap = pops[0].dvars().geneticMap
     for hap in range(num_composite*2):
         print "simulating haplotype "  + str(hap)
+        
+        breaks = [0]
+        last_break = 0
+        for i in range(1, len(pops[0].lociNames())):
+            if dists[i] - dists[last_break] > 0.2:
+                last_break = i;
+                breaks.append(i)
+        
+        if breaks[len(breaks)-1] < len(pops[0].lociNames()) - 1:
+            breaks.append(len(pops[0].lociNames()) - 1)
+        
         new_hap = []
         for b in range(len(breaks)-1):
             start = breaks[b]
@@ -80,7 +91,7 @@ def create_artificial_pop(pops, alphas, num_composite, num_ibd_pairs, error_rate
     
     return pop_composite
 
-def save_pop(pop):
+def save_pop(pop,scramble=False):
     pop.save(args.out + ".pop")
 
     f = open(args.out + ".trueibd.txt","w")
@@ -92,6 +103,13 @@ def save_pop(pop):
         pos = '%d' % pop.locusPos(pop.locusByName(locus))
         map_out.writelines(pop.chromNames()[0] + " " + locus + " " + str(pop.dvars().geneticMap[locus]) + " " + pos + "\n")
     map_out.close()
+    
+    if scramble:
+        for h1 in pop.individuals():
+            #logger.info("Writing data of individual %d  ", int(h1.info('ind_id')))
+            scrambled = zip(*[(x[1],x[0]) if random.randint(0,1) == 1 else x for x in zip(h1.genotype(0),h1.genotype(1))])
+            h1.setGenotype(list(scrambled[0]), 0)
+            h1.setGenotype(list(scrambled[1]), 1)
     
     data_out = open(args.out + ".genos.dat", 'w')
     count=0
@@ -121,6 +139,7 @@ parser.add_argument("-a", "--set-alphas", nargs='+', dest='alphas', required=Tru
 parser.add_argument("-n", "--num-inds", action="store", dest='num_inds', required=True, help="number of individuals to simulate")
 parser.add_argument("-i", "--ibd-pairs", action="store", dest='ibd_pairs', required=True, help="number of ibd pairs to simulate")
 parser.add_argument("-e", "--error-rate", action="store", dest='error_rate', required=True, help="genotyping error rate to add")
+parser.add_argument("-s", "--scramble", action='store_true', default=False, dest='scramble', help='scramble phase of genotypes')
 
 
 args = parser.parse_args()
@@ -158,19 +177,9 @@ gm_f = open(args.map)
 data = gm_f.readlines()
 dists = [float(x.split(" ")[2]) for x in data]
 
-breaks = [0]
-last_break = 0
-for i in range(1, len(pops[0].lociNames())):
-    if dists[i] - dists[last_break] > 0.2:
-        last_break = i;
-        breaks.append(i)
-
-if breaks[len(breaks)-1] < len(pops[0].lociNames()) - 1:
-    breaks.append(len(pops[0].lociNames()) - 1)
-
 pop_out = create_artificial_pop(pops,alphas,num_inds,ibd_pairs,error_rate)
 print "saving simulated population to file..."
-save_pop(pop_out)
+save_pop(pop_out,scramble=args.scramble)
 
 print "Finished!"
 

@@ -7,6 +7,7 @@ typedef struct struct_state
 	double prob_em[2];
 	int out_trans_num;
 	int in_trans_num;
+	bool likely_allele;
 } state;
 
 typedef struct struct_transition

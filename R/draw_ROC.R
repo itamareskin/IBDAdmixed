@@ -1,6 +1,6 @@
-data = read.table("~/Dropbox/Computational Biology/IBDAdmixed/figures/AfricanAmericans.artifical.roc.txt")
+data = read.table("~/Dropbox/Computational Biology/IBDAdmixed/figures/single.ceu.ceuref.roc.txt")
 colnames(data) = c("Method","Score","Sensitivity","FPR")
-data = data[data$Method %in% c("IBDAdmixed","fastIBD","PARENTE","IBDAdmixed-Single"),]
+data = data[data$Method %in% c("IBDAdmixed","PARENTE","IBDAdmixedTSI","IBDAdmixedUnphased","fastIBD","fastIBD>0.8"),]
 library(ggplot2)
 library("grid")
 #data = data[data$Method == "fastIBD",]
@@ -10,11 +10,11 @@ ggplot(data=data, aes(x=FPR, y=Sensitivity, group=Method, colour=Method, shape=M
   geom_point(size=2.5, fill="white") + 
   xlim(0, 0.002) + 
   ylim(0, 1) +
-  scale_x_continuous(expand = c(0,0), limits = c(0,0.001)) +
+  scale_x_continuous(expand = c(0,0), limits = c(0,0.1)) +
   scale_y_continuous(expand = c(0,0), limits = c(0, 1)) +
   scale_colour_hue(name="Method", l=30)  +
   scale_colour_manual(values=cbPalette) + 
-  scale_shape_manual(name="Method", values=c(22,21,23,24)) +
+  scale_shape_manual(name="Method", values=c(22,21,23,24,25,26)) +
   scale_linetype_discrete(name="Method") +
   xlab("False Positive Rate") + ylab("Sensitivity") +
   theme_bw() + 

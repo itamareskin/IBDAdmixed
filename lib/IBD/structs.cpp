@@ -15,6 +15,10 @@ state create_state(double allele_0_prob, double allele_1_prob, int out_trans_num
     s.prob_em[1] = (double)allele_1_prob;
     s.out_trans_num = out_trans_num;
     s.in_trans_num = in_trans_num;
+    if (allele_0_prob > 0.5)
+    	s.likely_allele = 0;
+    else
+    	s.likely_allele = 1;
     return s;
 }
 

@@ -58,9 +58,12 @@ parser.add_argument("-n", "--max-snps", action="store", dest='num_snps',help="ma
 parser.add_argument("-g", "--debug", action='store_true', default=False, dest='debug', help='print debugging information')
 parser.add_argument("-e", "--epsilon", action='store', dest='epsilon', help='epsilon for error')
 parser.add_argument("-m", "--min-score", action='store', dest='min_score', help='minimal score to report as IBD')
+parser.add_argument("-w", "--win-size", action='store', dest='win_size', help='window size (in number of SNPs)')
 parser.add_argument("--pairs-file", action='store', dest='pairs_file', help='file containing pairs of individuals to process')
 parser.add_argument("--germline-file", action='store', dest='germlinefile', help="germline results file")
 parser.add_argument("--set-ibd-trans", nargs='+', dest='ibd_trans', help='set ibd to no IBD probabilities')
+parser.add_argument("--phased", action='store_true', default=False, dest='phased', help='use phased mode')
+parser.add_argument("--scramble", action='store_true', default=False, dest='scramble', help='scramble phase of genotypes')
 
 args = parser.parse_args()
 
@@ -88,7 +91,11 @@ min_score=0
 if args.min_score != None:
     min_score = float(args.min_score)
     
-h = LDModel(map_file_name = args.mapfile,log_dir = ".",k = K,g = 8,max_snp_num = num_snps,eps = epsilon,min_score = min_score,debug = args.debug)
+win_size=0
+if args.min_score != None:
+    win_size = int(args.win_size)
+    
+h = LDModel(map_file_name = args.mapfile,log_dir = ".",log_prefix = args.out,k = K,g = 8,win_size=win_size,max_snp_num = num_snps,eps = epsilon,min_score = min_score,phased = args.phased,debug = args.debug)
 
 pair_list = []
 if args.pairs_file != None:
@@ -120,7 +127,7 @@ for anc in range(K):
 #h.print_emissions()
 #h.read_from_bgl_file("hapmap.chr1.ceu.hapmap3_r2_b36_fwd.consensus.qc.poly.chr1_ceu.unr.phased.all.bgl.dag",0)
 #h.read_from_bgl_file("hapmap.chr1.yri.hapmap3_r2_b36_fwd.consensus.qc.poly.chr1_yri.unr.phased.all.bgl.dag",1)
-nr_haplos = h.read_haplos(args.genofile)
+nr_haplos = h.read_haplos(args.genofile,scramble=args.scramble)
 nr_inds = nr_haplos/2
 #h.read_from_bgl_file("example.data.bgl.dag",1)
 #h.read_genetic_map(dir + "/genetic_map_chr1_b36.txt")

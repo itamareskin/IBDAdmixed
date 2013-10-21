@@ -66,6 +66,14 @@ awk 'NR==FNR{a[$3]=FNR; next;}{print $1,a[$2],a[$3]}' HapMap3_CEU_chr2.tped arit
 #run beagle model
 java -Xmx5000m -Djava.io.tmpdir=. -jar ~/Software/beagle.3.3/beagle.jar data=HapMap3_CEU_chr2.bgl out=HapMap3_CEU_chr2.bgl scale=2.0 shift=0
 
+#beagle phasing
+java -Xmx5000m -Djava.io.tmpdir=. -jar ~/Software/beagle.3.3/beagle.jar unphased=fileA.bgl missing=? out=example scale=2.0 shift=0
+awk 'NR>2{for (i=3;i<=NF;i++) printf $i" "; printf "\n"}' single.ceu.scrambled.single.ceu.scrambled.genos.bgl.phased > single.ceu.scrambled.single.ceu.scrambled.genos.bgl.phased.tmp
+paste -d" " single.ceu.scrambled.genos.map single.ceu.scrambled.single.ceu.scrambled.genos.bgl.phased.tmp > single.ceu.scrambled.single.ceu.scrambled.genos.bgl.phased.tped
+awk '{print $1,$2,$3,$4,$5,$6}' single.ceu.scrambled.genos.ped > single.ceu.scrambled.single.ceu.scrambled.genos.bgl.phased.tfam
+~/IVUS/plink --noweb --tfile single.ceu.scrambled.single.ceu.scrambled.genos.bgl.phased --recode --out single.ceu.scrambled.genos.phased
+awk '{for (i=7;i<NF;i++) printf $i-1; printf "\n"}' single.ceu.scrambled.genos.phased.ped > single.ceu.scrambled.genos.phased.dat
+
 #run germline a lot of results (use this one):
 ~/Software/germline-1-5-1/germline -silent -bits 64 -min_m 0.1 -err_hom 4 -err_het 2 -map artificial.admixed.test.genos.map -w_extend
 #run germline less results: 
