@@ -1,3 +1,5 @@
+#!/home/nasheran/itamares/Software/anaconda/bin/python
+
 '''
 Created on Mar 23, 2013
 
@@ -19,15 +21,13 @@ import subprocess
 import multiprocessing
 import time
 import argparse
+from htcondor import job, autorun
 
-def runPair(args):
+@job
+def runPair(pair):
     
-    (ind1,ind2) = args[0]
-    print "running pair " + str(args[2]) + "/" + str(args[3]) + ":" + str(ind1) + "," + str(ind2)
-    queue = args[1]
-    
-    chr_pairs = [(0,1,0,1),(0,1,1,0),(1,0,0,1),(1,0,1,0)]
-    
+    (ind1,ind2) = pair
+    #chr_pairs = [(0,1,0,1),(0,1,1,0),(1,0,0,1),(1,0,1,0)]
 #     if len(sys.argv) >= 4:
 #         chr_pairs = [chr_pairs[int(sys.argv[3])]]
     h.top_level_init()
@@ -40,11 +40,16 @@ def runPair(args):
     h.calc_top_level_forward_probs()
     h.calc_top_level_backward_probs()
     (ibd,ibd_probs,no_ibd_probs) = h.posterior_top_level_decoding()
-    #h.top_level_print()
     
-        #popIBD.add_human_pair((ind1,ind2),ibd)
-    queue.put(((ind1,ind2),ibd.to_list(),ibd_probs,no_ibd_probs))
+    return ((ind1,ind2),ibd.to_list(),ibd_probs,no_ibd_probs)
 
+autorun()
+
+def runPairMultiproc(args):
+    (ind1,ind2) = args[0]
+    print "running pair " + str(args[2]) + "/" + str(args[3]) + ":" + str(ind1) + "," + str(ind2)
+    queue = args[1]
+    queue.put(runPair(args[0]))
 
 parser = argparse.ArgumentParser()
 parser.add_argument("mapfile", type=str, help="PLINK-format map file name")
@@ -91,7 +96,7 @@ min_score=0
 if args.min_score != None:
     min_score = float(args.min_score)
     
-win_size=0
+win_size=25
 if args.min_score != None:
     win_size = int(args.win_size)
     
@@ -190,10 +195,10 @@ num_win = h.get_num_windows()
 manager = multiprocessing.Manager()
 q = manager.Queue()
 if num_cpus == 1:
-    result = map(runPair, [(x, q, ind, len(pairs)) for ind,x in enumerate(pairs.keys())])
+    result = map(runPairMultiproc, [(x, q, ind, len(pairs)) for ind,x in enumerate(pairs.keys())])
 else:
     pool = multiprocessing.Pool(num_cpus)
-    result = pool.map_async(runPair, [(x, q, ind, len(pairs)) for ind,x in enumerate(pairs.keys())])
+    result = pool.map_async(runPairMultiproc, [(x, q, ind, len(pairs)) for ind,x in enumerate(pairs.keys())])
 processed=0
 
 print "start processing results from individual pairs"
@@ -208,18 +213,6 @@ while processed < len(pairs.keys()):
         out_no_ibdprobs.write(str(ind1) + " " + str(ind2) + " " + string.join([str(x) for x in no_ibd_probs]," ") + "\n")
         out_no_ibdprobs.flush()
         #popIBD.add_human_pair((ind1,ind2),cPairIBD.from_list(ibd))
-        
-#         for win_idx in xrange(num_win):
-#             start_snp = win_idx * 25
-#             end_snp = min((win_idx + 1) * 25, num_snps)
-#             intersect = cPairIBD.from_list(ibd).find(start_snp,end_snp)
-#             win_ibd = 0
-#             if len(intersect) > 0:
-#                 if (intersect[0].end - intersect[0].start) > 15:
-#                     win_ibd = 1
-#             out_windows.write(" " + str(win_ibd))
-#         out_windows.write("\n") 
-#         out_windows.flush()
         if len(ibd) > 0:
             out.write(str(ind1) + "," + str(ind2) + ":" + cPairIBD.from_list(ibd).to_string() + "\n")
             out.flush()

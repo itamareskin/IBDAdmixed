@@ -122,6 +122,8 @@ cdef class LDModel(object):
     cdef double ******_top_level_forward_probs
     cdef double ******_top_level_backward_probs
     
+    cdef int ******_top_level_backtrack
+    
     # genetic map
     cdef gen_map_entry *_genetic_map 
     
@@ -209,6 +211,8 @@ cdef class LDModel(object):
     cpdef calc_top_level_ems_probs_inner(self)
     
     cpdef calc_top_level_ems_probs(self, int hap_idx1, int hap_idx2, int hap_idx3, int hap_idx4)
+    
+    cpdef calc_top_level_viterbi(self)
     
     cpdef posterior_top_level_decoding(self)
     

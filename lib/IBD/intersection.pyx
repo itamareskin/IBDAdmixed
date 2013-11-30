@@ -20,6 +20,7 @@ preserves all information about the intervals (unlike bitset projection methods)
 #cython: cdivision=True
 
 import operator
+import string
 
 cdef extern from "stdlib.h":
     int ceil(float f)
@@ -56,6 +57,14 @@ cdef inline int imin2(int a, int b):
     return a
 
 cdef float nlog = -1.0 / log(0.5)
+
+def string2IntervalTree(s):
+    t = IntervalTree()
+    l = [string.split(x,",") for x in string.split(s,sep=";")]
+    l = [Interval(int(x[0]),int(x[1])) for x in l]
+    for interval in l:
+        t.add_interval(interval)
+    return t
 
 cdef class IntervalNode:
     """
@@ -408,6 +417,9 @@ cdef class IntervalTree:
     def __cinit__( self ):
         root = None
     
+    def __reduce__( self ):
+        return string2IntervalTree, (self.to_string(),)
+    
     # ---- Position based interfaces -----------------------------------------
     
     def insert( self, int start, int end, object value=None ):
@@ -428,7 +440,23 @@ cdef class IntervalTree:
         if self.root is None:
             return []
         return self.root.find( self.root.minstart, self.root.maxend )
-
+    
+    def to_string( self):
+        """
+        Return a string of all intervals.
+        """
+        l = self.to_list()
+        return string.join([str(x.start)+","+str(x.end) for x in l],";")
+    
+    @classmethod
+    def from_string(cls, s):
+        t = IntervalTree()
+        l = [string.split(x,",") for x in string.split(s,sep=";")]
+        l = [Interval(int(x[0]),int(x[1])) for x in l]
+        for interval in l:
+            t.add_interval(interval)
+        return t
+    
     def find( self, start, end ):
         """
         Return a sorted list of all intervals overlapping [start,end).

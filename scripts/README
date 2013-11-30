@@ -86,3 +86,10 @@ python ~/Projects/ibdadmixed/scripts/simple_simulation.py HapMap3_CEU_chr2.pop H
 
 #pairs
 awk 'BEGIN{FS=":"}{print $1}' single.test.trueibd.txt > single.test.trueibd.pairs.txt
+
+
+
+# run IBDAdmixed
+
+nohup python ~/Projects/ibdadmixed/scripts/runIBDAdmixed.py HapMap3_CEU_chr2.map single.ceu.randb.genos.dat single.ceu.ceurandb.switch10 HapMap3_TSI_chr2.bgl.HapMap3_TSI_chr2.bgl.dag -k 1 -a 1 --pairs-file single.ceu.randb.trueibd.pairs.txt -p 15 --set-ibd-trans 1e-5 1 --germline-file single.ceu.randb.match --phased -m -50 --scramble -w 100 &
+
