@@ -38,9 +38,18 @@ awk 'BEGIN{FS=":"}{split($2,a,";"); split($1,b,","); for (i in a) {split(a[i],c,
 # get lengths (in cM) of segments in trueibd file
 awk 'NR==FNR{dist[NR]=$3; next;}{split($1,a,":"); split(a[2],b,","); print a[1],dist[b[2]+1]-dist[b[1]+1]}' HapMap3_CEU_chr2.map pseudo.admixed.trueibd.txt | less -S
 # get ibd segments in long format for a pair of individuals
-grep "40,70" psuedo.admixed.newmodel2.IBDAdmixed3.dat | awk 'BEGIN{FS=";"}{split($1,a,":"); split(a[2],b,","); print a[1]; print b[1],b[2],b[3]; for (i=2;i<NF;i++) {split($i,a,","); print a[1],a[2],a[3]}}' |  less -S
+grep "40,70" psuedo.admixed.newmodel2.IBDAdmixed3.dat | awk 'BEGIN{FS=";"}{split($1,a,":"); split(a[2],b,","); print a[1]; print b[1],b[2],b[3]; for (i=2;i<NF;i++) {split($i,a,","); print a[1],a[2],a[3]}}' | awk 'BEGIN{p=0}{if ($3>0) {if (($1-p) > 25) print ""; p=$1; print}}' | less -S
 # get ibdprobs in long format for a pair of individuals
 grep "33 41 " artificial.admixed.test.fix.ibdprobs.txt | awk '{for (i=3;i<NF;i++) print (i-3)*25,(i-2)*25,$i}' |  less -S
+
+
+# get lod scores in long format (for histogram)
+cat singe.ceu.trueibd.txt | awk 'BEGIN{FS=";"}{split($1,a,":"); split(a[2],b,","); split(a[1],c,","); print c[1]"."c[2]"\t"b[1]"\t"b[2]"\t"b[3]; for (i=2;i<NF;i++) {split($i,a,","); print c[1]"."c[2]"\t"a[1]"\t"a[2]"\t"a[3]}}' > singe.ceu.trueibd.long.txt
+cat singe.ceu.unphased.ibdadmixed.txt | awk 'BEGIN{FS=";"}{split($1,a,":"); split(a[2],b,","); split(a[1],c,","); print c[1]"."c[2]"\t"b[1]"\t"b[2]"\t"b[3]; for (i=2;i<NF;i++) {split($i,a,","); print c[1]"."c[2]"\t"a[1]"\t"a[2]"\t"a[3]}}' > singe.ceu.unphased.ibdadmixed.long.txt
+~/lecs/Software/bedtools-2.17.0/bin/bedtools intersect -a singe.ceu.trueibd.long.txt -b singe.ceu.unphased.ibdadmixed.long.txt -wb > singe.ceu.unphased.ibd.long.txt
+~/lecs/Software/bedtools-2.17.0/bin/bedtools subtract -b singe.ceu.trueibd.long.txt -a singe.ceu.phased.ibdadmixed.long.txt -A > singe.ceu.phased.noibd.long.txt
+
+
 
 #run beagle version 4
 awk 'BEGIN{OFS=" "}NR==1{$1="I"; $2="id"; print; next}{for (i=3;i<=NF;i++) {if ($i=="1") $i="A"; else $i="G"}; print;}' AfricanAmericans8.genos.bgl > AfricanAmericans8.genos.fixed.bgl

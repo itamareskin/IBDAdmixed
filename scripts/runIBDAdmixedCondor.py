@@ -20,7 +20,7 @@ from IBD.intersection import Interval, IntervalTree
 import subprocess
 import time
 import argparse
-from htcondor import job, autorun, write_dag_atexit
+from htcondor import job, autorun, write_dag_atexit, set_filename
 import shutil
 
 @job(output=None,error=None)
@@ -53,12 +53,12 @@ def runPair(pair, map_file_name, log_dir, log_prefix, K, g, win_size, max_snp_nu
     (ibd,ibd_probs,no_ibd_probs) = h.posterior_top_level_decoding()
 
     (outdir,outfilename) = os.path.split(os.path.abspath(outfile))
-    out = open(outdir + "/pair_outputs/"+ outfilename + "." + str(ind1) + "." + str(ind2) + ".ibdadmixed.txt", 'w')
+    out = open(outdir + "/tmp_outputs."+outfilename+"/"+ outfilename + "." + str(ind1) + "." + str(ind2) + ".ibdadmixed.txt", 'w')
     out.write(str(ind1) + "," + str(ind2) + ":" + ibd.to_string() + "\n")
     out.close()
     
-    out_ibdprobs = open(outdir + "/pair_outputs/"+ outfilename + "." + str(ind1) + "." + str(ind2) + ".ibdprobs.txt", 'w')
-    out_no_ibdprobs = open(outdir + "/pair_outputs/"+ outfilename + "." + str(ind1) + "." + str(ind2) + ".noibdprobs.txt", 'w')
+    out_ibdprobs = open(outdir + "/tmp_outputs."+outfilename+"/"+ outfilename + "." + str(ind1) + "." + str(ind2) + ".ibdprobs.txt", 'w')
+    out_no_ibdprobs = open(outdir + "/tmp_outputs."+outfilename+"/"+ outfilename + "." + str(ind1) + "." + str(ind2) + ".noibdprobs.txt", 'w')
     out_ibdprobs.write(str(ind1) + " " + str(ind2) + " " + string.join([str(x) for x in ibd_probs]," ") + "\n")
     out_no_ibdprobs.write(str(ind1) + " " + str(ind2) + " " + string.join([str(x) for x in no_ibd_probs]," ") + "\n")
     out_ibdprobs.close()
@@ -72,15 +72,15 @@ def combine_results(outfile):
     final_out_ibdprobs = open(outfilename + ".ibdprobs.txt","w")
     final_out_noibdprobs = open(outfilename + ".noibdprobs.txt","w")
     
-    for f in os.listdir(outdir + "/pair_outputs/"):
+    for f in os.listdir(outdir + "/tmp_outputs."+outfilename+"/"):
         if f.endswith(".ibdadmixed.txt"):
             parts = string.split(f, ".")
             ind1 = parts[-4]
             ind2 = parts[-3]
             
-            out = open(outdir + "/pair_outputs/"+ outfilename + "." + str(ind1) + "." + str(ind2) + ".ibdadmixed.txt")
-            out_ibdprobs = open(outdir + "/pair_outputs/"+ outfilename + "." + str(ind1) + "." + str(ind2) + ".ibdprobs.txt")
-            out_no_ibdprobs = open(outdir + "/pair_outputs/"+ outfilename + "." + str(ind1) + "." + str(ind2) + ".noibdprobs.txt")
+            out = open(outdir + "/tmp_outputs."+outfilename+"/"+ outfilename + "." + str(ind1) + "." + str(ind2) + ".ibdadmixed.txt")
+            out_ibdprobs = open(outdir + "/tmp_outputs."+outfilename+"/"+ outfilename + "." + str(ind1) + "." + str(ind2) + ".ibdprobs.txt")
+            out_no_ibdprobs = open(outdir + "/tmp_outputs."+outfilename+"/"+ outfilename + "." + str(ind1) + "." + str(ind2) + ".noibdprobs.txt")
             
             ibd = out.read()
             ibdprobs = out_ibdprobs.read()
@@ -98,8 +98,9 @@ def combine_results(outfile):
     final_out_ibdprobs.close()
     final_out_noibdprobs.close()
     
-    shutil.rmtree(outdir + "/pair_outputs/")
-    
+    shutil.rmtree(outdir + "/tmp_outputs."+outfilename+"/")
+
+
 autorun(write_dag=False)
 
 parser = argparse.ArgumentParser()
@@ -122,11 +123,13 @@ parser.add_argument("--scramble", action='store_true', default=False, dest='scra
 
 args = parser.parse_args()
 
+set_filename(os.path.basename(args.out)+".dag")
+
 logf = open(args.out + ".log", 'w')
 logf.write(str(args) + "\n")
 logf.close()
 
-temp_path = os.path.join(os.path.dirname(args.out),"pair_outputs")
+temp_path = os.path.join(os.path.dirname(args.out),"tmp_outputs."+os.path.basename(args.out))
 if os.path.exists(temp_path):
     shutil.rmtree(temp_path)
 os.makedirs(temp_path)
@@ -196,7 +199,7 @@ for curr_job in jobs:
     
 write_dag_atexit()
 
-retcode = subprocess.call("condor_submit_dag -f runIBDAdmixedCondor.dag", shell=True)
+retcode = subprocess.call("condor_submit_dag -f " + os.path.basename(args.out)+".dag", shell=True)
     
 
     

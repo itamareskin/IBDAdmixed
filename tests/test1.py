@@ -12,7 +12,7 @@ import math
 
 map_file = "/home/eskin/Data/IBDAdmixed/fromLecs/HapMap3_CEU_chr2.map"
 
-true_ibd = cPopulationIBD.fast_deserialize("/home/eskin/Data/IBDAdmixed/fromLecs/New/single.ceu.randb.trueibd.txt", map_file)
+true_ibd = cPopulationIBD.fast_deserialize("/home/eskin/Data/IBDAdmixed/fromLecs2/singe.ceu.trueibd.txt", map_file)
 #true_ibd = cPopulationIBD.fast_deserialize("/home/eskin/Data/IBDAdmixed/fromLecs/artificial.admixed.test.trueibd.txt", map_file)
 #true_ibd.filter_by_length(1.5,10)
 
@@ -34,7 +34,7 @@ gm_f = open(map_file)
 data = gm_f.readlines()
 dists = [float(x.split(" ")[2]) for x in data]
 
-ibd_admixed = cPopulationIBD.fast_deserialize("/home/eskin/Data/IBDAdmixed/fromLecs/New/single.ceu.ceurandb.switch10.ibdadmixed.txt", map_file)
+ibd_admixed = cPopulationIBD.fast_deserialize("/home/eskin/Data/IBDAdmixed/fromLecs2/singe.ceu.unphased.ibdadmixed.txt", map_file)
 #true_ibd.filter_by_human_pairs(ibd_admixed.keys())
 ibd_admixed.filter_by_human_pairs(true_ibd.keys())
 true_ibd.filter_by_human_pairs(ibd_admixed.keys())
@@ -63,7 +63,7 @@ for score in range(-30,max(scores)+1,10):
     ibd_admixed2.calc_dists(dists)
     ibd_admixed2.filter_by_length(0.5,1000)
     (power, FDR, FPR) = ibd_admixed2.stats_win(true_ibd,116430,25)
-    print "IBDAdmixedUnphased", score, power, FPR
+    print "IBDAdmixedUnphased", score, power, FDR, FPR
 
 parente = cPopulationIBD.fast_deserialize("/home/eskin/Data/IBDAdmixed/fromLecs/single.test.genos.parente.ibd.txt", map_file)
 (power, FDR, FPR) = parente.stats_win(true_ibd,116430,25)
