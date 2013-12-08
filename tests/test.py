@@ -49,7 +49,7 @@ h.set_ibs(tree)
 #h.calc_top_level_ems_probs_inner(chr1,chr2,chr1,chr3)
 #for chr_pair in chr_pairs:
 chr_pair = (0,1,0,1)
-h.calc_top_level_ems_probs(ind1*2+chr_pair[0],ind1*2+chr_pair[1],ind2*2+chr_pair[2],ind2*2+chr_pair[3])
+h.calc_top_level_ems_probs(ind1*2+chr_pair[0],ind1*2+chr_pair[1],ind1*2+chr_pair[2],ind2*2+chr_pair[3])
 h.calc_top_level_forward_probs()
 h.calc_top_level_backward_probs()
 (ibd,ibd_probs,no_ibd_probs) = h.posterior_top_level_decoding()

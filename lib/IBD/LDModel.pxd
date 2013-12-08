@@ -117,12 +117,16 @@ cdef class LDModel(object):
     
     cdef double *********_emission_prob_ibd_admx
     
+    cdef double ******_scale_factor
+    
     cdef double ******_top_level_ems_prob
     
     cdef double ******_top_level_forward_probs
     cdef double ******_top_level_backward_probs
     
     cdef int ******_top_level_backtrack
+    
+    cdef double *_top_level_scale_factor
     
     # genetic map
     cdef gen_map_entry *_genetic_map 
@@ -185,6 +189,12 @@ cdef class LDModel(object):
     cdef forward_probs_init(self, int win_idx)
     
     cpdef calc_forward_probs_ibd_admx(self, int win_idx)
+    
+    cpdef scale_factors_mem_alloc(self, int win_idx)
+    
+    cpdef scale_factors_mem_free(self, int win_idx)
+    
+    cdef scale_factors_init(self, int win_idx)
     
     cpdef backward_probs_mem_alloc(self, int win_idx)
     
