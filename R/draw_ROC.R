@@ -1,6 +1,7 @@
-data = read.table("~/Dropbox/Computational Biology/IBDAdmixed/figures/single.ceu.ceuref.roc.txt")
-colnames(data) = c("Method","Score","Sensitivity","FPR")
+data = read.table("~/Dropbox/Computational Biology/IBDAdmixed/figures/ceu.tsi.yri.lwk.unphased3.txt")
+colnames(data) = c("Method","Score","Sensitivity","FDR","FPR")
 data = data[data$Method %in% c("IBDAdmixed","PARENTE","IBDAdmixedTSI","IBDAdmixedUnphased","fastIBD","fastIBD>0.8"),]
+data = data[data$Method %in% c("IBDAdmixedUnphased","fastIBD"),]
 library(ggplot2)
 library("grid")
 #data = data[data$Method == "fastIBD",]
@@ -10,7 +11,7 @@ ggplot(data=data, aes(x=FPR, y=Sensitivity, group=Method, colour=Method, shape=M
   geom_point(size=2.5, fill="white") + 
   xlim(0, 0.002) + 
   ylim(0, 1) +
-  scale_x_continuous(expand = c(0,0), limits = c(0,0.1)) +
+  scale_x_continuous(expand = c(0,0), limits = c(0,0.05)) +
   scale_y_continuous(expand = c(0,0), limits = c(0, 1)) +
   scale_colour_hue(name="Method", l=30)  +
   scale_colour_manual(values=cbPalette) + 

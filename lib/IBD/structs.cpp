@@ -48,3 +48,13 @@ bool get_likely_allele(state s)
         return 1;
 }
 
+double logsumexp(double first, double second) {
+  double max_exp = first, sum = 0.0;
+  if (second > max_exp)
+	  max_exp = second;
+
+  sum = exp(first - max_exp) + exp(second - max_exp);
+
+  return log(sum) + max_exp;
+}
+

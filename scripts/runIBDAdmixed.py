@@ -43,7 +43,7 @@ def runPair(pair):
     
     return ((ind1,ind2),ibd.to_list(),ibd_probs,no_ibd_probs)
 
-autorun()
+#autorun()
 
 def runPairMultiproc(args):
     (ind1,ind2) = args[0]

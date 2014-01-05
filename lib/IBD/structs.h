@@ -27,3 +27,5 @@ state create_state(double allele_0_prob, double allele_1_prob, int out_trans_num
 transition create_transition(double prob, int next_node);
 gen_map_entry create_gen_map_entry(int position, double recomb_rate, double genetic_dist);
 bool get_likely_allele(state s);
+double logsumexp(double first, double second);
+

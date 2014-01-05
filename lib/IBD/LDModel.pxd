@@ -118,6 +118,7 @@ cdef class LDModel(object):
     cdef double *********_emission_prob_ibd_admx
     
     cdef double ******_scale_factor
+    cdef double ******_backward_scale_factor
     
     cdef double ******_top_level_ems_prob
     
@@ -127,7 +128,7 @@ cdef class LDModel(object):
     cdef int ******_top_level_backtrack
     
     cdef double *_top_level_scale_factor
-    
+       
     # genetic map
     cdef gen_map_entry *_genetic_map 
     
@@ -143,10 +144,20 @@ cdef class LDModel(object):
     cdef _trans_file
     cdef _ems_file
     cdef _ibs_file
+    cdef _breakpoints_file
     
     cdef char* _prefix_string
     
     cdef bool* _ibs
+    cdef bool* _ibd_segment_start
+    cdef bool* _ibd_segment_end
+    
+    cdef int* _exact_ibd_starts
+    cdef int* _exact_ibd_ends
+    
+    cdef double* _ibd_probs
+    cdef double* _no_ibd_probs
+    cdef double* _lod_scores
     
     cdef bool* _chr1
     cdef bool* _chr2
@@ -176,31 +187,31 @@ cdef class LDModel(object):
     
     cpdef calc_anc_trans(self)
     
-    cpdef emission_prob_ibd_admx_mem_alloc(self, int win_idx)
+    cpdef emission_prob_ibd_admx_mem_alloc(self, int win_idx, bool post)
     
-    cpdef emission_prob_ibd_admx_mem_free(self, int win_idx)
+    cpdef emission_prob_ibd_admx_mem_free(self, int win_idx, bool post)
     
-    cpdef calc_emission_probs_ibd_admx(self, int win_idx)
+    cpdef calc_emission_probs_ibd_admx(self, int win_idx, bool post)
     
-    cpdef forward_probs_mem_alloc(self, int win_idx)
+    cpdef forward_probs_mem_alloc(self, int win_idx, bool post)
     
-    cpdef forward_probs_mem_free(self, int win_idx)
+    cpdef forward_probs_mem_free(self, int win_idx, bool post)
     
-    cdef forward_probs_init(self, int win_idx)
+    cdef forward_probs_init(self, int win_idx, bool post)
     
-    cpdef calc_forward_probs_ibd_admx(self, int win_idx)
+    cpdef calc_forward_probs_ibd_admx(self, int win_idx, bool post)
     
-    cpdef scale_factors_mem_alloc(self, int win_idx)
+    cpdef scale_factors_mem_alloc(self, int win_idx, bool post)
     
-    cpdef scale_factors_mem_free(self, int win_idx)
+    cpdef scale_factors_mem_free(self, int win_idx, bool post)
     
-    cdef scale_factors_init(self, int win_idx)
+    cdef scale_factors_init(self, int win_idx, bool post)
     
-    cpdef backward_probs_mem_alloc(self, int win_idx)
+    cpdef backward_probs_mem_alloc(self, int win_idx, bool post)
     
-    cdef backward_probs_init(self, int win_idx)
+    cdef backward_probs_init(self, int win_idx, bool post)
     
-    cpdef calc_backward_probs_ibd_admx(self, int win_idx)
+    cpdef calc_backward_probs_ibd_admx(self, int win_idx, bool post)
     
     #cpdef posterior_decoding_ibd_admx(self, int win_idx)
     
@@ -212,15 +223,17 @@ cdef class LDModel(object):
     
     cpdef top_level_print(self)
     
-    cpdef calc_top_level_forward_probs(self)
+    cpdef calc_top_level_forward_probs(self, int start_window, int end_window)
     
-    cpdef calc_top_level_backward_probs(self)
+    cpdef calc_top_level_backward_probs(self, int start_window, int end_window)
     
-    cpdef print_inner_probs(self, win_idx)
+    cpdef print_inner_probs(self, win_idx, bool post)
     
     cpdef calc_top_level_ems_probs_inner(self)
     
     cpdef calc_top_level_ems_probs(self, int hap_idx1, int hap_idx2, int hap_idx3, int hap_idx4)
+    
+    cpdef calc_post_probs(self)
     
     cpdef calc_top_level_viterbi(self)
     
@@ -234,10 +247,10 @@ cdef class LDModel(object):
     
     cpdef int end_position(self)
     
+    cpdef int get_position(self, int snp_num)
+    
     cpdef int get_num_windows(self)
     
     cpdef generate_composite_individuals(self, num_inds)
-    
-        
         
         

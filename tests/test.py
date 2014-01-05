@@ -13,8 +13,9 @@ import math
 import numpy as np
 from itertools import combinations
 from IBD.intersection import Interval, IntervalTree
+import string
 
-h = LDModel(map_file_name = "tests/HapMap3_CEU_chr1.map",log_dir = "tests",log_prefix = "tests", k = 1,g = 8,win_size=100,max_snp_num = 2000,eps = 1e-4,min_score = 0,phased = False,debug = True)
+h = LDModel(map_file_name = "tests/HapMap3_CEU_chr1.map",log_dir = "tests",log_prefix = "tests", k = 1,g = 8,win_size=50,max_snp_num = 500,eps = 1e-4,min_score = -100000000,phased = False,debug = True)
 h.set_alphas([1])
 h.set_ibd_trans_rate(0,1e-5,1)
 #h.set_alphas([0.2,0.8])
@@ -37,6 +38,9 @@ h.generate_random_haps_inplace(0,4)
 ind1 = 0
 ind2 = 1
 
+hap = h.get_haplo(2)[0:200] + h.get_haplo(0)[200:400] + h.get_haplo(2)[400:500]
+h.set_haplo(2,hap)
+
 h.calc_ibd_prior()
 h.calc_anc_trans()
 h.top_level_alloc_mem()
@@ -49,10 +53,16 @@ h.set_ibs(tree)
 #h.calc_top_level_ems_probs_inner(chr1,chr2,chr1,chr3)
 #for chr_pair in chr_pairs:
 chr_pair = (0,1,0,1)
-h.calc_top_level_ems_probs(ind1*2+chr_pair[0],ind1*2+chr_pair[1],ind1*2+chr_pair[2],ind2*2+chr_pair[3])
-h.calc_top_level_forward_probs()
-h.calc_top_level_backward_probs()
+h.calc_top_level_ems_probs(ind1*2+chr_pair[0],ind1*2+chr_pair[1],ind2*2+chr_pair[2],ind2*2+chr_pair[3])
+h.calc_top_level_forward_probs(0,h.get_num_windows())
+h.calc_top_level_backward_probs(0,h.get_num_windows())
 (ibd,ibd_probs,no_ibd_probs) = h.posterior_top_level_decoding()
+#ibd.merge_intervals_fast(merge_diff_vals=True)
+#h.set_ibs(ibd,by_position=False,post=True)
+tree = IntervalTree()
+tree.add_interval(Interval(200,400))
+h.set_ibd_segment_endpoints(tree,by_position=False)
+ibd_new = h.calc_post_probs()
 #chr5 = chr3[0:2000] + chr1[2000:3000] + chr3[3000:5000]
 #out = open(dir+"halpos.test2.dat", 'w')
 #out.writelines(chr1+"\n") 
