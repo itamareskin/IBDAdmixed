@@ -38,6 +38,7 @@ parser.add_argument("-g", "--debug", action='store_true', default=False, dest='d
 parser.add_argument("-e", "--epsilon", action='store', dest='epsilon', help='epsilon for error')
 parser.add_argument("-m", "--min-score", action='store', dest='min_score', help='minimal score to report as IBD')
 parser.add_argument("-w", "--win-size", action='store', dest='win_size', help='window size (in number of SNPs)')
+parser.add_argument("-o", "--offset", action='store', dest='offset', help='offset for windows (in number of SNPs)')
 parser.add_argument("--pairs-file", action='store', dest='pairs_file', help='file containing pairs of individuals to process')
 parser.add_argument("--germline-file", action='store', dest='germlinefile', help="germline results file")
 parser.add_argument("--set-ibd-trans", nargs='+', dest='ibd_trans', help='set ibd to no IBD probabilities')
@@ -49,11 +50,12 @@ if len(sys.argv) > 1:
     args = parser.parse_args()
 
 @job(output="output.txt",error="error.txt")
-def runPair(pair, map_file_name, log_dir, log_prefix, K, g, win_size, max_snp_num, eps, min_score, phased, debug, alphas, ibd_trans, hapmodelfile, outfile, genofile, scramble, pairs):
+def runPair(pair, map_file_name, log_dir, log_prefix, K, g, win_size, max_snp_num, eps, min_score, phased, debug, alphas, ibd_trans, hapmodelfile, outfile, genofile, scramble, pairs, offset):
     
     (ind1,ind2) = pair
+    ibd_all = cPairIBD()
     
-    h = LDModel(map_file_name = map_file_name,log_dir = log_dir,log_prefix = log_prefix,k = K,g = g,win_size=win_size,max_snp_num = max_snp_num,eps = eps,min_score = min_score,phased = phased,debug = debug)
+    h = LDModel(map_file_name = map_file_name,log_dir = log_dir,log_prefix = log_prefix,k = K,g = g,win_size=win_size,max_snp_num = max_snp_num,eps = eps,min_score = min_score,phased = phased,debug = debug,offset=offset)
     h.set_alphas(alphas)
     for k in range(K):
         h.set_ibd_trans_rate(k,float(ibd_trans[k*2]),float(ibd_trans[k*2+1]))
@@ -68,27 +70,27 @@ def runPair(pair, map_file_name, log_dir, log_prefix, K, g, win_size, max_snp_nu
     h.top_level_init()
     h.set_prefix_string(str(ind1) + " " + str(ind2))
     h.set_ibs(pairs[(ind1,ind2)])
-    #h.calc_top_level_ems_probs_inner(chr1,chr2,chr1,chr3)
-    #for chr_pair in chr_pairs:
-    chr_pair = (0,1,0,1)
-    h.calc_top_level_ems_probs(ind1*2+chr_pair[0],ind1*2+chr_pair[1],ind2*2+chr_pair[2],ind2*2+chr_pair[3])
-    h.calc_top_level_forward_probs(0,h.get_num_windows())
-    h.calc_top_level_backward_probs(0,h.get_num_windows())
-    (ibd,ibd_probs,no_ibd_probs) = h.posterior_top_level_decoding()
+    h.smooth_ibs()
     
-    ibd.merge_intervals_fast(merge_diff_vals=True)
-    h.set_ibs(ibd,by_position=False,post=True)
-    ibd_new = h.calc_post_probs()
+    for offset in range(0,win_size,25):
+
+        #h.calc_top_level_ems_probs_inner(chr1,chr2,chr1,chr3)
+        #for chr_pair in chr_pairs:
+        chr_pair = (0,1,0,1)
+        h.calc_top_level_ems_probs(ind1*2+chr_pair[0],ind1*2+chr_pair[1],ind2*2+chr_pair[2],ind2*2+chr_pair[3])
+        h.calc_top_level_forward_probs(0,h.get_num_windows())
+        h.calc_top_level_backward_probs(0,h.get_num_windows())
+        (ibd,ibd_probs,no_ibd_probs) = h.posterior_top_level_decoding()
+        ibd_all.update(ibd,max_val=True)
+    
+#     ibd.merge_intervals_fast(merge_diff_vals=True)
+#     h.set_ibs(ibd,by_position=False,post=True)
+#     ibd_new = h.calc_post_probs()
     
     (outdir,outfilename) = os.path.split(os.path.abspath(outfile))
     
-    out = open(outdir + "/likelihoods.txt", 'w')
-    for i in range(len(total_likelihoods)):
-        out.write(str(before_likelihoods[i]) + " " + str(after_likelihoods[i]) + " " + str(total_likelihoods[i]) + "\n") 
-    out.close()
-    
     out = open(outdir + "/tmp_outputs."+outfilename+"/"+ outfilename + "." + str(ind1) + "." + str(ind2) + ".ibdadmixed.txt", 'w')
-    out.write(str(ind1) + "," + str(ind2) + ":" + ibd.to_string() + "\n")
+    out.write(str(ind1) + "," + str(ind2) + ":" + ibd_all.to_string() + "\n")
     out.close()
     
     out_ibdprobs = open(outdir + "/tmp_outputs."+outfilename+"/"+ outfilename + "." + str(ind1) + "." + str(ind2) + ".ibdprobs.txt", 'w')
@@ -172,6 +174,10 @@ win_size=25
 if args.min_score != None:
     win_size = int(args.win_size)
     
+offset=0
+if args.offset != None:
+    offset = int(args.offset)
+    
 #h = LDModel(map_file_name = args.mapfile,log_dir = ".",log_prefix = args.out,k = K,g = 8,win_size=win_size,max_snp_num = num_snps,eps = epsilon,min_score = min_score,phased = args.phased,debug = args.debug)
 
 pair_list = []
@@ -209,7 +215,7 @@ if args.germlinefile != None:
 if args.condor:
     jobs = []
     for ind,x in enumerate(pairs.keys()):
-        curr_job = runPair.queue(x,args.mapfile,".",args.out,K,8,win_size,num_snps,epsilon,min_score,args.phased,args.debug,alphas,args.ibd_trans,args.hapmodelfile,args.out,args.genofile,args.scramble,pairs)
+        curr_job = runPair.queue(x,args.mapfile,".",args.out,K,8,win_size,num_snps,epsilon,min_score,args.phased,args.debug,alphas,args.ibd_trans,args.hapmodelfile,args.out,args.genofile,args.scramble,pairs,offset)
         jobs.append(curr_job)
     
     last_job = combine_results.queue(args.out)
@@ -220,7 +226,7 @@ if args.condor:
     
     retcode = subprocess.call("condor_submit_dag -f " + os.path.basename(args.out)+".dag", shell=True)
 else:    
-    runPairPartial = partial(runPair, map_file_name=args.mapfile, log_dir=".", log_prefix=args.out, K=K, g=8, win_size=win_size, max_snp_num=num_snps, eps=epsilon, min_score=min_score, phased=args.phased, debug=args.debug, alphas=alphas, ibd_trans=args.ibd_trans, hapmodelfile=args.hapmodelfile, outfile=args.out, genofile=args.genofile, scramble=args.scramble, pairs=pairs)
+    runPairPartial = partial(runPair, map_file_name=args.mapfile, log_dir=".", log_prefix=args.out, K=K, g=8, win_size=win_size, max_snp_num=num_snps, eps=epsilon, min_score=min_score, phased=args.phased, debug=args.debug, alphas=alphas, ibd_trans=args.ibd_trans, hapmodelfile=args.hapmodelfile, outfile=args.out, genofile=args.genofile, scramble=args.scramble, pairs=pairs, offset=offset)
     if num_cpus == 1:
         result = map(runPairPartial, [x for ind,x in enumerate(pairs.keys())])
         print result

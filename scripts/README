@@ -96,7 +96,8 @@ python ~/Projects/ibdadmixed/scripts/simple_simulation.py HapMap3_CEU_chr2.pop H
 #pairs
 awk 'BEGIN{FS=":"}{print $1}' single.test.trueibd.txt > single.test.trueibd.pairs.txt
 
-
+# true ibd segment length in cM
+awk 'NR==FNR{pos[NR]=$3; next;}{split($1,a,":"); split(a[2],b,","); print $1","pos[b[2]]-pos[b[1]]}' single.ceu.tsi.genos.map single.ceu.tsi.trueibd.txt
 
 # run IBDAdmixed
 

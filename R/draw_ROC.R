@@ -1,19 +1,26 @@
-data = read.table("~/Dropbox/Computational Biology/IBDAdmixed/figures/ceu.tsi.yri.lwk.unphased3.txt")
-colnames(data) = c("Method","Score","Sensitivity","FDR","FPR")
-data = data[data$Method %in% c("IBDAdmixed","PARENTE","IBDAdmixedTSI","IBDAdmixedUnphased","fastIBD","fastIBD>0.8"),]
-data = data[data$Method %in% c("IBDAdmixedUnphased","fastIBD"),]
+data = read.table("~/Dropbox/Computational Biology/IBDAdmixed/figures/ceu.tsi.yri.lwk.jpt.chb.unphased1.txt")
+colnames(data) = c("Method","Score","segs","Sensitivity","FDR","FPR")
+data = data[data$Method %in% c("IBDAdmixed","PARENTE","IBDAdmixed>0.8","fastIBD","fastIBD>0.8"),]
+data = data[data$Method %in% c("IBDAdmixed","IBDAdmixed>0.8","fastIBD","fastIBD>0.8","PARENTE"),]
 library(ggplot2)
 library("grid")
-#data = data[data$Method == "fastIBD",]
 cbPalette <- c("#56B4E9", "#0072B2", "#009E73", "#E69F00", "#D55E00", "#CC79A7")
+new.data = data[data$Method == "IBDAdmixed",]
+new.data = rbind(new.data, new.data[1:2, ])
+new.data$FDR[29] = 0
+new.data$Sensitivity[29] = 0
+new.data$FDR[30] = 1
+new.data$Sensitivity[30] = 0
+
+idxs = chull(new.data$FDR,-new.data$Sensitivity)
 ggplot(data=data, aes(x=FPR, y=Sensitivity, group=Method, colour=Method, shape=Method)) + 
   geom_line(size=1) + 
   geom_point(size=2.5, fill="white") + 
   xlim(0, 0.002) + 
   ylim(0, 1) +
-  scale_x_continuous(expand = c(0,0), limits = c(0,0.05)) +
+  scale_x_continuous(expand = c(0,0), limits = c(0,0.1)) +
   scale_y_continuous(expand = c(0,0), limits = c(0, 1)) +
-  scale_colour_hue(name="Method", l=30)  +
+  scale_colour_hue(name="Method", l=30) +
   scale_colour_manual(values=cbPalette) + 
   scale_shape_manual(name="Method", values=c(22,21,23,24,25,26)) +
   scale_linetype_discrete(name="Method") +

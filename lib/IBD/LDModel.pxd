@@ -63,6 +63,8 @@ cdef class LDModel(object):
     
     cdef char** _haplos
     
+    cdef char** _true_ancs
+    
     # probability of IBD of each ancestry in the first position (_ibd_prior[anc][0] is the prob. of no IBS in ancestry anc, _ibd_prior[anc][1] is the probability of IBS in ancestry anc)
     cdef double **_ibd_prior
     
@@ -151,6 +153,7 @@ cdef class LDModel(object):
     cdef bool* _ibs
     cdef bool* _ibd_segment_start
     cdef bool* _ibd_segment_end
+    cdef int _tot_ibs_windows
     
     cdef int* _exact_ibd_starts
     cdef int* _exact_ibd_ends
@@ -170,6 +173,8 @@ cdef class LDModel(object):
     cdef bool _debug
     
     cdef bool _phased
+    
+    cdef int _offset
             
     ########
     # methods
@@ -182,6 +187,8 @@ cdef class LDModel(object):
     cpdef set_chrs(self, char* chr1, char* chr2, char* chr3, char* chr4)
     
     cpdef generate_random_hap(self, int anc)
+    
+    cpdef generate_admixed_random_hap(self)
     
     cpdef calc_ibd_prior(self)
     

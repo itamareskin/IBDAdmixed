@@ -11,6 +11,7 @@ import os
 import copy
 import numpy
 import string
+import math
 from libcpp.pair cimport pair as cpp_pair
 from libcpp.vector cimport vector as cpp_vector
 #from libcpp.map cimport map as cpp_map 
@@ -96,11 +97,11 @@ cdef class cPairIBD:
         values = self.__get_values_interval_tree().find(start,end)
         return zip(intervals,values)
     
-    cpdef update(cPairIBD self, cPairIBD other_ibd):
+    cpdef update(cPairIBD self, cPairIBD other_ibd, max_val=False):
         cdef list intervals = other_ibd.to_list()
         for interval in intervals:
-            self.add_interval(interval[0], interval[1])
-        self.merge_intervals()
+            self.add_interval(interval[0], interval[1], interval[2], interval[3])
+        self.merge_intervals_fast(max_val=max_val)
     
     cpdef to_string(cPairIBD self):
         s = []
@@ -273,7 +274,6 @@ cdef class cPairIBD:
             return 0
         #self.merge_intervals()
         #true_ibd.merge_intervals()
-        true_segments = true_ibd.to_list()
         tree = self._tree
         TP = 0
         FP = 0
@@ -294,16 +294,16 @@ cdef class cPairIBD:
         else:
             FDR = FP/(TP+FP)
         return (TP,FP,TN,FN,power,FDR,FPR)
-   
-#     cpdef get_detected_segments(cPairIBD self, cPairIBD true_ibd):
-#         true_segments = true_ibd.to_list()
-#         cdef list detected = []
-#         tree = self._tree
-#         for segment in true_segments:
-#             intersections = tree.find(segment[0],segment[1])
-#             if len(intersections) > 0:
-#                 detected.append(segment)
-#         return detected
+    
+    cpdef get_detected_segments(cPairIBD self, cPairIBD true_ibd):
+        true_segments = true_ibd.to_list()
+        cdef list detected = []
+        tree = self._tree
+        for segment in true_segments:
+            intersections = tree.find(segment[0],segment[1])
+            if len(intersections) > 0:
+                detected.append(segment)
+        return detected
 #     
 #     cpdef get_detected_segments_inv(cPairIBD self, cPairIBD true_ibd):
 #         self_segments = self.to_list()
@@ -363,6 +363,28 @@ cdef class cPairIBD:
         for i in range(self._intervals.size()):
             p = self._intervals.at(i)
             if p.value >= min_score and p.value <= max_score:
+                new_intervals.push_back(p) 
+        self._intervals = new_intervals
+        
+    cpdef filter_by_other_ibd(self, cPairIBD other_ibd):
+    
+        cdef cpp_vector[interval_item] *new_intervals = new cpp_vector[interval_item]()
+        cdef interval_item p
+        #while i != self._intervals.end():
+        for i in range(self._intervals.size()):
+            p = self._intervals.at(i)
+            if len(other_ibd.find(p.start,p.end)) > 0:
+                new_intervals.push_back(p) 
+        self._intervals = new_intervals
+        
+    cpdef filter_out_other_ibd(self, cPairIBD other_ibd):
+    
+        cdef cpp_vector[interval_item] *new_intervals = new cpp_vector[interval_item]()
+        cdef interval_item p
+        #while i != self._intervals.end():
+        for i in range(self._intervals.size()):
+            p = self._intervals.at(i)
+            if len(other_ibd.find(p.start,p.end)) == 0:
                 new_intervals.push_back(p) 
         self._intervals = new_intervals
     
@@ -485,17 +507,20 @@ cdef class cPopulationIBD:
 #         (all_hist, dummy) = numpy.histogram(all_segments_lengths, bins)
 #         return (numpy.nan_to_num(detected_hist/all_hist)).tolist()
 #     
-#     cpdef calc_power(self, true_ibd):
-#         assert isinstance(true_ibd, cPopulationIBD)
-#         detected_all = []
-#         for pair in true_ibd.keys():
-#             if self.has_key(pair):
-#                 detected = self._ibd_dic[pair].get_detected_segments(true_ibd.get_value(pair))
-#                 detected_all += detected
-#          
+    cpdef calc_power(self, true_ibd):
+        assert isinstance(true_ibd, cPopulationIBD)
+        detected_all = []
+        detected_dict = {}
+        for pair in true_ibd.keys():
+            if self.has_key(pair):
+                detected = self._ibd_dic[pair].get_detected_segments(true_ibd.get_value(pair))
+                detected_all += detected
+                if len(detected) > 0:
+                    detected_dict[pair] = detected
+          
 #         if len(detected_all) == 0:
-#             return 1
-#         return float(len(detected_all)) / len(true_ibd.get_all_segments())
+#             return (0,detected_dict)
+        return (float(len(detected_all)) / len(true_ibd.get_all_segments()), detected_dict)
 #     
 #     cpdef calc_false_positives(self, true_ibd):
 #         total_segments_num = 0
@@ -558,7 +583,23 @@ cdef class cPopulationIBD:
             self._ibd_dic[pair].filter_by_score(min_score,max_score)
             if len(self._ibd_dic[pair].to_list()) == 0:
                 self._ibd_dic.pop(pair)
-            
+                
+    cpdef filter_by_other_ibd(self, cPopulationIBD other_ibd):
+        for pair in self.keys():
+            if pair in other_ibd.keys():
+                self._ibd_dic[pair].filter_by_other_ibd(other_ibd.get_value(pair))
+                if len(self._ibd_dic[pair].to_list()) == 0:
+                    self._ibd_dic.pop(pair)
+            else:
+                self._ibd_dic.pop(pair)
+
+    cpdef filter_out_other_ibd(self, cPopulationIBD other_ibd):
+        for pair in self.keys():
+            if pair in other_ibd.keys():
+                self._ibd_dic[pair].filter_out_other_ibd(other_ibd.get_value(pair))
+                if len(self._ibd_dic[pair].to_list()) == 0:
+                    self._ibd_dic.pop(pair)
+                            
     cpdef calc_dists(self, dists):
         for pair in self.keys():
             self._ibd_dic[pair].calc_dists(dists)

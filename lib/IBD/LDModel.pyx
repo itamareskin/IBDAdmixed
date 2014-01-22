@@ -1,4 +1,7 @@
-#cython: profile=True
+#cython: boundscheck=False
+#cython: cdivision=True
+#cython.wraparound=False
+#cython.nonecheck=False
 
 from __future__ import division
 import random
@@ -78,7 +81,7 @@ cdef class LDModel(object):
     Hidden Markov Model for a single ancestral population
     '''
      
-    def __cinit__(self, map_file_name, char* log_dir, char* log_prefix, int k=1, int g=8, int win_size=25, int max_snp_num=1000000000, double eps = 1e-4, double min_score = 0, phased=True, bool debug=False):
+    def __cinit__(self, map_file_name, char* log_dir, char* log_prefix, int k=1, int g=8, int win_size=25, int max_snp_num=1000000000, double eps = 1e-4, double min_score = 0, phased=True, bool debug=False, int offset=0):
         
         # total number of SNPs to be analyzed
         with open(map_file_name) as map_file:
@@ -110,6 +113,8 @@ cdef class LDModel(object):
         self._debug = debug
         
         self._phased = phased
+        
+        self._offset = offset
         
         # rate of transition from IBD to No-IBD and vice-versa (notation from the Browning paper)
         self._t_0_1 = <double *> malloc(self.K * sizeof(double))
@@ -336,9 +341,19 @@ cdef class LDModel(object):
         self._haplos = <char **> malloc(self._nr_haplos * sizeof(char *))
         for hap_idx in range(4):    
             self._haplos[hap_idx] = <char *> malloc((self._snp_num) * sizeof(char))
-            self.generate_random_hap(anc)
             hap = self.generate_random_hap(anc)
             strncpy(self._haplos[hap_idx], hap, self._snp_num)
+    
+    def generate_admixed_random_haps_inplace(self, int count):
+        self._nr_haplos = count
+        self._haplos = <char **> malloc(self._nr_haplos * sizeof(char *))
+        self._true_ancs = <char **> malloc(self._nr_haplos * sizeof(char *))
+        for hap_idx in range(4):    
+            self._haplos[hap_idx] = <char *> malloc((self._snp_num) * sizeof(char))
+            self._true_ancs[hap_idx] = <char *> malloc((self._snp_num) * sizeof(char))
+            (hap,true_ancs) = self.generate_admixed_random_hap()
+            strncpy(self._haplos[hap_idx], hap, self._snp_num)
+            strncpy(self._true_ancs[hap_idx], true_ancs, self._snp_num)
     
     def read_haplos(self, file_name, scramble=False):
     
@@ -401,6 +416,55 @@ cdef class LDModel(object):
                         self._haplos[hap_idx+1][snp_idx] = temp_allele
         
         return self._nr_haplos
+    
+    def read_true_ancs(self, file_name):
+    
+        if not os.path.exists(file_name):
+            print "the file: " + file_name + " does not exist!"
+            exit(-1)
+        
+        count = 0
+        with open(file_name) as true_ancs_file:
+            for line in true_ancs_file.xreadlines(  ): 
+                count += 1
+                
+        if count == 0 or count % 2 == 1:
+            print "bad number of haplotypes. quitting..."
+            exit(-1)
+        
+        print "reading from true ancs file: " + file_name
+        self._true_ancs = <char **> malloc(self._nr_haplos * sizeof(char *)) 
+        
+        with open(file_name) as true_ancs_file:
+            
+            first_read = True
+            done = False
+            buffer_size = 100
+            hap_idx = 0
+            
+            while True:
+                
+                if done:
+                    break
+                # read next buffer_size lines from the file
+                lines = list(islice(true_ancs_file, buffer_size))
+                
+                if len(lines) == 0:
+                    done = True
+                
+                for line in lines:
+                    #print "line: " + line
+                    #print "pos: " + line[0]
+                    line_trunc = line[:self._snp_num] 
+                    self._true_ancs[hap_idx] = <char *> malloc((self._snp_num) * sizeof(char))
+                    strncpy(self._true_ancs[hap_idx], line_trunc,self._snp_num) 
+                    #py_bytes = line_trunc.encode('UTF-8')
+                    #self._haplos[hap_idx] = py_bytes
+                    #print self._haplos[hap_idx]
+                    hap_idx += 1
+                    if hap_idx >= self._nr_haplos:
+                        done = True;
+                        break
     
     def read_from_bgl_file(self, file_name, anc):
         '''
@@ -563,6 +627,7 @@ cdef class LDModel(object):
     def set_ibs(self, ibs_dic, by_position = True):
         if self._debug: 
             self._ibs_file.write(self._prefix_string + " ")
+        self._tot_ibs_windows = 0
         for win_idx in range(self.get_num_windows()):
             if by_position:
                 inter = ibs_dic.find(self._position[self.start_snp(win_idx)],self._position[self.end_snp(win_idx)-1])
@@ -570,6 +635,7 @@ cdef class LDModel(object):
                 inter = ibs_dic.find(self.start_snp(win_idx),self.end_snp(win_idx))
             if len(inter) > 0:
                 self._ibs[win_idx] = True
+                self._tot_ibs_windows += 1
             else:
                 self._ibs[win_idx] = False
             #self._ibs[win_idx] = True
@@ -579,6 +645,18 @@ cdef class LDModel(object):
         if self._debug:
             self._ibs_file.write("\n")
             self._ibs_file.flush()
+            
+    def smooth_ibs(self, kernel=3):
+        self._tot_ibs_windows = 0
+        for win_idx in range(self.get_num_windows()):
+            sum = 0
+            for inner_win_idx in range(max(win_idx-kernel,0),min(win_idx+kernel,self.get_num_windows()-1)):
+                if self._ibs[inner_win_idx]:
+                    sum += 1
+            if sum > kernel:
+                self._ibs[win_idx] = True
+            if self._ibs[win_idx]:
+                self._tot_ibs_windows += 1
     
     def set_ibd_segment_endpoints(self, ibs_dic, by_position = True):
         cdef bool* tmp_ibs = <bool *> malloc(self.get_num_windows() * sizeof(bool))
@@ -639,8 +717,18 @@ cdef class LDModel(object):
         pystring = self._haplos[hap_idx][:self._snp_num]
         return pystring
     
-    def set_haplo(self,hap_idx,hap):
+    def get_true_anc(self,hap_idx):
+        #pystring = self._haplos[hap_idx][:self._snp_num].decode('UTF-8')
+        pystring = self._true_ancs[hap_idx][:self._snp_num]
+        return pystring
+    
+    def set_haplo(self,hap_idx,hap,anc=""):
         strncpy(self._haplos[hap_idx], hap, self._snp_num)
+        if len(anc) > 0:
+            strncpy(self._true_ancs[hap_idx], anc, self._snp_num)
+    
+    def set_offset(self,offset):
+        self._offset = offset
     
     def get_layer_node_nums(self, anc):
         node_nums = []
@@ -752,7 +840,55 @@ cdef class LDModel(object):
                 next_node = self._trans_idx[anc][layer][next_node][np.array(t).cumsum().searchsorted(np.random.sample(1))]
                 #print "next node: " + str(next_node)
         return hap
+    
+    cpdef generate_admixed_random_hap(self):
+        hap = "" 
+        true_ancs = ""
         
+        anc_inds = []
+        ind = 0
+        for i in range(self.K):
+            alpha = self._alphas[i]
+            anc_inds += [ind] * (int(round(100 * alpha)))
+            ind += 1  
+        anc = random.choice(anc_inds)
+        p = [self._pi[anc][0][i] for i in xrange(self._layer_state_nums[anc][0])]
+#         print "layer state nums: " + str(self._layer_state_nums[anc][0])
+#         print "pi: " + str(p)  
+        cdef int next_node = np.array(p).cumsum().searchsorted(np.random.sample(1))[0]  
+#         print "next node: " + str(next_node)
+        last_dist = self._genetic_dist[0]
+        prev_anc = anc
+        for layer in range(self._snp_num):
+#             print "snp: " + str(layer)
+            if self._states[anc][layer][next_node].prob_em[0] > 0.5:
+                hap += '0'
+            else:
+                hap += '1'
+            true_ancs += str(anc)
+            if layer < self._snp_num - 1:
+                
+                if self._genetic_dist[layer] - last_dist > 0.8:
+#                     print "breakpoint"
+                    last_dist = self._genetic_dist[layer]
+                    prev_anc = anc
+                    anc = random.choice(anc_inds)
+#                     print str(prev_anc),anc
+                    if prev_anc != anc:
+#                         print "ancestry switch"
+                        p = [1.0/self._layer_state_nums[anc][layer+1] for i in xrange(self._layer_state_nums[anc][layer+1])]
+#                         print "set next node", next_node, self._layer_state_nums[anc][layer+1]
+                        next_node = np.array(p).cumsum().searchsorted(np.random.sample(1))[0]
+                        continue
+                    
+                t = [self._trans[anc][layer][next_node][i] for i in xrange(self._states[anc][layer][next_node].out_trans_num)]
+#                 print "set next node ", next_node, self._layer_state_nums[anc][layer+1], self._states[anc][layer][next_node].out_trans_num
+                next_node = self._trans_idx[anc][layer][next_node][np.array(t).cumsum().searchsorted(np.random.sample(1))]    
+#                 print "transition probs: " + str(t)
+                
+#                 print "next node: " + str(next_node)
+        return (hap,true_ancs)
+    
     cpdef calc_ibd_prior(self):
         cdef int win_idx
         cdef double d
@@ -1274,11 +1410,12 @@ cdef class LDModel(object):
             start_snp = self.start_snp(win_idx)
             end_snp = self.end_snp(win_idx)
         else:
-            first_win_idx = max(0,win_idx-1)
             if self._ibd_segment_start[win_idx]:
+                first_win_idx = max(0,win_idx-2)
                 start_snp = self.start_snp(win_idx-2)
                 end_snp = self.end_snp(win_idx)
             else:
+                first_win_idx = win_idx
                 start_snp = self.start_snp(win_idx)
                 end_snp = self.end_snp(win_idx+2)
 
@@ -1312,10 +1449,11 @@ cdef class LDModel(object):
                                     for node_idx3 in range(self._layer_state_nums[admx_idx3][start_snp]):
                                         for node_idx4 in range(self._layer_state_nums[admx_idx4][start_snp]):
                                             self._scale_factor[0][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] += self._forward_probs_ibd_admx[0][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd]
-                            if self._scale_factor[0][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] > 0:                 
-                                self._scale_factor[0][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = 1.0 / self._scale_factor[0][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd]
-                            else: 
-                                self._scale_factor[0][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = DBL_MAX
+                            self._scale_factor[0][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = 1
+#                             if self._scale_factor[0][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] > 0:                 
+#                                 self._scale_factor[0][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = 1.0 / self._scale_factor[0][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd]
+#                             else: 
+#                                 self._scale_factor[0][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = DBL_MAX
     
         # all other layers
         snp_idx_win = 0
@@ -1350,6 +1488,7 @@ cdef class LDModel(object):
                                                                         self._back_trans[admx_idx3][snp_idx+1][node_idx3][prev_node_idx3] * \
                                                                         self._back_trans[admx_idx4][snp_idx+1][node_idx4][prev_node_idx4]
                                                                     else:
+                                                                        #if admx_idx1 == admx_idx3 and get_likely_allele(self._states[admx_idx1][snp_idx+1][node_idx1]) == get_likely_allele(self._states[admx_idx3][snp_idx+1][node_idx3]) and prev_node1 == prev_node3:
                                                                         #if admx_idx1 == admx_idx3 and get_likely_allele(self._states[admx_idx1][snp_idx+1][node_idx1]) == get_likely_allele(self._states[admx_idx3][snp_idx+1][node_idx3]) and get_likely_allele(self._states[admx_idx1][snp_idx][prev_node_idx1]) == get_likely_allele(self._states[admx_idx3][snp_idx][prev_node_idx3]):
                                                                         if admx_idx1 == admx_idx3 and node_idx1 == node_idx3 and prev_node1 == prev_node3:
                                                                             self._forward_probs_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd] += \
@@ -1518,13 +1657,16 @@ cdef class LDModel(object):
         cdef int win_size
 
         if not post:
+            first_win_idx = win_idx
             start_snp = self.start_snp(win_idx)
             end_snp = self.end_snp(win_idx)
         else:
             if self._ibd_segment_start[win_idx]:
+                first_win_idx = max(0,win_idx-2)
                 start_snp = self.start_snp(win_idx-2)
                 end_snp = self.end_snp(win_idx)
             else:
+                first_win_idx = win_idx
                 start_snp = self.start_snp(win_idx)
                 end_snp = self.end_snp(win_idx+2)
         win_size=end_snp-start_snp
@@ -1554,10 +1696,11 @@ cdef class LDModel(object):
                                     for node_idx3 in range(self._layer_state_nums[admx_idx3][end_snp - 1]):
                                         for node_idx4 in range(self._layer_state_nums[admx_idx4][end_snp - 1]):
                                             self._backward_scale_factor[win_size - 1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] += self._backward_probs_ibd_admx[win_size - 1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd]
-                            if self._backward_scale_factor[win_size - 1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] > 0:                 
-                                self._backward_scale_factor[win_size - 1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = 1.0 / self._backward_scale_factor[win_size - 1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd]
-                            else: 
-                                self._backward_scale_factor[win_size - 1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = DBL_MAX
+                            self._backward_scale_factor[win_size - 1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = 1.0
+#                             if self._backward_scale_factor[win_size - 1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] > 0:                 
+#                                 self._backward_scale_factor[win_size - 1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = 1.0 / self._backward_scale_factor[win_size - 1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd]
+#                             else: 
+#                                 self._backward_scale_factor[win_size - 1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = DBL_MAX
 #                             if ibd ==0 and self._backward_scale_factor[win_size - 1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] < 1: #and self._forward_probs_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd] > 1:
 #                             print " snp_idx: " + str(end_snp - 1) + " admx_idx1: " + str(admx_idx1) + " admx_idx2: " + str(admx_idx2) + " admx_idx3: " + str(admx_idx3) + " admx_idx4: " + str(admx_idx4) + \
 #                             " node_idx1: " + str(node_idx1) + " node_idx2: " + str(node_idx2) + " node_idx3: " + str(node_idx3) + " node_idx4: " + str(node_idx4) + " ibd: " + str(ibd) + " backward prob: " + str(self._backward_probs_ibd_admx[win_size - 1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd])                                    
@@ -1596,13 +1739,13 @@ cdef class LDModel(object):
                                                                         self._emission_prob_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][nxt_node1][nxt_node2][nxt_node3][nxt_node4] #* \
                                                                         #self._s[snp_idx][ibd][nxt_ibd] 
                                                                     else:
-#                                                                         if admx_idx1 == admx_idx3 and node_idx1 == node_idx3 and nxt_node1 == nxt_node3:
-                                                                        self._backward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd] += \
-                                                                        self._backward_probs_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][nxt_node1][nxt_node2][nxt_node3][nxt_node4][nxt_ibd] * \
-                                                                        self._trans[admx_idx1][snp_idx][node_idx1][nxt_node_idx1] * \
-                                                                        self._trans[admx_idx2][snp_idx][node_idx2][nxt_node_idx2] * \
-                                                                        self._trans[admx_idx4][snp_idx][node_idx4][nxt_node_idx4] * \
-                                                                        self._emission_prob_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][nxt_node1][nxt_node2][nxt_node3][nxt_node4]
+                                                                        if admx_idx1 == admx_idx3 and node_idx1 == node_idx3 and nxt_node1 == nxt_node3:
+                                                                            self._backward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd] += \
+                                                                            self._backward_probs_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][nxt_node1][nxt_node2][nxt_node3][nxt_node4][nxt_ibd] * \
+                                                                            self._trans[admx_idx1][snp_idx][node_idx1][nxt_node_idx1] * \
+                                                                            self._trans[admx_idx2][snp_idx][node_idx2][nxt_node_idx2] * \
+                                                                            self._trans[admx_idx4][snp_idx][node_idx4][nxt_node_idx4] * \
+                                                                            self._emission_prob_ibd_admx[snp_idx_win+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][nxt_node1][nxt_node2][nxt_node3][nxt_node4]
                                                                         #self._s[snp_idx][ibd][nxt_ibd] * \
             # rescaling to avoid underflow
             for admx_idx1 in range(self.K):
@@ -1614,7 +1757,20 @@ cdef class LDModel(object):
                                     for node_idx2 in range(self._layer_state_nums[admx_idx2][snp_idx]):
                                         for node_idx3 in range(self._layer_state_nums[admx_idx3][snp_idx]):
                                             for node_idx4 in range(self._layer_state_nums[admx_idx4][snp_idx]):
-                                                self._backward_scale_factor[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] += self._backward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd]
+                                                if snp_idx_win > 0:
+                                                    self._backward_scale_factor[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] += self._backward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd]
+                                                else:
+                                                    if ibd == 0:
+                                                        self._backward_scale_factor[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] += self._backward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd] * \
+                                                        self._emission_prob_ibd_admx[0][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4] * \
+                                                        self._pi[admx_idx1][first_win_idx][node_idx1] * self._pi[admx_idx2][first_win_idx][node_idx2] * self._pi[admx_idx3][first_win_idx][node_idx3] * self._pi[admx_idx4][first_win_idx][node_idx4]
+                                                    else:
+                                                        if admx_idx1 == admx_idx3:
+                                                            self._backward_scale_factor[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] += self._backward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd] * \
+                                                            self._emission_prob_ibd_admx[0][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4] * \
+                                                            self._pi[admx_idx1][first_win_idx][node_idx1] * self._pi[admx_idx2][first_win_idx][node_idx2] * self._pi[admx_idx4][first_win_idx][node_idx4]
+                                                            
+                                                    
                                 if self._backward_scale_factor[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] > 0:                 
                                     self._backward_scale_factor[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = 1.0 / self._backward_scale_factor[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd]
                                 else: 
@@ -1636,7 +1792,9 @@ cdef class LDModel(object):
 #                                                     print " snp_idx: " + str(snp_idx) + " admx_idx1: " + str(admx_idx1) + " admx_idx2: " + str(admx_idx2) + " admx_idx3: " + str(admx_idx3) + " admx_idx4: " + str(admx_idx4) + \
 #                                                     " node_idx1: " + str(node_idx1) + " node_idx2: " + str(node_idx2) + " node_idx3: " + str(node_idx3) + " node_idx4: " + str(node_idx4) + " ibd: " + str(ibd) + " backward prob: " + str(self._backward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd])
                                                 self._backward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd] = \
-                                                self._backward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd] * self._backward_scale_factor[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd]                                                
+                                                self._backward_probs_ibd_admx[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4][ibd] * self._backward_scale_factor[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd]
+#                                                 if snp_idx_win == 0:
+#                                                     self._backward_scale_factor[0][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = self._backward_scale_factor[0][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] / self._emission_prob_ibd_admx[0][admx_idx1][admx_idx2][admx_idx3][admx_idx4][node_idx1][node_idx2][node_idx3][node_idx4]                                                 
             snp_idx_win -= 1                                            
     
     cpdef top_level_alloc_mem(self):
@@ -1795,22 +1953,27 @@ cdef class LDModel(object):
         cdef int admx_idx4
         cdef int ibd
         cdef double tmp
+        cdef int ibs_idx
         
         if self._debug:
             self._inner_probs_file.write("ind1 ind2 snp admx1 admx2 admx3 admx4 node1 node2 node3 node4 ibd forward scaling emission\n")
             
+        ibs_idx = 0
         for win_idx in range(self.get_num_windows()):
-            if self._ibs[win_idx]:
+            if self._ibs[win_idx]: 
+                print "calculating emission probabilities in window " + str(win_idx) + " (" + str(ibs_idx) + " of " + str(self._tot_ibs_windows) + " IBS windows)"
+                ibs_idx+=1;
+                stdout.flush()
                 self.emission_prob_ibd_admx_mem_alloc(win_idx,False)
                 self.calc_emission_probs_ibd_admx(win_idx,False)
                 self.scale_factors_mem_alloc(win_idx,False)
                 self.forward_probs_mem_alloc(win_idx,False)
                 self.calc_forward_probs_ibd_admx(win_idx,False)
-                self.backward_probs_mem_alloc(win_idx,False)
-                self.calc_backward_probs_ibd_admx(win_idx,False)
+#                 self.backward_probs_mem_alloc(win_idx,False)
+#                 self.calc_backward_probs_ibd_admx(win_idx,False)
                 
-                if self._debug:
-                    self.print_inner_probs(win_idx,False)
+#                 if self._debug:
+#                     self.print_inner_probs(win_idx,False)
                 #self.backward_probs_mem_alloc(win_idx)
                 #self.calc_backward_probs_ibd_admx(chr1,chr2,chr3,chr4,win_idx)
                 for admx_idx1 in range(self.K):
@@ -1828,10 +1991,11 @@ cdef class LDModel(object):
                                         tmp = \
                                         tmp - \
                                         log(self._backward_scale_factor[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd])
+                                    
 #                                         print "forward scale factor " + str(snp_idx) + " " + str(admx_idx1) + " " + str(admx_idx2) + " " + str(admx_idx3) + " " + str(admx_idx4) + " " + str(ibd) + " " + str(self._scale_factor[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd])
 #                                         print "backward scale factor " + str(snp_idx) + " " + str(admx_idx1) + " " + str(admx_idx2) + " " + str(admx_idx3) + " " + str(admx_idx4) + " " + str(ibd) + " " + str(self._backward_scale_factor[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd])
                                         snp_idx_win += 1
-                                    print str(win_idx) + " " + str(ibd) + " " + str(self._top_level_ems_prob[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd]) + " " + str(tmp)
+#                                     print str(win_idx) + " " + str(ibd) + " " + str(self._top_level_ems_prob[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd]) + " " + str(tmp)
                                     #self._top_level_ems_prob[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = exp(self._top_level_ems_prob[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd])
                 self.emission_prob_ibd_admx_mem_free(win_idx,False)
                 self.forward_probs_mem_free(win_idx,False)
@@ -1874,10 +2038,10 @@ cdef class LDModel(object):
         for win_idx in range(self.get_num_windows()):
             if self._ibd_segment_start[win_idx] or self._ibd_segment_end[win_idx]:
                 
-                if self._ibd_segment_start[win_idx]:
-                    print "calculating post probs in start window: " + str(win_idx)
-                else:
-                    print "calculating post probs in end window: " + str(win_idx)
+#                 if self._ibd_segment_start[win_idx]:
+#                     print "calculating post probs in start window: " + str(win_idx)
+#                 else:
+#                     print "calculating post probs in end window: " + str(win_idx)
                 
                 self.emission_prob_ibd_admx_mem_alloc(win_idx, True)
                 self.calc_emission_probs_ibd_admx(win_idx, True)
@@ -1893,8 +2057,8 @@ cdef class LDModel(object):
                 max_prob = -DBL_MAX
                 max_breakpoint = -1
                 
-                if self._debug:
-                    self._breakpoints_file.write(str(win_idx) + " ")
+#                 if self._debug:
+#                     self._breakpoints_file.write(str(win_idx) + " ")
                 
                 if self._ibd_segment_start[win_idx]:
                     first_win = max(0,win_idx-2)
@@ -1906,6 +2070,9 @@ cdef class LDModel(object):
                 
                 breakpoint_start = self.start_snp(first_win)
                 breakpoint_end = self.end_snp(last_win)
+#                 if breakpoint_start < breakpoint_end:
+#                     breakpoint_start += int(self._win_size/3) 
+#                     breakpoint_end -= int(self._win_size/3)
                 for breakpoint in range(breakpoint_start,breakpoint_end):
 #                     print "breakpoint: " + str(breakpoint)
                     for admx_idx1 in range(self.K):
@@ -1929,7 +2096,7 @@ cdef class LDModel(object):
                                     ibd = 0 if self._ibd_segment_start[win_idx] else 1
                                     snp_idx_win = 0
                                     self._top_level_ems_prob[0][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = 0
-                                    for snp_idx in range(self.start_snp(first_win), breakpoint):
+                                    for snp_idx in range(self.start_snp(first_win), breakpoint+1):
 #                                         if ibd == 1 and self._scale_factor[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] < 1:
 #                                             print "scale 0 : " + str(snp_idx) + " " + str(ibd) + " " + str(log(self._scale_factor[snp_idx_win][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd]))
                                         self._top_level_ems_prob[0][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = \
@@ -1945,7 +2112,7 @@ cdef class LDModel(object):
                         for admx_idx2 in range(self.K):
                             for admx_idx3 in range(self.K):
                                 for admx_idx4 in range(self.K):
-                                    ibd = 0 if self._ibd_segment_end[win_idx] else 1
+                                    ibd = 0 if self._ibd_segment_start[win_idx] else 1
                                     snp_idx_win = 0
                                     self._top_level_ems_prob[1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = 0
                                     for snp_idx in range(breakpoint, self.end_snp(last_win)):
@@ -1968,12 +2135,12 @@ cdef class LDModel(object):
                                                               self._top_level_ems_prob[0][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] + \
                                                               log(self._alphas[admx_idx1]) + log(self._alphas[admx_idx2]) + log(self._alphas[admx_idx3]) + log(self._alphas[admx_idx4]))
                     
-                    d = self._genetic_dist[breakpoint] - self._genetic_dist[self.start_snp(first_win)]
-                    for anc in range(self.K):
-                        self._s[anc][0][1][1] = exp(-self._t_1_0[anc] * d)  
-                        self._s[anc][0][0][0] = exp(-self._t_0_1[anc] * d)
-                        self._s[anc][0][1][0] = 1 - self._s[anc][0][1][1]
-                        self._s[anc][0][0][1] = 1 - self._s[anc][0][0][0]
+#                     d = self._genetic_dist[breakpoint] - self._genetic_dist[self.start_snp(first_win)]
+#                     for anc in range(self.K):
+#                         self._s[anc][0][1][1] = exp(-self._t_1_0[anc] * d)  
+#                         self._s[anc][0][0][0] = exp(-self._t_0_1[anc] * d)
+#                         self._s[anc][0][1][0] = 1 - self._s[anc][0][1][1]
+#                         self._s[anc][0][0][1] = 1 - self._s[anc][0][0][0]
                     
                     for admx_idx1 in range(self.K):
                         for admx_idx2 in range(self.K):
@@ -2000,15 +2167,17 @@ cdef class LDModel(object):
                                 for admx_idx4 in range(self.K):
                                     for ibd in range(2):
                                         total_prob = logsumexp(total_prob,self._top_level_forward_probs[1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd])
-                    if self._debug:
-                        self._breakpoints_file.write(str(total_prob) + "\n")
-                    print "breakpoint: " + str(breakpoint) + " no ibd prob:" + str(self._top_level_forward_probs[1][0][0][0][0][0]) +  " ibd prob:" + str(self._top_level_forward_probs[1][0][0][0][0][1]) + " no ibd ems 0:" + str(self._top_level_ems_prob[0][0][0][0][0][0]) +  " ibd ems 0:" + str(self._top_level_ems_prob[0][0][0][0][0][1]) +" no ibd ems 1:" + str(self._top_level_ems_prob[1][0][0][0][0][0]) +  " ibd ems 1:" + str(self._top_level_ems_prob[1][0][0][0][0][1]) + " total prob: " + str(total_prob)
+                                    if self._debug:
+                                        self._breakpoints_file.write(str(win_idx) + " " + str(breakpoint) + " " + str(ibd) + " " + str(self._top_level_ems_prob[0][admx_idx1][admx_idx2][admx_idx3][admx_idx4][0]) + " " + str(self._top_level_ems_prob[1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][0]) + " " + str(self._top_level_forward_probs[1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][1]) + " " + str(total_prob) + "\n")
+#                     if self._debug:
+#                         self._breakpoints_file.write(str(total_prob) + " ")
+#                     print "breakpoint: " + str(breakpoint) + " no ibd prob:" + str(self._top_level_forward_probs[1][0][0][0][0][0]) +  " ibd prob:" + str(self._top_level_forward_probs[1][0][0][0][0][1]) + " no ibd ems 0:" + str(self._top_level_ems_prob[0][0][0][0][0][0]) +  " ibd ems 0:" + str(self._top_level_ems_prob[0][0][0][0][0][1]) +" no ibd ems 1:" + str(self._top_level_ems_prob[1][0][0][0][0][0]) +  " ibd ems 1:" + str(self._top_level_ems_prob[1][0][0][0][0][1]) + " total prob: " + str(total_prob)
                     if total_prob > max_prob:
                         max_prob = total_prob
                         max_breakpoint = breakpoint
                 
                 if self._debug:
-                    self._breakpoints_file.write("\n")
+                    #self._breakpoints_file.write("\n")
                     self._breakpoints_file.flush()
                 
                 if self._ibs[win_idx]:
@@ -2120,7 +2289,10 @@ cdef class LDModel(object):
                                         self._top_level_forward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = \
                                         logsumexp(self._top_level_forward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd],\
                                                               self._top_level_ems_prob[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] + \
-                                                              log(self._alphas[admx_idx1]) + log(self._alphas[admx_idx2]) + log(self._alphas[admx_idx3]) + log(self._alphas[admx_idx4]))
+                                                              log(self._alphas[admx_idx1]) + \
+                                                              log(self._alphas[admx_idx2]) + \
+                                                              log(self._alphas[admx_idx3]) + \
+                                                              log(self._alphas[admx_idx4]))
                                                               
                 if win_idx < end_window - 1:
                     for admx_idx1 in range(self.K):
@@ -2133,7 +2305,13 @@ cdef class LDModel(object):
                                                 for prev_admx_idx3 in range(self.K):
                                                     for prev_admx_idx4 in range(self.K):
                                                         for prev_ibd in range(2):
-                                                            self._top_level_forward_probs[win_idx+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = logsumexp(self._top_level_forward_probs[win_idx+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd], self._top_level_forward_probs[win_idx][prev_admx_idx1][prev_admx_idx2][prev_admx_idx3][prev_admx_idx4][prev_ibd] + self._top_level_ems_prob[win_idx+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] + log(self._s[admx_idx1][win_idx][prev_ibd][ibd]) + log(self._anc_trans[win_idx][prev_admx_idx1][prev_admx_idx2][prev_admx_idx3][prev_admx_idx4][admx_idx1][admx_idx2][admx_idx3][admx_idx4]) + log(self._alphas[admx_idx1]) + log(self._alphas[admx_idx2]) + log(self._alphas[admx_idx3]) + log(self._alphas[admx_idx4]))
+#                                                             print str(win_idx) + " " + str(admx_idx1) + " " + str(prev_ibd) + " " + str(ibd) + " : " + str(log(self._s[admx_idx1][win_idx][prev_ibd][ibd])) + " " + str(self._s[admx_idx1][win_idx][prev_ibd][ibd]) 
+                                                            self._top_level_forward_probs[win_idx+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] = \
+                                                            logsumexp(self._top_level_forward_probs[win_idx+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd], \
+                                                                      self._top_level_forward_probs[win_idx][prev_admx_idx1][prev_admx_idx2][prev_admx_idx3][prev_admx_idx4][prev_ibd] + \
+                                                                      self._top_level_ems_prob[win_idx+1][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] + \
+                                                                      log(self._s[admx_idx1][win_idx][prev_ibd][ibd]) + \
+                                                                      log(self._anc_trans[win_idx][prev_admx_idx1][prev_admx_idx2][prev_admx_idx3][prev_admx_idx4][admx_idx1][admx_idx2][admx_idx3][admx_idx4]))
     
     cpdef calc_top_level_backward_probs(self, int start_window, int end_window):
         cdef int win_idx
@@ -2178,9 +2356,7 @@ cdef class LDModel(object):
                                                         self._top_level_backward_probs[win_idx+1][nxt_admx_idx1][nxt_admx_idx2][nxt_admx_idx3][nxt_admx_idx4][nxt_ibd] + \
                                                         self._top_level_ems_prob[win_idx+1][nxt_admx_idx1][nxt_admx_idx2][nxt_admx_idx3][nxt_admx_idx4][nxt_ibd] + \
                                                         log(self._s[admx_idx1][win_idx][ibd][nxt_ibd]) + \
-                                                        log(self._anc_trans[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][nxt_admx_idx1][nxt_admx_idx2][nxt_admx_idx3][nxt_admx_idx4]) + \
-                                                        log(self._alphas[nxt_admx_idx1]) + log(self._alphas[nxt_admx_idx2]) + log(self._alphas[nxt_admx_idx3]) + \
-                                                        log(self._alphas[nxt_admx_idx4]))
+                                                        log(self._anc_trans[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][nxt_admx_idx1][nxt_admx_idx2][nxt_admx_idx3][nxt_admx_idx4]))
 #                                                         self._top_level_backward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] += \
 #                                                         self._top_level_backward_probs[win_idx+1][nxt_admx_idx1][nxt_admx_idx2][nxt_admx_idx3][nxt_admx_idx4][nxt_ibd] * \
 #                                                         self._top_level_ems_prob[win_idx+1][nxt_admx_idx1][nxt_admx_idx2][nxt_admx_idx3][nxt_admx_idx4][nxt_ibd] * \
@@ -2234,6 +2410,9 @@ cdef class LDModel(object):
 #                                         print "top level scare factor is zero, in win_idx: " + str(win_idx) + " ibd: " + str(ibd) 
                                     curr_gamma = self._top_level_forward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] + \
                                     self._top_level_backward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd] #* (1.0/self._top_level_scale_factor[win_idx])
+                                    
+#                                     print str(win_idx+1) + " top level probs " + str(win_idx) + " " + str(admx_idx1) + " " +  str(admx_idx2) + " " +  str(admx_idx3) + " " +  str(admx_idx4) + " " +  str(ibd) + ": " + str(self._top_level_forward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd]) + " " + str(self._top_level_backward_probs[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd]) + " " + str(curr_gamma) + " " + str(self._top_level_ems_prob[win_idx][admx_idx1][admx_idx2][admx_idx3][admx_idx4][ibd])
+                                    
                                     if ibd == 0:
                                         #curr_non_ibd_prob += curr_gamma
                                         curr_non_ibd_prob = logsumexp(curr_non_ibd_prob,curr_gamma)
@@ -2262,7 +2441,7 @@ cdef class LDModel(object):
                 self._no_ibd_probs[win_idx] = curr_non_ibd_prob
                 self._lod_scores[win_idx] = 2*(self._ibd_probs[win_idx] - self._no_ibd_probs[win_idx]) 
                 if self._lod_scores[win_idx] > self._min_score:
-                    pairIBD.add_interval(win_idx*self._win_size,(win_idx+1)*self._win_size,self._lod_scores[win_idx])
+                    pairIBD.add_interval(self.start_snp(win_idx),self.end_snp(win_idx),self._lod_scores[win_idx])
             else:
                 self._ibd_probs[win_idx] = -1
                 self._no_ibd_probs[win_idx] = -1
@@ -2291,10 +2470,10 @@ cdef class LDModel(object):
         return (pairIBD,ibd_probs,non_ibd_probs)
     
     cdef int start_snp(self, int win_idx):
-        return max(0,win_idx * self._win_size)
+        return max(0,win_idx * self._win_size + self._offset)
     
     cdef int end_snp(self, int win_idx):
-        return min((win_idx + 1) * self._win_size, self._snp_num)
+        return min((win_idx + 1) * self._win_size + self._offset, self._snp_num)
     
     cpdef int start_position(self):
         return self._position[0] 
@@ -2307,8 +2486,8 @@ cdef class LDModel(object):
     
     cpdef int get_num_windows(self):
         cdef int num_win
-        num_win = int(self._snp_num / self._win_size)
-        if self._snp_num % self._win_size > 0:
+        num_win = int((self._snp_num - self._offset) / self._win_size)
+        if (self._snp_num - self._offset) % self._win_size > 0:
             num_win += 1
         return num_win
     

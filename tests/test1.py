@@ -9,12 +9,13 @@ from IBD.cIBD import cPairIBD, cPopulationIBD
 import pylab as P
 import numpy as np
 import math
+import cPickle
 
 map_file = "/home/eskin/Data/IBDAdmixed/fromLecs/HapMap3_CEU_chr2.map"
 
-true_ibd = cPopulationIBD.fast_deserialize("/home/eskin/Data/IBDAdmixed/fromLecs3/ceu.tsi.yri.lwk.trueibd.txt", map_file)
+true_ibd = cPopulationIBD.fast_deserialize("/home/eskin/Data/IBDAdmixed/fromLecs3/single.ceu.tsi.trueibd.txt", map_file)
 #true_ibd = cPopulationIBD.fast_deserialize("/home/eskin/Data/IBDAdmixed/fromLecs/artificial.admixed.test.trueibd.txt", map_file)
-true_ibd.filter_by_length(1,10)
+#true_ibd.filter_by_length(1.5,10)
 
 #true_ibd.filter_by_length(5,100)
 #with open(map_file) as gm_f:
@@ -34,41 +35,50 @@ gm_f = open(map_file)
 data = gm_f.readlines()
 dists = [float(x.split(" ")[2]) for x in data]
 
-ibd_admixed = cPopulationIBD.fast_deserialize("/home/eskin/Data/IBDAdmixed/fromLecs3/ceu.tsi.yri.lwk.unphased4.ibdadmixed.txt", map_file)
-#true_ibd.filter_by_human_pairs(ibd_admixed.keys())
-ibd_admixed.filter_by_human_pairs(true_ibd.keys())
+ibd_admixed = cPopulationIBD.fast_deserialize("/home/eskin/Data/IBDAdmixed/fromLecs3/single.ceu.tsi.unphased5.ibdadmixed.txt", map_file)
 true_ibd.filter_by_human_pairs(ibd_admixed.keys())
+ibd_admixed.filter_by_human_pairs(true_ibd.keys())
+ibd_admixed.merge_all(overlap = 1, max_val = True)
+# true_ibd.filter_by_human_pairs(ibd_admixed.keys())
 
 ibd_admixed2 = cPopulationIBD.from_string(ibd_admixed.to_string(),dists)
 scores = [x[2] for x in ibd_admixed.to_list()]
 print min(scores),max(scores)
-#ibd_admixed2.filter_by_score(-55,1e10)
+ibd_admixed2.filter_by_score(-25,1e10)
 ibd_admixed2.merge_all_fast(overlap = 1, max_val = True, merge_diff_vals=True)
 ibd_admixed2.calc_dists(dists)
+ibd_admixed2.filter_by_score(-25,1e10)
 ibd_admixed2.filter_by_length(0.5,1000)
-(power, FDR, FPR) = ibd_admixed2.stats_win(true_ibd,116430,250)
+(power_sigs,detected_dict) = ibd_admixed2.calc_power(true_ibd)
+(power, FDR, FPR) = ibd_admixed2.stats_win(true_ibd,116430,25)
 #(power,FDR,FPR) = ibd_admixed2.stats(true_ibd,116430)
-print power, FDR, FPR
+print power_sigs, power, FDR, FPR
 
-f = open("/home/eskin/Data/IBDAdmixed/fromLecs/New/ceu.yri.tsilwkref.ibdadmixed.filt.txt","w")
-f.write(ibd_admixed2.to_string())
-f.close()
+# f = open("/home/eskin/Data/IBDAdmixed/fromLecs/New/ceu.yri.tsilwkref.ibdadmixed.filt.txt","w")
+# f.write(ibd_admixed2.to_string())
+# f.close()
  
 scores = [int(x[2]) for x in ibd_admixed2.to_list() if (not np.isnan(x[2]) and not np.isinf(x[2]))]
 print min(scores),max(scores)
 #for score in range(0,205,5):
 #for score in range(-50,max(scores)+1,10):
-for score in range(min(scores),max(scores)+1,5):
+for score in range(min(scores),max(scores)+1,2):
     ibd_admixed2 = cPopulationIBD.from_string(ibd_admixed.to_string(),dists)
-    ibd_admixed2.filter_by_score(score,max(scores)+100)
+    ibd_admixed2.filter_by_score(-25,max(scores)+100)
     ibd_admixed2.merge_all_fast(overlap = 1, max_val = True, merge_diff_vals=True)
     ibd_admixed2.calc_dists(dists)
     ibd_admixed2.filter_by_length(0.8,1000)
-    (power, FDR, FPR) = ibd_admixed2.stats_win(true_ibd,116430,25)
+    
+    ibd_admixed3 = cPopulationIBD.from_string(ibd_admixed.to_string(),dists)
+    ibd_admixed3.filter_by_score(score,max(scores)+100)
+    ibd_admixed3.filter_by_other_ibd(ibd_admixed2)
+    
+    (power_sigs,detected_dict) = ibd_admixed3.calc_power(true_ibd)
+    (power, FDR, FPR) = ibd_admixed3.stats_win(true_ibd,116430,25)
     #(power,FDR,FPR) = ibd_admixed2.stats(true_ibd,116430)
-    print "IBDAdmixedUnphased", score, power, FDR, FPR
+    print "IBDAdmixed", score, power_sigs, power, FDR, FPR
 
-parente = cPopulationIBD.fast_deserialize("/home/eskin/Data/IBDAdmixed/fromLecs/single.test.genos.parente.ibd.txt", map_file)
+parente = cPopulationIBD.fast_deserialize("/home/eskin/Data/IBDAdmixed/fromLecs3/ceu.tsi.yri.lwk.half2.genos.parente.ibd.txt", map_file)
 (power, FDR, FPR) = parente.stats_win(true_ibd,116430,25)
 print "PARENTE", power, FPR
   
@@ -80,8 +90,9 @@ for score in range(int(min(scores)),int(max(scores))+1):
     parente2 = cPopulationIBD.from_string(parente.to_string(),dists)
     #parente2.filter_by_human_pairs(true_ibd.keys())
     parente2.filter_by_score(score,1000)
+    (power_sigs,detected_dict) = parente2.calc_power(true_ibd)
     (power, FDR, FPR) = parente2.stats_win(true_ibd,116430,25)
-    print "PARENTE", score, power, FPR
+    print "PARENTE", score, power_sigs, power, FDR, FPR
 
 # 
 # x=1

@@ -47,25 +47,32 @@ def create_artificial_pop(pops, alphas, num_composite, num_ibd_pairs, error_rate
         print "simulating haplotype "  + str(hap)
         
         breaks = [0]
+        anc_switches = [0]
         last_break = 0
+        last_anc_switch = 0
         for i in range(1, len(pops[0].lociNames())):
             if dists[i] - dists[last_break] > 0.2:
                 last_break = i;
                 breaks.append(i)
-        
+            if dists[i] - dists[last_anc_switch] > 4:
+                last_anc_switch = i
+                anc_switches.append(i)
         if breaks[len(breaks)-1] < len(pops[0].lociNames()) - 1:
             breaks.append(len(pops[0].lociNames()) - 1)
         
         new_hap = []
+        anc_ind = random.choice(anc_inds)
         for b in range(len(breaks)-1):
             start = breaks[b]
-            anc_ind = random.choice(anc_inds)
+            if breaks[b] in anc_switches:
+                anc_ind = random.choice(anc_inds)
             ind_ind = random.randint(0,pops[anc_ind].popSize()-1)
             hap_ind = random.randint(0,1) 
             new_hap += pops[anc_ind].individual(ind_ind).genotype(hap_ind)[breaks[b]:breaks[b+1]]
             #new_hap += genos[haps_mat[hap][b]][breaks[b]:breaks[b+1]]
         pop_composite.individual(int(hap/2)).setGenotype(new_hap, hap%2)
       
+    save_pop(pop_composite,scramble=args.scramble, suffix=".before")
     pairs = list(combinations(range(pop_composite.popSize()),2))
     random.shuffle(pairs)
     pairs = set(pairs)
@@ -91,14 +98,15 @@ def create_artificial_pop(pops, alphas, num_composite, num_ibd_pairs, error_rate
     
     return pop_composite
 
-def save_pop(pop,scramble=False):
+def save_pop(pop,scramble=False, suffix=""):
     pop.save(args.out + ".pop")
 
-    f = open(args.out + ".trueibd.txt","w")
-    f.write(pop.dvars().ibd.to_string())
-    f.close()
+    if "ibd" in pop.vars():
+        f = open(args.out + suffix + ".trueibd.txt" ,"w")
+        f.write(pop.dvars().ibd.to_string())
+        f.close()
     
-    map_out = open(args.out + ".genos.map", 'w')
+    map_out = open(args.out + suffix + ".genos.map", 'w')
     for locus in pop.lociNames():
         pos = '%d' % pop.locusPos(pop.locusByName(locus))
         map_out.writelines(pop.chromNames()[0] + " " + locus + " " + str(pop.dvars().geneticMap[locus]) + " " + pos + "\n")
@@ -111,7 +119,7 @@ def save_pop(pop,scramble=False):
             h1.setGenotype(list(scrambled[0]), 0)
             h1.setGenotype(list(scrambled[1]), 1)
     
-    data_out = open(args.out + ".genos.dat", 'w')
+    data_out = open(args.out + suffix + ".genos.dat", 'w')
     count=0
     for h1 in pop.individuals():
         count+=1
@@ -120,7 +128,7 @@ def save_pop(pop,scramble=False):
         data_out.writelines(string.join([str(x) for x in h1.genotype(1)],'') + "\n")
     data_out.close()
     
-    ped_out = open(args.out + ".genos.ped", 'w')
+    ped_out = open(args.out + suffix + ".genos.ped", 'w')
     count=0
     for h1 in pop.individuals():
         count+=1
