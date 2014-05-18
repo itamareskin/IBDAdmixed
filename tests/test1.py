@@ -11,9 +11,9 @@ import numpy as np
 import math
 import cPickle
 
-map_file = "/home/eskin/Data/IBDAdmixed/fromLecs/HapMap3_CEU_chr2.map"
+map_file = "K:\Data\IBDAdmixed\New2\HapMap3_CEU_chr2.map"
 
-true_ibd = cPopulationIBD.fast_deserialize("/home/eskin/Data/IBDAdmixed/fromLecs3/single.ceu.tsi.trueibd.txt", map_file)
+true_ibd = cPopulationIBD.fast_deserialize("K:\Data\IBDAdmixed\New3\single.ceu.tsi.trueibd.txt", map_file)
 #true_ibd = cPopulationIBD.fast_deserialize("/home/eskin/Data/IBDAdmixed/fromLecs/artificial.admixed.test.trueibd.txt", map_file)
 #true_ibd.filter_by_length(1.5,10)
 
@@ -35,7 +35,7 @@ gm_f = open(map_file)
 data = gm_f.readlines()
 dists = [float(x.split(" ")[2]) for x in data]
 
-ibd_admixed = cPopulationIBD.fast_deserialize("/home/eskin/Data/IBDAdmixed/fromLecs3/single.ceu.tsi.unphased5.ibdadmixed.txt", map_file)
+ibd_admixed = cPopulationIBD.fast_deserialize("K:\Data\IBDAdmixed\New2\single.ceu.tsi.unphased5.ibdadmixed.txt", map_file)
 true_ibd.filter_by_human_pairs(ibd_admixed.keys())
 ibd_admixed.filter_by_human_pairs(true_ibd.keys())
 ibd_admixed.merge_all(overlap = 1, max_val = True)

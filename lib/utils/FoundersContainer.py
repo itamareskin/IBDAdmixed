@@ -5,23 +5,7 @@ Created on Jan 13, 2012
 '''
 
 from intersection import IntervalTree,Interval
-import IntervalUtils as iu 
-
-def from_flat_string_m(class_name, char* s, int start_snp, int snp_num):
-    cdef int i
-    f = FoundersContainer(start_snp,snp_num)
-    new_s = s + '$'
-    last_founder = new_s[0]
-    curr_start = start_snp
-    for i in range(len(new_s)):
-        curr_founder = new_s[i]
-        if curr_founder != last_founder:
-            if not f._founder_to_tree.has_key(int(last_founder)):
-                f._founder_to_tree[int(last_founder)] = IntervalTree()
-            f._founder_to_tree[int(last_founder)].add_interval(Interval(curr_start, start_snp+i))
-            curr_start = start_snp+i
-            last_founder = curr_founder
-    return f
+import Infra.IntervalUtils as iu 
 
 class FoundersContainer(object):
     
@@ -152,44 +136,20 @@ class FoundersContainer(object):
         return f
     
     @staticmethod
-    def from_founders_list(founders,start_snp,snp_num):
-        cdef int i = 0
+    def from_flat_string(s,start_snp,snp_num):
         f = FoundersContainer(start_snp,snp_num)
-        founders.append('$')
-        last_founder = founders[0]
+        s += '$'
+        last_founder = s[0]
         curr_start = start_snp
-        for founder in founders:
-            if founder != last_founder:
+        for i in range(len(s)):
+            curr_founder = s[i]
+            if curr_founder != last_founder:
                 if not f._founder_to_tree.has_key(int(last_founder)):
                     f._founder_to_tree[int(last_founder)] = IntervalTree()
                 f._founder_to_tree[int(last_founder)].add_interval(Interval(curr_start, start_snp+i))
                 curr_start = start_snp+i
-                last_founder = founder
-            i+=1
+                last_founder = curr_founder
         return f
-    
-    #===========================================================================
-    # 
-    # @staticmethod
-    # def from_flat_string(s,start_snp,snp_num):
-    #    cdef int i
-    #    cdef char* s = ""
-    #    f = FoundersContainer(start_snp,snp_num)
-    #    s += '$'
-    #    last_founder = s[0]
-    #    curr_start = start_snp
-    #    for i in range(len(s)):
-    #        curr_founder = s[i]
-    #        if curr_founder != last_founder:
-    #            if not f._founder_to_tree.has_key(int(last_founder)):
-    #                f._founder_to_tree[int(last_founder)] = IntervalTree()
-    #            f._founder_to_tree[int(last_founder)].add_interval(Interval(curr_start, start_snp+i))
-    #            curr_start = start_snp+i
-    #            last_founder = curr_founder
-    #    return f
-    #===========================================================================
-    
-    from_flat_string = classmethod(from_flat_string_m)
                 
 def main():
     

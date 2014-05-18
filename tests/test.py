@@ -20,7 +20,7 @@ start_ibd = 2150
 end_ibd = 2550
 true_ibd = cPairIBD()
 true_ibd.add_interval(start_ibd,end_ibd)
-h = LDModel(map_file_name = "tests/HapMap3_CEU_TSI_chr2.train.map",log_dir = "tests",log_prefix = "tests", k = 2,g = 8,win_size=200,max_snp_num = max_snp_num,eps = 1e-4,min_score = -50,phased = False,debug = True)
+h = LDModel(map_file_name = "HapMap3_CEU_TSI_chr2.train.map",log_dir = ".",log_prefix = ".", k = 2,g = 8,win_size=200,max_snp_num = max_snp_num,eps = 1e-4,min_score = -50,phased = False,debug = True)
 h.set_alphas([0.5,0.5])
 h.set_ibd_trans_rate(0,1e-4,1)
 h.set_ibd_trans_rate(1,1e-4,1)
