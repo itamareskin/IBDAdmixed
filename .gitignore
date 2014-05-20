@@ -1,0 +1,5 @@
+*.pyc
+*.html
+*.pyd
+lib/build/
+lib/cython_debug/

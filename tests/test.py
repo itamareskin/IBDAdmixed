@@ -5,7 +5,9 @@ Created on Mar 23, 2013
 '''
 
 from IBD.LDModel import LDModel
+from IBD.GenotypePairModel import GenotypePairModel
 from IBD.cIBD import cPairIBD,cPopulationIBD
+from IBD.GeneticMap import GeneticMap
 #import IBD.LDModelUtils as ldu
 #from Logic.IBDGenoHMM import IBDGenoHMM
 #import Logic.LDModelUtils as ldu
@@ -14,6 +16,8 @@ import numpy as np
 from itertools import combinations
 from IBD.intersection import Interval, IntervalTree
 import string
+
+gm = GeneticMap("K:\\Projects\\ibdadmixed\\tests\\HapMap3_CEU_chr2.map", max_snp_num=500)
 
 max_snp_num = 10000
 start_ibd = 2150
