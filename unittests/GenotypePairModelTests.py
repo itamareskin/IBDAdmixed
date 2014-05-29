@@ -24,11 +24,13 @@ class Test(unittest.TestCase):
         pass
 
     def testName(self):
+        self.m.alloc_mem()
         p = GenotypePair()
         p.generate_random_haps_inplace(self.ldm)
-        self.m.calc_emission_probs(p)
-        self.m.calc_forward_probs()
-        likelihood = self.m.calc_likelihood()
+        #self.m.calc_emission_probs(p)
+        #self.m.calc_forward_probs()
+        sliced = self.m.slice_from_model(0,250)
+        likelihood = sliced.calc_likelihood(p)
         x = 1
 
 

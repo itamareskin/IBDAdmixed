@@ -6,6 +6,8 @@
 
 from InnerModel import InnerModel
 from InnerModel cimport InnerModel
+from TestSet import TestSet 
+from TestSet cimport TestSet 
 from TestSet import GenotypePair
 from TestSet cimport GenotypePair
 from LDModel import LDModel
@@ -14,9 +16,11 @@ from libcpp cimport bool
 
 cdef class GenotypePairModel(InnerModel):
     
-    cdef bool _phased
+    cdef public bool _phased
     # the ibd state of the model (0 - no IBD, 1 - IBD between 1st and 3rd chromosomes)
-    cdef int _ibd
+    cdef public int _ibd
+    
+    cdef public int _g
     
     cdef LDModel _m1
     cdef LDModel _m2
@@ -32,9 +36,17 @@ cdef class GenotypePairModel(InnerModel):
     cdef double *_scale_factor
     cdef double *_backward_scale_factor
     
+    cpdef alloc_mem(self)
+    cpdef free_mem(self)
     cpdef calc_emission_probs(self, GenotypePair p)
     cpdef calc_forward_probs(self)
     cpdef calc_backward_probs(self)
     
     cdef rescale_forward(self, int snp_idx)
     cdef rescale_backward(self, int snp_idx)
+    
+    cdef double ibd_trans_prob(self, GenotypePairModel other)
+    cdef double anc_trans_prob(self, GenotypePairModel other)
+    cpdef double trans_prob(self, InnerModel other)
+    
+    cpdef print_inner_prob(self)

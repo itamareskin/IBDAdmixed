@@ -3,3 +3,5 @@
 *.pyd
 lib/build/
 lib/cython_debug/
+*.so
+resources/out/

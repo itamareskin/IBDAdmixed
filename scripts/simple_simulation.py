@@ -12,7 +12,6 @@ import os, sys
 import random
 import string
 import logging
-from utils import FoundersContainer.FoundersContainer
 from IBD.cIBD import cPairIBD, cPopulationIBD 
 from itertools import product, combinations 
 from hapMapUtil import getHapMapMarkers

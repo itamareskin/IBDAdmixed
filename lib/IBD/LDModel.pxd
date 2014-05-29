@@ -36,9 +36,15 @@ cdef class LDModel(object):
     ## constants
     
     cdef double eps
-    
+
+    # the proportion of ancestry
+    cdef double _alpha    
     # a number representing the ancestry of haplotypes modeled (used by other classes that contain LDModel)
     cdef int _anc
+    
+    # rate of transition from IBD to No-IBD and vice-versa (notation from the Browning paper)
+    cdef double _t_0_1
+    cdef double _t_1_0
     
     # initial probabilities - size of _pi is _layer_state_nums[0]
     cdef double *_pi 
@@ -76,6 +82,8 @@ cdef class LDModel(object):
     
     cdef char _allele_0
     cdef char _allele_1
+    
+    cpdef LDModel get_slice_model(self, int start_snp, int snp_num)
        
     cpdef int start_position(self)
     

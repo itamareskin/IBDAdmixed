@@ -55,7 +55,7 @@ cdef extern from "structs.h":
     double logsumexp(double first, double second)
 
 cdef read_until_blank_line(file_name, first_line = None):
-        buffer_size = 100
+        buffer_size = 500
         blank_line = '\n'
         # read a buffer_size of lines from the file
         if first_line == None:
@@ -78,14 +78,49 @@ cdef class LDModel(object):
     Hidden Markov Model for a single ancestral population
     '''
      
-    def __cinit__(self, map_file_name, beagle_file_name, int anc=0, int max_snp_num=1000000000, double eps = 1e-4):
-        
-        self._gm = GeneticMap(map_file_name, max_snp_num)
-        self._snp_num = self._gm._snp_num
-        
-        print "genetic map created"
+    def __cinit__(self, map_file_name=None, beagle_file_name=None, int anc=0, double alpha=1, double t_0_1 = 1e-5, double t_1_0 = 1, int max_snp_num=1000000000, double eps = 1e-4):
         self._anc = anc
+        self._alpha = alpha
+        self._t_0_1 = t_0_1
+        self._t_1_0 = t_1_0
         self.eps = eps
+        self._snp_num = 0
+        if map_file_name is not None:
+            self._gm = GeneticMap(map_file_name, max_snp_num)
+            self._snp_num = self._gm._snp_num
+        if beagle_file_name is not None:
+            self.read_from_bgl_file(beagle_file_name)
+        
+    cpdef LDModel get_slice_model(self, int start_snp, int snp_num):
+        cdef LDModel other = LDModel()
+        other._anc = self._anc
+        other.eps = self.eps
+        other._gm = self._gm.get_slice(start_snp,snp_num)
+        other._snp_num = min(snp_num, self._snp_num - start_snp)
+        other._snp_ids = self._snp_ids + start_snp
+        other._states = self._states + start_snp
+        other._layer_state_nums = self._layer_state_nums + start_snp
+        other._pi = <double *> malloc(other._layer_state_nums[0] * sizeof(double))
+        if other._layer_state_nums[0] == 0:
+            exit(-1)
+        for i in range(other._layer_state_nums[0]):
+            other._pi[i] = 1
+        other._trans = self._trans + start_snp
+        other._trans_idx = self._trans_idx + start_snp
+        other._back_trans = self._back_trans + start_snp
+        other._back_trans_idx = self._back_trans_idx + start_snp
+        other._allele_0 = self._allele_0
+        other._allele_1 = self._allele_1 
+        return other 
+    
+    def __dealloc__(self):
+        pass
+        #free(self._pi)
+    
+    def read_from_bgl_file(self, file_name):
+        ''' 
+        read the model from a beagle model file (.dag file)
+        '''
         
         # allocate memory
         self._snp_ids = <char **> malloc(self._snp_num * sizeof(char *))
@@ -95,14 +130,6 @@ cdef class LDModel(object):
         self._trans_idx = <int ***> malloc((self._snp_num-1) * sizeof(int **))
         self._back_trans = <double ***> malloc((self._snp_num) * sizeof(double **))
         self._back_trans_idx = <int ***> malloc((self._snp_num) * sizeof(int **))
-        
-        self.read_from_bgl_file(beagle_file_name)
-            
-    
-    def read_from_bgl_file(self, file_name):
-        ''' 
-        read the model from a beagle model file (.dag file)
-        '''
         
         if not os.path.exists(file_name):
             print "the file: " + file_name + " does not exist!"  
@@ -240,6 +267,7 @@ cdef class LDModel(object):
                         if layer >= self._snp_num:
                             done = True;
                             break
+                    
         print "Finished reading beagle file."
     
     def get_layer_node_nums(self, anc):

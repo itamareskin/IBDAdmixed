@@ -3,6 +3,16 @@
 #cython.wraparound=False
 #cython.nonecheck=False
 
+from TestSet import TestSet
+from TestSet cimport TestSet
+
 cdef class InnerModel(object):
 
-    cpdef double calc_likelihood(self)
+    # initial probability of this model (use in Windowed Model)
+    cdef double _prior
+    
+    cpdef InnerModel slice_from_model(self, int start_snp, int snp_num)
+    
+    cpdef double trans_prob(self, InnerModel other)
+    
+    cpdef double calc_likelihood(self, TestSet g)

@@ -16,6 +16,11 @@ class Test(unittest.TestCase):
     def testread_map(self):
         gm = GeneticMap(os.path.join(self.resource_path, "HapMap3_CEU_chr2.map"), max_snp_num=500)
         self.assertEqual(gm._snp_num, 500, "Not all snps were read correctly from map file")
+        
+    def testget_slice(self):
+        gm = GeneticMap(os.path.join(self.resource_path, "HapMap3_CEU_chr2.map"), max_snp_num=500)
+        sliced = gm.get_slice(0,250)
+        self.assertEqual(sliced._snp_num, 250, "Not all snps were read correctly from map file")
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testread_map']

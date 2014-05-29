@@ -6,17 +6,17 @@ Created on Mar 23, 2013
 @author: eskin3
 '''
 
-from IBD.LDModel import LDModel
-from IBD.cIBD import cPairIBD,cPopulationIBD
-#from Logic.IBDGenoHMM import IBDGenoHMM
-#import Logic.LDModelUtils as ldu
+from IBD.TestSet import TestSet  # @UnresolvedImport
+from IBD.cIBD import cPairIBD, cPopulationIBD  # @UnresolvedImport
+# from Logic.IBDGenoHMM import IBDGenoHMM
+# import Logic.LDModelUtils as ldu
 import math
 import numpy as np
 import os
 import string
 from itertools import combinations
 import sys
-from IBD.intersection import Interval, IntervalTree
+from IBD.intersection import Interval, IntervalTree  # @UnresolvedImport
 import subprocess
 import time
 import argparse
@@ -24,198 +24,177 @@ from htcondor import job, autorun, write_dag_atexit, set_filename
 import shutil
 import multiprocessing
 from functools import partial
+from IBD.TestSet import GenotypePair  # @UnresolvedImport
+from IBD.IBDAdmixedModel import ibdadmixed
+from IBD.GeneticMap import GeneticMap
 
 parser = argparse.ArgumentParser()
 parser.add_argument("mapfile", type=str, help="PLINK-format map file name")
 parser.add_argument("genofile", type=str, help="genomtypes file name (IBDAdmixed/LAMP format)")
 parser.add_argument("out", type=str, help="output prefix")
 parser.add_argument("hapmodelfile", nargs='*', type=str, help=".dag beagle model file name (one for each ancestry)")
-parser.add_argument("-k", "--num-anc", action='store', dest='K', required=True, help='set number of ancestries')
-parser.add_argument("-a", "--set-alphas", nargs='+', dest='alphas', required=True, default=[],help="set the alphas")
-parser.add_argument("-n", "--max-snps", action="store", dest='num_snps',help="maximal number of snps to be used")
-parser.add_argument("-p", "--num-cpus", action="store", dest='num_cpus',help="number of cpus to be used")
-parser.add_argument("-g", "--debug", action='store_true', default=False, dest='debug', help='print debugging information')
-parser.add_argument("-e", "--epsilon", action='store', dest='epsilon', help='epsilon for error')
-parser.add_argument("-m", "--min-score", action='store', dest='min_score', help='minimal score to report as IBD')
-parser.add_argument("-w", "--win-size", action='store', dest='win_size', help='window size (in number of SNPs)')
-parser.add_argument("-o", "--offset", action='store', dest='offset', help='offset for windows (in number of SNPs)')
-parser.add_argument("--pairs-file", action='store', dest='pairs_file', help='file containing pairs of individuals to process')
-parser.add_argument("--germline-file", action='store', dest='germlinefile', help="germline results file")
-parser.add_argument("--set-ibd-trans", nargs='+', dest='ibd_trans', help='set ibd to no IBD probabilities')
+parser.add_argument("-k", "--num-anc", type=int, dest='K', default=1, help='set number of ancestries')
+parser.add_argument("-a", "--set-alphas", type=float, nargs='+', dest='alphas', default=[1], help="set the alphas")
+parser.add_argument("-g", "--generations", type=float, dest='generations', default=8, help="set the number of generations of admixture")
+parser.add_argument("-n", "--max-snps", type=int, dest='num_snps', default=1000000000, help="maximal number of snps to be used")
+parser.add_argument("-p", "--num-cpus", type=int, dest='num_cpus', default=1, help="number of cpus to be used")
+parser.add_argument("-e", "--epsilon", type=float, dest='epsilon', default=1e-4, help='epsilon for error')
+parser.add_argument("-m", "--min-score", type=float, dest='min_score', default=0, help='minimal score to report as IBD')
+parser.add_argument("-w", "--win-size", type=int, dest='win_size', default=250, help='window size (in number of SNPs)')
+parser.add_argument("-o", "--offset", type=int, dest='offset', default=0, help='offset for windows (in number of SNPs)')
+parser.add_argument("--pair", type=int, nargs=2, dest='pair', help='single pair to process')
+parser.add_argument("--pairs-file", dest='pairs_file', help='file containing pairs of individuals to process')
+parser.add_argument("--germline-file", dest='germlinefile', help="germline results file")
+parser.add_argument("--set-ibd-trans", type=float, nargs='+', dest='ibd_trans', help='set ibd to no IBD probabilities')
+parser.add_argument("--debug", action='store_true', default=False, dest='debug', help='print debugging information')
 parser.add_argument("--phased", action='store_true', default=False, dest='phased', help='use phased mode')
 parser.add_argument("--scramble", action='store_true', default=False, dest='scramble', help='scramble phase of genotypes')
 parser.add_argument("--condor", action='store_true', default=False, dest='condor', help='send jobs to htcondor')
+#parser.add_argument("--log-filename-prefix", dest='log_filename', default="ibdadmixed", help="name of log filename prefix")
 
 if len(sys.argv) > 1:
     args = parser.parse_args()
+    args.mapfile = os.path.normpath(args.mapfile)
+    args.genofile = os.path.normpath(args.genofile)
+    args.out = os.path.normpath(args.out)
+    if args.germlinefile is not None:
+        args.germlinefile = os.path.normpath(args.germlinefile)
+    if args.pairs_file is not None:
+        args.pairs_file = os.path.normpath(args.pairs_file)
+    for anc in range(len(args.hapmodelfile)):
+        args.hapmodelfile[anc] = os.path.normpath(args.hapmodelfile[anc])
+    #args.log_filename = os.path.normpath(args.log_filename)
+    #args.log_filename = args.out + ".log"
+    
+logger = logging.getLogger('')
+    
+def get_input_file_name(prefix, pair):
+    return prefix + "." + str(pair[0]) + "." + str(pair[1]) + ".genos.dat"
 
-@job(output="output.txt",error="error.txt")
-def runPair(pair, map_file_name, log_dir, log_prefix, K, g, win_size, max_snp_num, eps, min_score, phased, debug, alphas, ibd_trans, hapmodelfile, outfile, genofile, scramble, pairs, offset):
+def get_output_file_name(outdir, outfilename, pair, suffix):
+    if pair is not None and len(pair) > 0:
+        return os.path.join(outdir, "tmp_outputs." + outfilename, outfilename + "." + str(pair[0]) + "." + str(pair[1]) + suffix)
+    else:
+        return os.path.join(outdir, "tmp_outputs." + outfilename)
     
-    (ind1,ind2) = pair
-    ibd_all = cPairIBD()
-    
-    h = LDModel(map_file_name = map_file_name,log_dir = log_dir,log_prefix = log_prefix,k = K,g = g,win_size=win_size,max_snp_num = max_snp_num,eps = eps,min_score = min_score,phased = phased,debug = debug,offset=offset)
-    h.set_alphas(alphas)
-    for k in range(K):
-        h.set_ibd_trans_rate(k,float(ibd_trans[k*2]),float(ibd_trans[k*2+1]))
-    for anc in range(K):
-        h.read_from_bgl_file(hapmodelfile[anc],anc)
-        
-    h.read_haplos(genofile,scramble=scramble)
-    
-    h.calc_ibd_prior()
-    h.calc_anc_trans()
-    h.top_level_alloc_mem()
-    h.top_level_init()
-    h.set_prefix_string(str(ind1) + " " + str(ind2))
-    h.set_ibs(pairs[(ind1,ind2)])
-    h.smooth_ibs()
-    
-    for offset in range(0,win_size,25):
-
-        #h.calc_top_level_ems_probs_inner(chr1,chr2,chr1,chr3)
-        #for chr_pair in chr_pairs:
-        chr_pair = (0,1,0,1)
-        h.calc_top_level_ems_probs(ind1*2+chr_pair[0],ind1*2+chr_pair[1],ind2*2+chr_pair[2],ind2*2+chr_pair[3])
-        h.calc_top_level_forward_probs(0,h.get_num_windows())
-        h.calc_top_level_backward_probs(0,h.get_num_windows())
-        (ibd,ibd_probs,no_ibd_probs) = h.posterior_top_level_decoding()
-        ibd_all.update(ibd,max_val=True)
-    
-#     ibd.merge_intervals_fast(merge_diff_vals=True)
-#     h.set_ibs(ibd,by_position=False,post=True)
-#     ibd_new = h.calc_post_probs()
-    
-    (outdir,outfilename) = os.path.split(os.path.abspath(outfile))
-    
-    out = open(outdir + "/tmp_outputs."+outfilename+"/"+ outfilename + "." + str(ind1) + "." + str(ind2) + ".ibdadmixed.txt", 'w')
-    out.write(str(ind1) + "," + str(ind2) + ":" + ibd_all.to_string() + "\n")
-    out.close()
-    
-    out_ibdprobs = open(outdir + "/tmp_outputs."+outfilename+"/"+ outfilename + "." + str(ind1) + "." + str(ind2) + ".ibdprobs.txt", 'w')
-    out_no_ibdprobs = open(outdir + "/tmp_outputs."+outfilename+"/"+ outfilename + "." + str(ind1) + "." + str(ind2) + ".noibdprobs.txt", 'w')
-    out_ibdprobs.write(str(ind1) + " " + str(ind2) + " " + string.join([str(x) for x in ibd_probs]," ") + "\n")
-    out_no_ibdprobs.write(str(ind1) + " " + str(ind2) + " " + string.join([str(x) for x in no_ibd_probs]," ") + "\n")
-    out_ibdprobs.close()
-    out_no_ibdprobs.close()
-    
-@job(output="output.txt",error="error.txt")
-def combine_results(outfile):
-    (outdir,outfilename) = os.path.split(os.path.abspath(outfile))
-    
-    final_out = open(outfilename + ".ibdadmixed.txt","w") 
-    final_out_ibdprobs = open(outfilename + ".ibdprobs.txt","w")
-    final_out_noibdprobs = open(outfilename + ".noibdprobs.txt","w")
-    
-    for f in os.listdir(outdir + "/tmp_outputs."+outfilename+"/"):
-        if f.endswith(".ibdadmixed.txt"):
-            parts = string.split(f, ".")
-            ind1 = parts[-4]
-            ind2 = parts[-3]
-            
-            out = open(outdir + "/tmp_outputs."+outfilename+"/"+ outfilename + "." + str(ind1) + "." + str(ind2) + ".ibdadmixed.txt")
-            out_ibdprobs = open(outdir + "/tmp_outputs."+outfilename+"/"+ outfilename + "." + str(ind1) + "." + str(ind2) + ".ibdprobs.txt")
-            out_no_ibdprobs = open(outdir + "/tmp_outputs."+outfilename+"/"+ outfilename + "." + str(ind1) + "." + str(ind2) + ".noibdprobs.txt")
-            
-            ibd = out.read()
-            ibdprobs = out_ibdprobs.read()
-            noibdprobs = out_no_ibdprobs.read()
-            
-            final_out.write(ibd)
-            final_out_ibdprobs.write(ibdprobs)
-            final_out_noibdprobs.write(noibdprobs)
-            
-            out.close()
-            out_ibdprobs.close()
-            out_no_ibdprobs.close()
-    
-    final_out.close()
-    final_out_ibdprobs.close()
-    final_out_noibdprobs.close()
-    
-    shutil.rmtree(outdir + "/tmp_outputs."+outfilename+"/")
-
-#if __name__=='__main__':
-
-autorun(write_dag=False)
-set_filename(os.path.basename(args.out)+".dag")
-
-logf = open(args.out + ".log", 'w')
-logf.write(str(args) + "\n")
-logf.close()
-
-temp_path = os.path.join(os.path.dirname(args.out),"tmp_outputs."+os.path.basename(args.out))
-if os.path.exists(temp_path):
-    shutil.rmtree(temp_path)
-os.makedirs(temp_path)
-
-num_cpus = 1
-if args.num_cpus != None:
-    num_cpus = int(args.num_cpus)
-        
-num_snps = 1000000000
-if args.num_snps != None:
-    num_snps = int(args.num_snps)
-
-K = 1
-if args.K != None:
-    K = int(args.K)
-    
-epsilon=1e-4
-if args.epsilon != None:
-    epsilon = float(args.epsilon)
-    
-min_score=0
-if args.min_score != None:
-    min_score = float(args.min_score)
-    
-win_size=25
-if args.min_score != None:
-    win_size = int(args.win_size)
-    
-offset=0
-if args.offset != None:
-    offset = int(args.offset)
-    
-#h = LDModel(map_file_name = args.mapfile,log_dir = ".",log_prefix = args.out,k = K,g = 8,win_size=win_size,max_snp_num = num_snps,eps = epsilon,min_score = min_score,phased = args.phased,debug = args.debug)
-
-pair_list = []
-if args.pairs_file != None:
-    pairs_f = open(args.pairs_file)
-    pair_list = pairs_f.readlines()
-    pair_list = [x.strip("\n") for x in pair_list]
-    pair_list = [x.split(",") for x in pair_list]
-    pair_list = [(int(x[0]),int(x[1])) for x in pair_list]
-    pairs_f.close()
-
-if args.alphas != None:
-    if len(args.alphas) > 0:
-        alphas = [float(x) for x in args.alphas]
-            
-pairs = {}
-if args.germlinefile != None:
-    with open(args.germlinefile) as germline:
-        #for counter in range(nr_inds*(nr_inds-1)/2):
+def intervals_from_germline_file(germlinefile, pairs, pos_dict):
+    ibs_intervals = {}
+    print "reading IBS intervals from GERMLINE file: " + germlinefile
+    with open(germlinefile) as germline:
         while True:
             line = germline.readline()
             if not line:
                 break
-            line = line.replace('\t',' ')
+            line = line.replace('\t', ' ')
             line = line.split(' ')
-            pair = (int(line[0]),int(line[2]))
-            if len(pair_list) > 0 and not pair in pair_list:
+            pair = (int(line[0]), int(line[2]))
+            if pair not in pairs:
                 continue
-            if not pairs.has_key(pair):
-                pairs[pair] = IntervalTree()
-            #print "adding interval: " + line[5] + "," + line[6]
-            pairs[pair].add_interval(Interval(long(line[5]),long(line[6])))
+            if not ibs_intervals.has_key(pair):
+                ibs_intervals[pair] = []
+            if pos_dict.has_key(long(line[5])) and pos_dict.has_key(long(line[6])):
+                ibs_intervals[pair].append((pos_dict[long(line[5])], pos_dict[long(line[6])]))
+    print "finished reading IBS intervals."
+    return ibs_intervals
 
+@job(output="output.txt", error="error.txt")
+def runPair(pair, input_file_name, args):
+    
+    (ind1, ind2) = pair
+    obs_data = GenotypePair()
+    obs_data.read_haplos(input_file_name)
+    
+    (ibd_p, lod_scores) = ibdadmixed(args.mapfile,
+                                     args.hapmodelfile,
+                                     obs_data,
+                                     ibs_intervals=args.ibs_intervals[pair],
+                                     max_snp_num=args.num_snps,
+                                     phased=args.phased,
+                                     g=args.generations,
+                                     alphas=args.alphas,
+                                     ibd_trans=args.ibd_trans,
+                                     win_size=args.win_size,
+                                     min_score=args.min_score)
+
+    (outdir, outfilename) = os.path.split(os.path.abspath(args.out))
+    with open(get_output_file_name(outdir, outfilename, pair, ".ibdadmixed.txt"), 'w') as out:
+        out.write(str(ind1) + "," + str(ind2) + ":" + ibd_p.to_string() + "\n")
+    with open(get_output_file_name(outdir, outfilename, pair, ".lodscores.txt"), 'w') as out_lodscores:
+        out_lodscores.write(str(ind1) + " " + str(ind2) + " " + string.join([str(x) for x in lod_scores], " ") + "\n")
+    
+@job(output="output.txt", error="error.txt")
+def combine_results(args):
+    (outdir, outfilename) = os.path.split(os.path.abspath(args.out))
+    
+    final_out = open(outfilename + ".ibdadmixed.txt", "w") 
+    final_out_lodscores = open(outfilename + ".lodscores.txt", "w")
+    
+    for f in os.listdir(get_output_file_name(outdir, outfilename, [], "")):
+        if f.endswith(".ibdadmixed.txt"):
+            parts = string.split(f, ".")
+            pair = (parts[-4], parts[-3])
+            
+            with open(get_output_file_name(outdir, outfilename, pair, ".ibdadmixed.txt")) as out:
+                ibd = out.read()
+                final_out.write(ibd)
+            with open(get_output_file_name(outdir, outfilename, pair, ".lodscores.txt")) as out_lodscores:
+                lodscores = out_lodscores.read()
+                final_out_lodscores.write(lodscores)
+    
+    final_out.close()
+    final_out_lodscores.close()
+    
+    shutil.rmtree(os.path.join(outdir,"tmp_outputs." + outfilename))
+
+autorun(write_dag=False)
+set_filename(os.path.basename(args.out) + ".dag")
+
+with  open(args.out + ".cmdlog", 'w') as logf:
+    logf.write(str(args) + "\n")
+    
+posterior_probs_logger = logging.getLogger('posteriorprobs')
+posterior_probs_logger.addHandler(logging.FileHandler(args.out + ".posteriorprobs.log"))
+posterior_probs_logger.setLevel(logging.DEBUG)
+
+temp_path = os.path.join(os.path.dirname(args.out), "tmp_outputs." + os.path.basename(args.out))
+if os.path.exists(temp_path):
+    shutil.rmtree(temp_path)
+os.makedirs(temp_path)
+
+pairs = []
+if args.pair is not None:
+    pairs = [tuple(args.pair)]
+
+if args.pairs_file != None:
+    with open(args.pairs_file) as pairs_f:
+        pairs = pairs_f.readlines()
+        pairs = [x.strip("\n") for x in pairs]
+        pairs = [x.split(",") for x in pairs]
+        pairs = [(int(x[0]), int(x[1])) for x in pairs]
+
+ibs_intervals = {}
+gm = GeneticMap(args.mapfile, args.num_snps)
+pos_dict = gm.get_position_dict()
+if args.germlinefile != None:
+    ibs_intervals = intervals_from_germline_file(args.germlinefile, pairs, pos_dict)
+args.ibs_intervals = ibs_intervals
+
+if len(args.ibs_intervals) == 0:
+    print "No pair of haplotypes to analyze"
+    exit(-1)
+
+# write inputs for jobs
+ts = TestSet()
+ts.read_haplos(args.genofile, max_snp_num=args.num_snps)
+for idx, pair in enumerate(args.ibs_intervals.keys()):
+    gp = ts.get_genotype_pair(pair[0], pair[1])
+    input_file_name = get_input_file_name(args.out,pair) 
+    gp.write_haplos(input_file_name)
 
 if args.condor:
     jobs = []
-    for ind,x in enumerate(pairs.keys()):
-        curr_job = runPair.queue(x,args.mapfile,".",args.out,K,8,win_size,num_snps,epsilon,min_score,args.phased,args.debug,alphas,args.ibd_trans,args.hapmodelfile,args.out,args.genofile,args.scramble,pairs,offset)
+    for idx, pair in enumerate(args.ibs_intervals.keys()):
+        curr_job = runPair.queue(pair, input_file_name, args)
         jobs.append(curr_job)
     
     last_job = combine_results.queue(args.out)
@@ -224,18 +203,20 @@ if args.condor:
         
     write_dag_atexit()
     
-    retcode = subprocess.call("condor_submit_dag -f " + os.path.basename(args.out)+".dag", shell=True)
+    retcode = subprocess.call("condor_submit_dag -f " + os.path.basename(args.out) + ".dag", shell=True)
 else:    
-    runPairPartial = partial(runPair, map_file_name=args.mapfile, log_dir=".", log_prefix=args.out, K=K, g=8, win_size=win_size, max_snp_num=num_snps, eps=epsilon, min_score=min_score, phased=args.phased, debug=args.debug, alphas=alphas, ibd_trans=args.ibd_trans, hapmodelfile=args.hapmodelfile, outfile=args.out, genofile=args.genofile, scramble=args.scramble, pairs=pairs, offset=offset)
-    if num_cpus == 1:
-        result = map(runPairPartial, [x for ind,x in enumerate(pairs.keys())])
+    runPairPartial = partial(runPair, args=args)
+    if args.num_cpus == 1:
+        result = map(runPairPartial,
+                     [pair for idx, pair in enumerate(args.ibs_intervals.keys())],
+                     [get_input_file_name(args.out,pair) for idx, pair in enumerate(args.ibs_intervals.keys())])
         print result
     else:
-        pool = multiprocessing.Pool(num_cpus)
-        results = pool.map_async(runPairPartial, [x for ind,x in enumerate(pairs.keys())])
-#             for result in results.get():
-#                 print result
+        pool = multiprocessing.Pool(args.num_cpus)
+        results = pool.map_async(runPairPartial, 
+                                 [pair for idx, pair in enumerate(args.ibs_intervals.keys())],
+                                 [get_input_file_name(args.out,pair) for idx, pair in enumerate(args.ibs_intervals.keys())])
         pool.close()
         pool.join()
-    combine_results(args.out)
+    combine_results(args)
     

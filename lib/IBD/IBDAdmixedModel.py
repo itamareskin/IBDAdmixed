@@ -1,226 +1,79 @@
-#cython: profile=True
 
-from libcpp cimport bool
+from __future__ import division
+from WindowedModel import WindowedModel  # @UnresolvedImport
+from GenotypePairModel import GenotypePairModel  # @UnresolvedImport
+from LDModel import LDModel  # @UnresolvedImport
+from IBD.cIBD import cPairIBD
+from IBD.intersection import Interval, IntervalTree  # @UnresolvedImport
 
-cdef class IBDAdmixed(object):
-    '''
-    The IBD Admixed Model 
-    '''
-    ## constants
+def get_ibdadmixed_inner_models(ldmodels, K, ibd, phased, g):
+    gpmodels = []
+    for anc1 in range(K):
+        for anc2 in range(K):
+            for anc3 in range(K):
+                for anc4 in range(K):
+                    gpmodels.append(GenotypePairModel(ldmodels[anc1],
+                                                      ldmodels[anc2],
+                                                      ldmodels[anc3],
+                                                      ldmodels[anc4],
+                                                      phased=phased,
+                                                      ibd=ibd,
+                                                      g=g))
+    return gpmodels
 
-    # admixture fraction
-    cdef double *_alphas
-    # number of generations since begining of admixture
-    cdef int g
-    # recombination rate
-    cdef double r
+def run_windowed_model(gpmodels, obs_data, max_snp_num, win_size):
+    winmodel = WindowedModel(gpmodels, max_snp_num, win_size)
+    winmodel.alloc_mem()
+    winmodel.calc_ems_probs(obs_data)
+    winmodel.calc_forward_probs()
+    winmodel.calc_backward_probs()
+    winmodel.posterior_decoding()
+    return winmodel
+
+def ibdadmixed(map_file, beagle_model_files, obs_data, ibs_intervals=None, max_snp_num=1000000000, phased=False, g=8, alphas=None, ibd_trans=None, win_size=250, min_score=0):
+    K = len(beagle_model_files)
+    if alphas is None:
+        alphas = [1 / K] * K
+    if ibd_trans is None:
+        ibd_trans = [1e-5, 1] * K
+        
+    ldmodels = []
+    for anc in range(K):
+        ldmodels.append(LDModel(map_file,
+                                beagle_model_files[anc],
+                                anc=anc,
+                                alpha=alphas[anc],
+                                t_0_1=ibd_trans[anc * 2],
+                                t_1_0=ibd_trans[anc * 2 + 1],
+                                max_snp_num=max_snp_num))
+        
+    gpmodels_noibd = get_ibdadmixed_inner_models(ldmodels, K, ibd=0, phased=phased, g=g)
+    gpmodels_ibd = get_ibdadmixed_inner_models(ldmodels, K, ibd=1, phased=phased, g=g)
     
-    # number of populations
-    cdef int K
-    # transition rate of each ancestry from non-IBD to IBD (per cM)
-    cdef double *_t_0_1 
-    # transition rate of each ancestry from IBD to non-IBD (per cM)
-    cdef double *_t_1_0
+    pairIBD = cPairIBD()
+    lod_scores = {}    
+    if ibs_intervals is None:
+        ibs_intervals = [(0, obs_data._snp_num)]
+    for interval in ibs_intervals:
+        start_snp = interval[0]
+        snp_num = interval[1] - interval[0]
+        sliced_gpmodels_noibd = [gpmodel.slice_from_model(start_snp,snp_num) for gpmodel in gpmodels_noibd]
+        sliced_gpmodels_ibd = [gpmodel.slice_from_model(start_snp,snp_num) for gpmodel in gpmodels_ibd]
+        sliced_obs_data = obs_data.get_slice(start_snp,snp_num)
+        winmodel_noibd = run_windowed_model(sliced_gpmodels_noibd, sliced_obs_data, sliced_obs_data._snp_num, win_size)
+        winmodel_ibd = run_windowed_model(sliced_gpmodels_ibd, sliced_obs_data, sliced_obs_data._snp_num, win_size)
     
-    cdef int _win_size
+        lod_scores[interval] = winmodel_ibd.compare(winmodel_noibd)
     
-    cdef char** _haplos
+        win_idx = 0
+        for score in lod_scores[interval]:
+            if score > min_score:
+                pairIBD.add_interval(interval[0],interval[1],score)
+            win_idx += 1
     
-    cdef char** _true_ancs
+    return (pairIBD,lod_scores)
     
-    # probability of IBD of each ancestry in the first position (_ibd_prior[anc][0] is the prob. of no IBS in ancestry anc, _ibd_prior[anc][1] is the probability of IBS in ancestry anc)
-    cdef double **_ibd_prior
     
-    # _s[anc][i][j][k] is the probability of transition from IBD state j (0/1 - no-IBD/IBD) to state k, from snp k-1 to snp k
-    cdef double ****_s
     
-    cdef double *********_anc_trans
     
-    # initial probabilities - size of _pi is _layer_state_nums[0]
-    cdef double ***_pi 
-    
-    # states of the HMM - size of _states is _snp_num (each state holds its emission probabilities and number of transitions to next layer)
-    cdef state ***_states
-    
-    # transition probability matrix - size of _trans is _snps_num - 1 
-    # _trans[i][j][k] is the probability of transition from state j in layer (SNP) i to state _trans_idx[i][j][k] in layer i+1 
-    cdef double ****_trans
-    
-    # index of states of edges - size of _trans_idx is _snps_num - 1  
-    # _trans_idx[i][j][k] is the index of the state in layer i+1 that the edge represented by _trans[i][j][k] points to
-    cdef int ****_trans_idx
-    
-    # backwards transition probability matrix - size of _back_trans is _snps_num
-    # _back_trans[i][j][k] is the probability of transition from state _back_trans_idx[i][j][k] in layer (SNP) i-1 to state j in layer i
-    cdef double ****_back_trans
-    
-    # index of states of back edges - size of _back_trans_idx is _snps_num
-    # _back_trans_idx[i][j][k] is the index of the state in layer i-1 that the edge represented by _back_trans[i][j][k] originates from
-    cdef int ****_back_trans_idx
-    
-    # snp IDs - size of _snp_ids is _snp_num
-    cdef char **_snp_ids
-    
-    # number of nodes in each layer (SNP) - size of _layer_state_nums is _snp_num
-    cdef int **_layer_state_nums
-    
-    # physical positions
-    cdef int *_position
-    
-    # genetic distances (cM from 5' end)
-    cdef double *_genetic_dist
-    
-    # number of snps (layers) in the model
-    cdef int _snp_num
-    
-    # number of haplotypes to analyze
-    cdef int _nr_haplos
-    
-    cdef double **********_forward_probs_ibd_admx
-    
-    cdef double **********_backward_probs_ibd_admx
-    
-    cdef double *********_emission_prob_ibd_admx
-    
-    cdef double ******_scale_factor
-    cdef double ******_backward_scale_factor
-    
-    cdef double ******_top_level_ems_prob
-    
-    cdef double ******_top_level_forward_probs
-    cdef double ******_top_level_backward_probs
-    
-    cdef int ******_top_level_backtrack
-    
-    cdef double *_top_level_scale_factor
-       
-    # genetic map
-    cdef gen_map_entry *_genetic_map 
-    
-    # log directory
-    cdef char* _log_dir
-    
-    # log prefix
-    cdef char* _log_prefix
-    
-    # log files
-    cdef _inner_probs_file
-    cdef _probs_file
-    cdef _trans_file
-    cdef _ems_file
-    cdef _ibs_file
-    cdef _breakpoints_file
-    
-    cdef char* _prefix_string
-    
-    cdef bool* _ibs
-    cdef bool* _ibd_segment_start
-    cdef bool* _ibd_segment_end
-    cdef int _tot_ibs_windows
-    
-    cdef int* _exact_ibd_starts
-    cdef int* _exact_ibd_ends
-    
-    cdef double* _ibd_probs
-    cdef double* _no_ibd_probs
-    cdef double* _lod_scores
-    
-    cdef bool* _chr1
-    cdef bool* _chr2
-    cdef bool* _chr3
-    cdef bool* _chr4
-    
-    cdef char _allele_0
-    cdef char _allele_1
-    
-    cdef bool _debug
-    
-    cdef bool _phased
-    
-    cdef int _offset
             
-    ########
-    # methods
-    ###########
-    
-    cpdef set_ibd_trans_rate(self, anc, t_0_1, t_1_0)
-    
-    cpdef set_alphas(self, alphas)
-    
-    cpdef set_chrs(self, char* chr1, char* chr2, char* chr3, char* chr4)
-    
-    cpdef generate_random_hap(self, int anc)
-    
-    cpdef generate_admixed_random_hap(self)
-    
-    cpdef calc_ibd_prior(self)
-    
-    cpdef calc_anc_trans(self)
-    
-    cpdef emission_prob_ibd_admx_mem_alloc(self, int win_idx, bool post)
-    
-    cpdef emission_prob_ibd_admx_mem_free(self, int win_idx, bool post)
-    
-    cpdef calc_emission_probs_ibd_admx(self, int win_idx, bool post)
-    
-    cpdef forward_probs_mem_alloc(self, int win_idx, bool post)
-    
-    cpdef forward_probs_mem_free(self, int win_idx, bool post)
-    
-    cdef forward_probs_init(self, int win_idx, bool post)
-    
-    cpdef calc_forward_probs_ibd_admx(self, int win_idx, bool post)
-    
-    cpdef scale_factors_mem_alloc(self, int win_idx, bool post)
-    
-    cpdef scale_factors_mem_free(self, int win_idx, bool post)
-    
-    cdef scale_factors_init(self, int win_idx, bool post)
-    
-    cpdef backward_probs_mem_alloc(self, int win_idx, bool post)
-    
-    cdef backward_probs_init(self, int win_idx, bool post)
-    
-    cpdef calc_backward_probs_ibd_admx(self, int win_idx, bool post)
-    
-    #cpdef posterior_decoding_ibd_admx(self, int win_idx)
-    
-    #cpdef top_level_ems_prob_alloc_mem(self)
-    
-    cpdef top_level_alloc_mem(self)
-    
-    cpdef top_level_init(self)
-    
-    cpdef top_level_print(self)
-    
-    cpdef calc_top_level_forward_probs(self, int start_window, int end_window)
-    
-    cpdef calc_top_level_backward_probs(self, int start_window, int end_window)
-    
-    cpdef print_inner_probs(self, win_idx, bool post)
-    
-    cpdef calc_top_level_ems_probs_inner(self)
-    
-    cpdef calc_top_level_ems_probs(self, int hap_idx1, int hap_idx2, int hap_idx3, int hap_idx4)
-    
-    cpdef calc_post_probs(self)
-    
-    cpdef calc_top_level_viterbi(self)
-    
-    cpdef posterior_top_level_decoding(self)
-    
-    cdef int start_snp(self, int win_idx)
-    
-    cdef int end_snp(self, int win_idx)
-    
-    cpdef int start_position(self)
-    
-    cpdef int end_position(self)
-    
-    cpdef int get_position(self, int snp_num)
-    
-    cpdef int get_num_windows(self)
-    
-    cpdef generate_composite_individuals(self, num_inds)
-        
-        

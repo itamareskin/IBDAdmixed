@@ -20,6 +20,10 @@ cdef class TestSet(object):
     
     cdef bool** _haplos
     
+    cpdef TestSet get_slice(self, int start_snp, int snp_num)
+    
+    cpdef GenotypePair get_genotype_pair(self, int ind1, int ind2)
+    
     #cpdef generate_random_hap(self, int anc)
     
     cpdef generate_composite_individuals(self, LDModel m, num_inds)
@@ -39,6 +43,10 @@ cdef class GenotypePair(TestSet):
         return self._haplos[3][snp_idx]
     
     cpdef generate_random_haps_inplace(self, LDModel m, int snp_num=*)
+    
+    cpdef set_ibd_segment(self, int start_snp, int snp_num)
+    
+    cpdef Genotype get_genotype(self, int ind)
 
 cdef class Genotype(TestSet):
     

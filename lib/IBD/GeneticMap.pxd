@@ -11,7 +11,13 @@ cdef class GeneticMap(object):
     cdef public int _snp_num
     
     # physical positions
-    cdef int *_position
+    cdef long *_position
     
     # genetic distances (cM from 5' end)
     cdef double *_genetic_dist
+    
+    cpdef GeneticMap get_slice(self, int start_snp, int snp_num)
+    
+    cpdef dict get_position_dict(self)
+    
+    
