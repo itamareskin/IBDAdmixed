@@ -6,13 +6,19 @@
 
 from InnerModel import InnerModel
 from InnerModel cimport InnerModel
-from TestSet import TestSet 
-from TestSet cimport TestSet 
+from TestSet import TestSet
+from TestSet cimport TestSet
 from TestSet import GenotypePair
 from TestSet cimport GenotypePair
 from LDModel import LDModel
 from LDModel cimport LDModel
 from libcpp cimport bool
+
+cdef inline double single_anc_trans_prob(LDModel first, LDModel second):
+    if first._anc == second._anc:
+        return 1
+    else:
+        return first._alpha * second._alpha
 
 cdef class GenotypePairModel(InnerModel):
     
@@ -22,10 +28,10 @@ cdef class GenotypePairModel(InnerModel):
     
     cdef public int _g
     
-    cdef LDModel _m1
-    cdef LDModel _m2
-    cdef LDModel _m3
-    cdef LDModel _m4
+    cdef public LDModel _m1
+    cdef public LDModel _m2
+    cdef public LDModel _m3
+    cdef public LDModel _m4
     
     cdef double *****_forward_prob
     
@@ -45,8 +51,8 @@ cdef class GenotypePairModel(InnerModel):
     cdef rescale_forward(self, int snp_idx)
     cdef rescale_backward(self, int snp_idx)
     
-    cdef double ibd_trans_prob(self, GenotypePairModel other)
-    cdef double anc_trans_prob(self, GenotypePairModel other)
+    cpdef double ibd_trans_prob(self, GenotypePairModel other)
+    cpdef double anc_trans_prob(self, GenotypePairModel other)
     cpdef double trans_prob(self, InnerModel other)
     
     cpdef print_inner_prob(self)

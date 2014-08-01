@@ -86,23 +86,17 @@ cdef class GenotypeModel(InnerModel):
         cdef int node_idx2
 
         for snp_idx in range(self._m1._snp_num):
-            print "calculating emission probs, snp: " + str(snp_idx)
             for node_idx1 in range(self._m1._layer_state_nums[snp_idx]):
                 for node_idx2 in range(self._m2._layer_state_nums[snp_idx]):
-                    print "nodes: "+ str(node_idx1) + " " + str(node_idx2)
                     if not self._phased:
-                        print "1"
                         if p.chr1(snp_idx) == p.chr2(snp_idx):
-                            print "2"
                             self._emission_prob[snp_idx][node_idx1][node_idx2] = \
                             self._m1._states[snp_idx][node_idx1].prob_em[p.chr1(snp_idx)] * self._m2._states[snp_idx][node_idx2].prob_em[p.chr2(snp_idx)]
                         else:
-                            print "3"
                             self._emission_prob[snp_idx][node_idx1][node_idx2] = \
                             self._m1._states[snp_idx][node_idx1].prob_em[p.chr1(snp_idx)] * self._m2._states[snp_idx][node_idx2].prob_em[p.chr2(snp_idx)] + \
                             self._m1._states[snp_idx][node_idx1].prob_em[p.chr2(snp_idx)] * self._m2._states[snp_idx][node_idx2].prob_em[p.chr1(snp_idx)]
                     else:
-                        print "4"
                         self._emission_prob[snp_idx][node_idx1][node_idx2] = \
                         self._m1._states[snp_idx][node_idx1].prob_em[p.chr1(snp_idx)] * \
                         self._m2._states[snp_idx][node_idx2].prob_em[p.chr2(snp_idx)]
@@ -190,7 +184,6 @@ cdef class GenotypeModel(InnerModel):
                 for node_idx2 in range(self._m2._layer_state_num[snp_idx]):
                     for nxt_node_idx1 in range(self._m1._states[snp_idx][node_idx1].out_trans_num):
                         for nxt_node_idx2 in range(self._m2._states[snp_idx][node_idx2].out_trans_num):
-                                    #for nxt_ibd in range(2):
                             nxt_node1 = self._m1._trans_idx[snp_idx][node_idx1][nxt_node_idx1]
                             nxt_node2 = self._m2._trans_idx[snp_idx][node_idx2][nxt_node_idx2]
                             self._backward_prob[snp_idx][node_idx1][node_idx2] += \
@@ -221,7 +214,7 @@ cdef class GenotypeModel(InnerModel):
                 self._backward_prob[snp_idx][node_idx1][node_idx2] = \
                 self._backward_prob[snp_idx][node_idx1][node_idx2] * self._backward_scale_factor[snp_idx]
     
-    cpdef double calc_likelihood(self, TestSet obs_data):
+    cpdef double calc_likelihood(self, TestSet obs_data, bool free_mem=True):
         cdef Genotype g = <Genotype?>obs_data
         cdef int snp_idx       
         cdef likelihood = 0
@@ -232,24 +225,9 @@ cdef class GenotypeModel(InnerModel):
         #self.print_inner_prob() 
         for snp_idx in range(self._m1._snp_num):
             likelihood = likelihood - log(self._scale_factor[snp_idx])
-        self.free_mem()
+        if free_mem:
+            self.free_mem()
         return likelihood
-    
-    cdef double ibd_trans_prob(self, GenotypeModel other):
-        cdef double d = self._m1._gm._genetic_dist[self._m1._snp_num - 1] - self._m1._gm._genetic_dist[0]
-        cdef double s_0_0, s_0_1, s_1_0, s_1_1
-        s_1_1 = exp(-self._m1._t_1_0 * d)
-        s_0_0 = exp(-self._m1._t_0_1 * d)
-        s_1_0 = (1 - s_1_1)
-        s_0_1 = (1 - s_0_0)
-        if self._ibd == 1 and other._ibd == 1:
-            return s_1_1
-        if self._ibd == 0 and other._ibd == 0:
-            return s_0_0
-        if self._ibd == 1 and other._ibd == 0:
-            return s_1_0
-        if self._ibd == 0 and other._ibd == 1:
-            return s_0_1
     
     cdef double anc_trans_prob(self, GenotypeModel other):
         cdef double win_recomb = (self._m1._gm._genetic_dist[self._m1._snp_num - 1] - self._m1._gm._genetic_dist[0])
@@ -260,7 +238,7 @@ cdef class GenotypeModel(InnerModel):
     
     cpdef double trans_prob(self, InnerModel other):
         cdef GenotypeModel other_gpm = <GenotypeModel?>other
-        return self.anc_trans_prob(other_gpm) * self.ibd_trans_prob(other_gpm)
+        return self.anc_trans_prob(other_gpm)
     
     cpdef print_inner_prob(self):
         for snp_idx in range(self._m1._snp_num):

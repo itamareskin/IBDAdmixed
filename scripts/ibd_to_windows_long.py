@@ -8,8 +8,7 @@ import os, sys
 import random
 import string
 import logging
-from utils import FoundersContainer.FoundersContainer
-from IBD.cIBD import cPairIBD, cPopulationIBD 
+from IBD.cIBD import cPairIBD, cPopulationIBD
 from itertools import product
 
 logging.basicConfig(level=logging.DEBUG)
@@ -32,7 +31,7 @@ for pair in ibd.keys():
     for win_idx in range(num_win):
         start_snp = win_idx * 25
         end_snp = min((win_idx + 1) * 25, num_snps)
-        intersect = ibd.get_value(pair).find_with_values(start_snp,end_snp)
+        intersect = ibd.get_value(pair).find(start_snp,end_snp)
         win_ibd = 0
         ibd_len = 0
         score = 1

@@ -20,8 +20,8 @@ cdef class GenotypeModel(InnerModel):
     # the ibd state of the model (0 - no IBD, 1 - IBD between 1st and 3rd chromosomes)
     cdef public int _g
     
-    cdef LDModel _m1
-    cdef LDModel _m2
+    cdef public LDModel _m1
+    cdef public LDModel _m2
     
     cdef double ***_forward_prob
     
@@ -40,8 +40,7 @@ cdef class GenotypeModel(InnerModel):
     
     cdef rescale_forward(self, int snp_idx)
     cdef rescale_backward(self, int snp_idx)
-    
-    cdef double ibd_trans_prob(self, GenotypeModel other)
+
     cdef double anc_trans_prob(self, GenotypeModel other)
     cpdef double trans_prob(self, InnerModel other)
     

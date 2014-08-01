@@ -5,6 +5,7 @@
 
 from TestSet import TestSet
 from TestSet cimport TestSet
+from libcpp cimport bool
 
 cdef class InnerModel(object):
 
@@ -15,4 +16,4 @@ cdef class InnerModel(object):
     
     cpdef double trans_prob(self, InnerModel other)
     
-    cpdef double calc_likelihood(self, TestSet g)
+    cpdef double calc_likelihood(self, TestSet obs_data, bool free_mem=?)

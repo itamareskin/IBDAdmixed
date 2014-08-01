@@ -90,6 +90,7 @@ cdef class LDModel(object):
             self._snp_num = self._gm._snp_num
         if beagle_file_name is not None:
             self.read_from_bgl_file(beagle_file_name)
+        self._is_slice = False
         
     cpdef LDModel get_slice_model(self, int start_snp, int snp_num):
         cdef LDModel other = LDModel()
@@ -110,12 +111,36 @@ cdef class LDModel(object):
         other._back_trans = self._back_trans + start_snp
         other._back_trans_idx = self._back_trans_idx + start_snp
         other._allele_0 = self._allele_0
-        other._allele_1 = self._allele_1 
+        other._allele_1 = self._allele_1
+        other._is_slice = True
         return other 
     
     def __dealloc__(self):
-        pass
-        #free(self._pi)
+        cdef int snp_idx
+        cdef int node_idx
+        free(self._pi)
+        if not self._is_slice:
+            for snp_idx in range(self._snp_num):
+                free(self._states[snp_idx])
+                for node_idx in range(self._layer_state_nums[snp_idx]):
+                    if snp_idx < self._snp_num - 1:
+                        free(self._trans[snp_idx][node_idx])
+                        free(self._trans_idx[snp_idx][node_idx])
+                    if snp_idx > 0:
+                        free(self._back_trans[snp_idx][node_idx])
+                        free(self._back_trans_idx[snp_idx][node_idx])
+                if snp_idx < self._snp_num - 1:
+                    free(self._trans[snp_idx])
+                    free(self._trans_idx[snp_idx])
+                if snp_idx > 0:
+                    free(self._back_trans[snp_idx])
+                    free(self._back_trans_idx[snp_idx])
+            free(self._states)
+            free(self._layer_state_nums)
+            free(self._trans)
+            free(self._trans_idx)
+            free(self._back_trans)
+            free(self._back_trans_idx)
     
     def read_from_bgl_file(self, file_name):
         ''' 

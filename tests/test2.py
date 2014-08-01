@@ -14,7 +14,6 @@ true_ibd = cPopulationIBD.fast_deserialize("/home/eskin/Data/IBDAdmixed/fromLecs
 #true_ibd.filter_by_length(0,100)
 with open(map_file) as gm_f:
     dists = [float(x.split(" ")[2]) for x in gm_f.readlines()]
-true_ibd.calc_dists(dists)
 
 beagle  = cPopulationIBD.fast_deserialize("/home/eskin/Data/IBDAdmixed/fromLecs/beagle.ibd.txt", map_file)
 # beagle.filter_by_score(-1,0)

@@ -34,13 +34,15 @@ cdef class LDModel(object):
     Hidden Markov Model for a single ancestral population 
     '''
     ## constants
+
+    cdef bool _is_slice
     
-    cdef double eps
+    cdef public double eps
 
     # the proportion of ancestry
-    cdef double _alpha    
+    cdef public double _alpha
     # a number representing the ancestry of haplotypes modeled (used by other classes that contain LDModel)
-    cdef int _anc
+    cdef public int _anc
     
     # rate of transition from IBD to No-IBD and vice-versa (notation from the Browning paper)
     cdef double _t_0_1
@@ -75,13 +77,13 @@ cdef class LDModel(object):
     cdef int *_layer_state_nums
     
     # genetic map
-    cdef GeneticMap _gm
+    cdef public GeneticMap _gm
     
     # number of snps (layers) in the model
     cdef public int _snp_num
     
-    cdef char _allele_0
-    cdef char _allele_1
+    cdef public char _allele_0
+    cdef public char _allele_1
     
     cpdef LDModel get_slice_model(self, int start_snp, int snp_num)
        

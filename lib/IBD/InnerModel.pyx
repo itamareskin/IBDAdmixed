@@ -17,5 +17,5 @@ cdef class InnerModel(object):
     cpdef double trans_prob(self, InnerModel other):
         pass
     
-    cpdef double calc_likelihood(self, TestSet g):
+    cpdef double calc_likelihood(self, TestSet obs_data, bool free_mem=True):
         pass

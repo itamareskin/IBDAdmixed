@@ -1,6 +1,6 @@
 
 import copy_reg
-from intersection import IntervalTree, Interval
+from IntervalTree import IntervalTree, Interval
 #from Infra.IntervalTree import IntervalTree, Interval
 
 def IntersectIntervalTrees(tree,interval_list):

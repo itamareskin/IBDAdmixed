@@ -5,3 +5,15 @@ lib/build/
 lib/cython_debug/
 *.so
 resources/out/
+lib/IBD/GenotypeModel.cpp
+lib/IBD/WindowedModel.cpp
+lib/err.valgrind
+lib/out.valgrind
+resources/out.32.54.genos.dat
+resources/out.cmdlog
+resources/out.ibdadmixed.txt
+resources/out.lodscores.txt
+scripts/out.ibdadmixed.txt
+scripts/out.lodscores.txt
+scripts/runIBDAdmixedCondor.py_OLD
+tests/stats.txt

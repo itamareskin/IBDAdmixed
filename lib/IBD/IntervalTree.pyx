@@ -1,22 +1,3 @@
-"""
-Data structure for performing intersect queries on a set of intervals which
-preserves all information about the intervals (unlike bitset projection methods).
-
-:Authors: James Taylor (james@jamestaylor.org),
-          Ian Schenk (ian.schenck@gmail.com),
-          Brent Pedersen (bpederse@gmail.com)
-"""
-
-# Historical note:
-#    This module original contained an implementation based on sorted endpoints
-#    and a binary search, using an idea from Scott Schwartz and Piotr Berman.
-#    Later an interval tree implementation was implemented by Ian for Galaxy's
-#    join tool (see `bx.intervals.operations.quicksect.py`). This was then
-#    converted to Cython by Brent, who also added support for
-#    upstream/downstream/neighbor queries. This was modified by James to
-#    handle half-open intervals strictly, to maintain sort order, and to
-#    implement the same interface as the original Intersecter.
-
 #cython: cdivision=True
 
 import operator
@@ -69,15 +50,8 @@ def string2IntervalTree(s):
 cdef class IntervalNode:
     """
     A single node of an `IntervalTree`.
-    
-    NOTE: Unless you really know what you are doing, you probably should us
-          `IntervalTree` rather than using this directly. 
+
     """
-    cdef float priority
-    cdef public object interval
-    cdef public int start, end
-    cdef int minend, maxend, minstart
-    cdef IntervalNode cleft, cright, croot
 
     property left_node:
         def __get__(self):
@@ -97,7 +71,7 @@ cdef class IntervalNode:
         # uniform into a binomial because it naturally scales with
         # tree size.  Also, python's uniform is perfect since the
         # upper limit is not inclusive, which gives us undefined here.
-        self.priority = ceil(nlog * log(-1.0/(1.0 * rand()/RAND_MAX - 1)))
+        self.priority = ceil(nlog * log(-1.0/(1.0 * rand()/(RAND_MAX+1) - 1)))
         self.start    = start
         self.end      = end
         self.interval = interval
@@ -277,32 +251,18 @@ cdef class IntervalNode:
 
 cdef IntervalNode EmptyNode = IntervalNode( 0, 0, Interval(0, 0))
 
-## ---- Wrappers that retain the old interface -------------------------------
-
 cdef class Interval:
     """
     Basic feature, with required integer start and end properties.
-    Also accepts optional strand as +1 or -1 (used for up/downstream queries),
-    a name, and any arbitrary data is sent in on the info keyword argument
-
-    >>> from bx.intervals.intersection import Interval
-
-    >>> f1 = Interval(23, 36)
-    >>> f2 = Interval(34, 48, value={'chr':12, 'anno':'transposon'})
-    >>> f2
-    Interval(34, 48, value={'anno': 'transposon', 'chr': 12})
+    Also accepts optional value
 
     """
-    cdef public int start, end
-    cdef public object value, chrom, strand
 
-    def __init__(self, int start, int end, object value=None, object chrom=None, object strand=None ):
+    def __init__(self, int start, int end, float value=0):
         assert start <= end, "start must be less than end"
         self.start  = start
         self.end   = end
         self.value = value
-        self.chrom = chrom
-        self.strand = strand
 
     def __repr__(self):
         fstr = "Interval(%d, %d" % (self.start, self.end)
@@ -320,10 +280,10 @@ cdef class Interval:
             return self == other or self < other
         elif op == 2:
             # ==
-            return self.start == other.start and self.end == other.end
+            return self.start == other.start and self.end == other.end and self.value == other.value
         elif op == 3:
             # !=
-            return self.start != other.start or self.end != other.end
+            return self.start != other.start or self.end != other.end or self.value != other.value
         elif op == 4:
             # >
             return self.start > other.start or self.end > other.end
@@ -336,7 +296,7 @@ cdef class Interval:
             new_val = max(self.value,other.value)
         else:
             new_val = min(self.value,other.value)
-        return Interval(min(self.start,other.start),max(self.end,other.end),min(self.value,other.value))
+        return Interval(min(self.start,other.start),max(self.end,other.end),new_val)
     
     def substract(self, other):
         if self.start >= other.start:
@@ -360,59 +320,8 @@ cdef class IntervalTree:
     """
     Data structure for performing window intersect queries on a set of 
     of possibly overlapping 1d intervals.
-    
-    Usage
-    =====
-    
-    Create an empty IntervalTree
-    
-    >>> from bx.intervals.intersection import Interval, IntervalTree
-    >>> intersecter = IntervalTree()
-    
-    An interval is a start and end position and a value (possibly None).
-    You can add any object as an interval:
-    
-    >>> intersecter.insert( 0, 10, "food" )
-    >>> intersecter.insert( 3, 7, dict(foo='bar') )
-    
-    >>> intersecter.find( 2, 5 )
-    ['food', {'foo': 'bar'}]
-    
-    If the object has start and end attributes (like the Interval class) there
-    is are some shortcuts:
-    
-    >>> intersecter = IntervalTree()
-    >>> intersecter.insert_interval( Interval( 0, 10 ) )
-    >>> intersecter.insert_interval( Interval( 3, 7 ) )
-    >>> intersecter.insert_interval( Interval( 3, 40 ) )
-    >>> intersecter.insert_interval( Interval( 13, 50 ) )
-    
-    >>> intersecter.find( 30, 50 )
-    [Interval(3, 40), Interval(13, 50)]
-    >>> intersecter.find( 100, 200 )
-    []
-    
-    Before/after for intervals
-    
-    >>> intersecter.before_interval( Interval( 10, 20 ) )
-    [Interval(3, 7)]
-    >>> intersecter.before_interval( Interval( 5, 20 ) )
-    []
-    
-    Upstream/downstream
-    
-    >>> intersecter.upstream_of_interval(Interval(11, 12))
-    [Interval(0, 10)]
-    >>> intersecter.upstream_of_interval(Interval(11, 12, strand="-"))
-    [Interval(13, 50)]
 
-    >>> intersecter.upstream_of_interval(Interval(1, 2, strand="-"), num_intervals=3)
-    [Interval(3, 7), Interval(3, 40), Interval(13, 50)]
-
-    
     """
-    
-    cdef IntervalNode root
     
     def __cinit__( self ):
         root = None
@@ -431,8 +340,6 @@ cdef class IntervalTree:
         else:
             self.root = self.root.insert( start, end, value )
         
-    add = insert
-
     def to_list( self):
         """
         Return a sorted list of all intervals.
@@ -440,7 +347,10 @@ cdef class IntervalTree:
         if self.root is None:
             return []
         return self.root.find( self.root.minstart, self.root.maxend )
-    
+
+    def size( self):
+        return len(self.to_list())
+
     def to_string( self):
         """
         Return a string of all intervals.
@@ -454,7 +364,7 @@ cdef class IntervalTree:
         l = [string.split(x,",") for x in string.split(s,sep=";")]
         l = [Interval(int(x[0]),int(x[1])) for x in l]
         for interval in l:
-            t.add_interval(interval)
+            t.insert_interval(interval)
         return t
     
     def find( self, start, end ):
@@ -492,50 +402,6 @@ cdef class IntervalTree:
         """
         self.insert( interval.start, interval.end, interval )
 
-    add_interval = insert_interval
-
-    def before_interval( self, interval, num_intervals=1, max_dist=2500 ):
-        """
-        Find `num_intervals` intervals that lie completely before `interval`
-        and are no further than `max_dist` positions away
-        """
-        if self.root is None:
-            return []
-        return self.root.left( interval.start, num_intervals, max_dist )
-
-    def after_interval( self, interval, num_intervals=1, max_dist=2500 ):
-        """
-        Find `num_intervals` intervals that lie completely after `interval` and
-        are no further than `max_dist` positions away
-        """
-        if self.root is None:
-            return []
-        return self.root.right( interval.end, num_intervals, max_dist )
-
-    def upstream_of_interval( self, interval, num_intervals=1, max_dist=2500 ):
-        """
-        Find `num_intervals` intervals that lie completely upstream of
-        `interval` and are no further than `max_dist` positions away
-        """
-        if self.root is None:
-            return []
-        if interval.strand == -1 or interval.strand == "-":
-            return self.root.right( interval.end, num_intervals, max_dist )
-        else:
-            return self.root.left( interval.start, num_intervals, max_dist )
-
-    def downstream_of_interval( self, interval, num_intervals=1, max_dist=2500 ):
-        """
-        Find `num_intervals` intervals that lie completely downstream of
-        `interval` and are no further than `max_dist` positions away
-        """
-        if self.root is None:
-            return []
-        if interval.strand == -1 or interval.strand == "-":
-            return self.root.left( interval.start, num_intervals, max_dist )
-        else:
-            return self.root.right( interval.end, num_intervals, max_dist )
-    
     def traverse(self, fn):
         """
         call fn for each element in the tree
@@ -543,6 +409,3 @@ cdef class IntervalTree:
         if self.root is None:
             return None
         return self.root.traverse(fn)
-
-# For backward compatibility
-Intersecter = IntervalTree

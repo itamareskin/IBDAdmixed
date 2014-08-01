@@ -5,12 +5,13 @@ Created on May 25, 2014
 '''
 import unittest
 import os
-from IBD.LDModel import LDModel
-from IBD.GenotypePairModel import GenotypePairModel
-from IBD.TestSet import GenotypePair
-from IBD.NaiveModel import naivemodel
 import logging
 import logging.handlers
+
+from IBD.LDModel import LDModel
+from IBD.TestSet import GenotypePair
+from IBD.NaiveModel import naivemodel
+
 posterior_probs_logger = logging.getLogger('posteriorprobs')
 posterior_probs_logger.addHandler(logging.FileHandler("posteriorprobs.log"))
 posterior_probs_logger.setLevel(logging.DEBUG)
@@ -37,10 +38,11 @@ class Test(unittest.TestCase):
         p.generate_random_haps_inplace(self.ldm)
         p.set_ibd_segment(0,100)
         
-        naivemodel(os.path.join(self.resource_path, "HapMap3_CEU_chr2.map"), 
+        (pairIBD, lod_scores) = naivemodel(os.path.join(self.resource_path, "HapMap3_CEU_chr2.map"),
                    [os.path.join(self.resource_path, "HapMap3_CEU_chr2.low.bgl.dag")], 
-                   p)
-        
+                    p, max_snp_num=100, win_size=25)
+
+        x=1
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']

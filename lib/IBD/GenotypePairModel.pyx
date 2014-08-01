@@ -7,7 +7,7 @@
 from __future__ import division
 from InnerModel import InnerModel
 from InnerModel cimport InnerModel
-from TestSet import TestSet 
+from TestSet import TestSet
 from TestSet cimport TestSet
 from TestSet import GenotypePair
 from TestSet cimport GenotypePair
@@ -339,7 +339,7 @@ cdef class GenotypePairModel(InnerModel):
                         self._backward_prob[snp_idx][node_idx1][node_idx2][node_idx3][node_idx4] = \
                         self._backward_prob[snp_idx][node_idx1][node_idx2][node_idx3][node_idx4] * self._backward_scale_factor[snp_idx]
     
-    cpdef double calc_likelihood(self, TestSet obs_data):
+    cpdef double calc_likelihood(self, TestSet obs_data, bool free_mem=True):
         cdef GenotypePair gp = <GenotypePair?>obs_data
         cdef int snp_idx       
         cdef likelihood = 0
@@ -350,10 +350,11 @@ cdef class GenotypePairModel(InnerModel):
         #self.print_inner_prob() 
         for snp_idx in range(self._m1._snp_num):
             likelihood = likelihood - log(self._scale_factor[snp_idx])
-        self.free_mem()
+        if free_mem:
+            self.free_mem()
         return likelihood
     
-    cdef double ibd_trans_prob(self, GenotypePairModel other):
+    cpdef double ibd_trans_prob(self, GenotypePairModel other):
         cdef double d = self._m1._gm._genetic_dist[self._m1._snp_num - 1] - self._m1._gm._genetic_dist[0]
         cdef double s_0_0, s_0_1, s_1_0, s_1_1
         s_1_1 = exp(-self._m1._t_1_0 * d)
@@ -369,10 +370,14 @@ cdef class GenotypePairModel(InnerModel):
         if self._ibd == 0 and other._ibd == 1:
             return s_0_1
     
-    cdef double anc_trans_prob(self, GenotypePairModel other):
+    cpdef double anc_trans_prob(self, GenotypePairModel other):
         cdef double win_recomb = (self._m1._gm._genetic_dist[self._m1._snp_num - 1] - self._m1._gm._genetic_dist[0])
         if win_recomb > 0:
-            return ((self._g - 1) * win_recomb)
+            return ((self._g - 1) * win_recomb * \
+            single_anc_trans_prob(self._m1, other._m1) * \
+            single_anc_trans_prob(self._m2, other._m2) * \
+            single_anc_trans_prob(self._m3, other._m3) * \
+            single_anc_trans_prob(self._m4, other._m4))
         else:
             return 1
     
@@ -394,4 +399,33 @@ cdef class GenotypePairModel(InnerModel):
                             str(self._forward_prob[snp_idx][node_idx1][node_idx2][node_idx3][node_idx4]) + " " + \
                             str(self._backward_prob[snp_idx][node_idx1][node_idx2][node_idx3][node_idx4]) + " " + \
                             str(self._emission_prob[snp_idx][node_idx1][node_idx2][node_idx3][node_idx4])
-            
+
+    def get_ems_probs(self):
+        cdef list res = []
+        for snp_idx in range(self._m1._snp_num):
+            res.append({})
+            for node_idx1 in range(self._m1._layer_state_nums[snp_idx]):
+                for node_idx2 in range(self._m2._layer_state_nums[snp_idx]):
+                    for node_idx3 in range(self._m3._layer_state_nums[snp_idx]):
+                        for node_idx4 in range(self._m4._layer_state_nums[snp_idx]):
+                            res[snp_idx][(node_idx1,node_idx2,node_idx3,node_idx4)] = self._emission_prob[snp_idx][node_idx1][node_idx2][node_idx3][node_idx4]
+        return res
+
+    def get_forward_probs(self):
+        cdef list res = []
+        for snp_idx in range(self._m1._snp_num):
+            res.append({})
+            for node_idx1 in range(self._m1._layer_state_nums[snp_idx]):
+                for node_idx2 in range(self._m2._layer_state_nums[snp_idx]):
+                    for node_idx3 in range(self._m3._layer_state_nums[snp_idx]):
+                        for node_idx4 in range(self._m4._layer_state_nums[snp_idx]):
+                            res[snp_idx][(node_idx1,node_idx2,node_idx3,node_idx4)] = self._forward_prob[snp_idx][node_idx1][node_idx2][node_idx3][node_idx4]
+        return res
+
+    def get_scale_factors(self):
+        cdef list res = []
+        for snp_idx in range(self._m1._snp_num):
+            res.append(self._scale_factor[snp_idx])
+        return res
+
+

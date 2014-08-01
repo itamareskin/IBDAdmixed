@@ -30,17 +30,20 @@ cdef class GeneticMap(object):
             self.read_map(map_file_name)
         
             print "genetic map created"
+
+        self._is_slice = False
             
     def __dealloc__(self):
-        pass
-        #free(self._position)
-        #free(self._genetic_dist)
+        if not self._is_slice:
+            free(self._position)
+            free(self._genetic_dist)
     
     cpdef GeneticMap get_slice(self, int start_snp, int snp_num):
         cdef GeneticMap other = GeneticMap()
         other._snp_num = min(snp_num, self._snp_num - start_snp)
         other._position = self._position + start_snp
         other._genetic_dist = self._genetic_dist + start_snp
+        other._is_slice = True
         return other
         
     def read_map(self, map_file_name):
@@ -86,5 +89,14 @@ cdef class GeneticMap(object):
         for snp_idx in range(self._snp_num):
             pos_dict[self._position[snp_idx]] = snp_idx
         return pos_dict
-        #cdef int* res = bsearch(<void *>position, self._position, self._snp_num, sizeof(int),  _qsortcmp) 
-        #return res[0]
+
+    cpdef list get_genetic_dist_list(self):
+        cdef snp_idx
+        cdef list dists = []
+        for snp_idx in range(self._snp_num):
+            dists.append(self._genetic_dist[snp_idx])
+        return dists
+
+
+    cpdef float get_length(self, int start_snp_idx, int end_snp_idx):
+        return self._genetic_dist[min(start_snp_idx,self._snp_num-1)] - self._genetic_dist[min(start_snp_idx,self._snp_num-1)]

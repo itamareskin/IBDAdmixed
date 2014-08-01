@@ -4,7 +4,7 @@ Created on Jan 13, 2012
 @author: itamares
 '''
 
-from intersection import IntervalTree,Interval
+from IntervalTree import IntervalTree,Interval
 import Infra.IntervalUtils as iu 
 
 class FoundersContainer(object):
@@ -91,11 +91,6 @@ class FoundersContainer(object):
             d[founder] = [] 
             self._founder_to_tree[founder].traverse(lambda x: d[founder].append((x.start,x.end)))
         return d
-    
-    def merge_all(self):
-        founders = self.get_founders() 
-        for f in founders:
-            self._founder_to_tree[f] = iu.merge_intervals(self._founder_to_tree[f])
     
     @staticmethod
     def from_dict(d,start_snp,snp_num):

@@ -4,29 +4,13 @@ Created on Jan 11, 2012
 @author: itamares
 '''
 from __future__ import division
-import cPickle
-from intersection import Interval, IntervalTree
+from IBD.IntervalTree cimport Interval, IntervalTree
+from IBD.IntervalTree import Interval, IntervalTree
 import IntervalUtils as iu 
-import os
-import copy
 import numpy
 import string
-import math
-from libcpp.pair cimport pair as cpp_pair
 from libcpp.vector cimport vector as cpp_vector
-#from libcpp.map cimport map as cpp_map 
-
-cdef extern from "intervalItem.h":
-    
-    cdef struct struct_interval_item:
-        int start
-        int end
-        float value
-        float length
-
-    ctypedef struct_interval_item interval_item
-    
-    interval_item create_interval_item(int start, int end, float value, float length)
+from GeneticMap cimport GeneticMap
 
 cdef class cPairIBD:
     '''
@@ -34,73 +18,25 @@ cdef class cPairIBD:
     Implemented using a IntervalTree to allow fast intersection queries
     '''
     
-    cdef cpp_vector[interval_item] *_intervals
+    cdef public IntervalTree _tree
     
-    def __cinit__(self): 
-        self._intervals = new cpp_vector[interval_item]()
-        #self._tree = IntervalTree()
-        #if intervals != None:
-        #    for interval in intervals: 
-        #        self.add_interval(interval[0],interval[1])
-        
-    def __dealloc__(self):
-        del self._intervals
+    def __cinit__(self):
+        self._tree = IntervalTree()
 
-    property _tree:
+    property _list:
         def __get__(cPairIBD self):
-            return self.__get_interval_tree()
-    
-#     cdef __get_interval_tree(cPairIBD self):
-#         tree = IntervalTree()
-#         #for interval in self._intervals:
-#         #    tree.add_interval(Interval(interval.first,interval.second))   
-#         #cdef cpp_list[cpp_pair[int,int]].iterator i = self._intervals.begin()
-#         cdef interval_item p 
-#         #while i != self._intervals.end():
-#         for i in range(self._intervals.size()):
-#             p = self._intervals.at(i)
-#             tree.add_interval(Interval(<int>p.start,<int>p.end)) 
-#             #tree.insert(p.start,p.end,p.value)
-#         return tree
-    
-    cdef __get_interval_tree(cPairIBD self):
-        tree = IntervalTree()
-        #for interval in self._intervals:
-        #    tree.add_interval(Interval(interval.first,interval.second))   
-        #cdef cpp_list[cpp_pair[int,int]].iterator i = self._intervals.begin()
-        cdef interval_item p 
-        #while i != self._intervals.end():
-        for i in range(self._intervals.size()):
-            p = self._intervals.at(i)
-            #tree.add_interval(Interval(<int>p.start,<int>p.end)) 
-            tree.insert_interval(Interval(p.start,p.end,p.value))
-        return tree
+            return self.to_list()
         
-    cpdef add_interval(cPairIBD self, int start, int end, float value=0, float length=0):
-        cdef interval_item p 
-        p.start = start 
-        p.end = end
-        p.value = value
-        p.length = length
-        self._intervals.push_back(p)
-        #self._tree.add_interval(Interval(start,end))
-    
-    cpdef clear(cPairIBD self):
-        del self._intervals
+    cpdef add_interval(cPairIBD self, int start, int end, float value=0):
+        self._tree.insert_interval(Interval(start,end,value))
     
     cpdef find(cPairIBD self,int start,int end):
-        intervals = self._tree.find(start,end)
         return self._tree.find(start,end)
-    
-    cpdef find_with_values(cPairIBD self,int start,int end):
-        intervals = self._tree.find(start,end)
-        values = self.__get_values_interval_tree().find(start,end)
-        return zip(intervals,values)
     
     cpdef update(cPairIBD self, cPairIBD other_ibd, max_val=False):
         cdef list intervals = other_ibd.to_list()
         for interval in intervals:
-            self.add_interval(interval[0], interval[1], interval[2], interval[3])
+            self.add_interval(interval[0], interval[1], interval[2])
         self.merge_intervals_fast(max_val=max_val)
     
     cpdef to_string(cPairIBD self):
@@ -113,16 +49,7 @@ cdef class cPairIBD:
         return "".join(s)
     
     cpdef list to_list(cPairIBD self):
-    #    return self._intervals
-        #l = []; self._tree.traverse(lambda x: l.append((x.start,x.end)))
-        #return l
-        cdef list result = [] 
-        cdef interval_item p
-        #while i != self._intervals.end():
-        for i in range(self._intervals.size()):
-            p = self._intervals.at(i)
-            result.append((<int>p.start,<int>p.end,<float>p.value,<float>p.length)) 
-        return result
+        return [(x.start,x.end,x.value) for x in self._tree.to_list()]
     
     @classmethod
     def from_list(cls, list l):
@@ -135,94 +62,44 @@ cdef class cPairIBD:
         return p
     
     cpdef merge_intervals_fast(cPairIBD self, int overlap = 1, max_val=False, merge_diff_vals=False):
-        tree = self.__get_interval_tree()
-        intervals = tree.to_list()
+
+        # get a list of all intervals in the IntervalTree
+        intervals = self._tree.to_list()
+        if len(intervals) == 0:
+            return
+
+        # find the maximal end position of all intervals
+        max_end = max([x.end for x in intervals])
+
+        # sort the intervals according to their start position
         decorated = [(tup.start, tup) for tup in intervals]
         decorated.sort()
         intervals = [tup for second, tup in decorated]
-        self._intervals.erase(self._intervals.begin(),self._intervals.end())
-        cdef interval_item p            
+
+        # clear the IntervalTree
+        self._tree = IntervalTree()
+
+        # these will hold the start,end and value of the current interval that is being created
         prev_score = -1e100
         prev_start = intervals[0].start-overlap-1
         prev_end = intervals[0].start-overlap-1
-        
-        for interval in intervals+[Interval(intervals[-1].end+overlap+1,intervals[-1].end+overlap+1,0)]:
+
+        # go over all intervals, plus one dummy Interval that just makes the merged intervals before it get inserted to the tree
+        for interval in intervals+[Interval(max_end+overlap+1,max_end+overlap+1,0)]:
+            # if there is an overlap, update the end and score (start position remains the same)
             if interval.start - prev_end <= overlap and (interval.value == prev_score or merge_diff_vals):
-                prev_end = interval.end
+                prev_end = max(prev_end,interval.end)
                 if max_val:
                     prev_score = <float>max(prev_score,interval.value)
                 else:
                     prev_score = <float>min(prev_score,interval.value)
+            # if there is not overlap, insert the previous merge results to the tree and update the start,end and value to the current interval
             else:
                 if prev_start != intervals[0].start-overlap-1:
-                    p.start = <int>prev_start
-                    p.end = <int>prev_end
-                    p.value = <float>prev_score
-                    self._intervals.push_back(p)
+                    self._tree.insert_interval(Interval(prev_start,prev_end,prev_score))
                 prev_start = interval.start
                 prev_end = interval.end
                 prev_score = interval.value
-        
-    
-    cpdef merge_intervals(cPairIBD self, int ovelap = 1, max_val=False, merge_diff_vals=False):
-        tree = self.__get_interval_tree()
-        new_tree = IntervalTree()
-        intervals = tree.to_list()
-        #intervals = sorted(intervals, key=lambda tup: tup.value)
-        decorated = [(tup.value, tup) for tup in intervals]
-        if max_val:
-            decorated.sort()
-        else:
-            decorated.sort(reverse=True)
-        intervals = [tup for second, tup in decorated]
-        for interval in intervals:
-            intersections = new_tree.find(interval.start-ovelap,interval.end+ovelap)
-            if len(intersections) > 0:
-                #non_intersecting = []; 
-                #new_tree.traverse(lambda x: non_intersecting.append((x.start,x.end)))
-                non_intersecting = new_tree.to_list()
-                for curr_intersection in intersections:
-                    non_intersecting.remove(curr_intersection)
-                    
-                new_tree = IntervalTree()
-                for non in non_intersecting:
-                    new_tree.insert_interval(non)
-                
-                new_intervals = []
-                for curr_inter in intersections:
-                    if curr_inter.value == interval.value or merge_diff_vals:
-                        #new_intervals.append(curr_inter)
-                        #new_intervals.append(interval)
-                        interval=interval.merge(curr_inter,max_val)
-                    else:
-                        if (not max_val and curr_inter.value > interval.value) or (max_val and curr_inter.value < interval.value):
-                            new_intervals += curr_inter.substract(interval)
-                            #new_intervals.append(interval) 
-                        
-                            
-                new_intervals.append(interval)
-                #intersections.append(interval)
-                #new_int = Interval(min([x.start for x in intersections]),max([x.end for x in intersections]),max([x.value for x in intersections]))
-                for new_int in new_intervals:
-                    new_tree.insert_interval(new_int)
-            else:
-                new_tree.insert_interval(interval)
-            
-        self._intervals.erase(self._intervals.begin(),self._intervals.end())
-        l = new_tree.to_list()
-        cdef interval_item p
-        for interval in l:
-            p.start = <int>interval.start
-            p.end = <int>interval.end
-            p.value = <float>interval.value
-            self._intervals.push_back(p)
-    
-    cpdef get_total_segments_length(self):
-        l = self.to_list()
-        total_length = 0
-        for segment in l:
-            total_length += (segment[1]-segment[0])
-        return total_length
     
     cpdef get_num_windows(self, int window_size):
         l = self.to_list()
@@ -233,41 +110,6 @@ cdef class cPairIBD:
     
     cpdef get_IBD_percent(cPairIBD self, int snp_num):
         return  100 * float(sum([i[1]-i[0] for i in self.to_list()])) / snp_num
-    
-#     cpdef calc_accuracy(cPairIBD self, cPairIBD true_ibd, int snp_num):
-#         if true_ibd == None:
-#             return 0
-#         intersections = iu.IntersectIntervalTrees(self._tree, true_ibd.to_list())
-#         TP = sum([i[1]-i[0] for i in intersections])
-#         FP = sum([i[1]-i[0] for i in self.to_list()]) - TP
-#         FN = sum([i[1]-i[0] for i in true_ibd.to_list()]) - TP
-#         TN = snp_num - (TP + FP + FN)
-#         accuracy = 100 * float(TP + TN) / snp_num
-#         return accuracy
-   
-    cpdef stats(cPairIBD self, cPairIBD true_ibd, int snp_num):
-        if true_ibd == None:
-            return 0
-        self.merge_intervals()
-        true_ibd.merge_intervals()
-        true_segments = true_ibd.to_list()
-        tree = self._tree
-        TP = 0
-        FP = 0
-        TN = 0
-        FN = 0
-        intersections = iu.IntersectIntervalTrees(self._tree, true_ibd.to_list()) 
-        if len(intersections) > 0:
-            for inter in intersections:
-                TP += inter[1] - inter[0]
-        FP = self.get_total_segments_length() - TP
-        FN = true_ibd.get_total_segments_length() - TP
-        TN = snp_num - (TP + FP + FN)
-        power = TP/(TP+FN)
-        specificity = TN/(TN+FP)
-        FPR = 1 - specificity
-        FDR = FP/(TP+FP)
-        return (TP,FP,TN,FN,power,FDR,FPR)
     
     cpdef stats_win(cPairIBD self, cPairIBD true_ibd, int snp_num, int window_size):
         if true_ibd == None:
@@ -304,15 +146,6 @@ cdef class cPairIBD:
             if len(intersections) > 0:
                 detected.append(segment)
         return detected
-#     
-#     cpdef get_detected_segments_inv(cPairIBD self, cPairIBD true_ibd):
-#         self_segments = self.to_list()
-#         cdef list detected = []
-#         for segment in self_segments:
-#             intersections = true_ibd.find(segment[0],segment[1])
-#             if len(intersections) > 0:
-#                 detected.append(segment)
-#         return detected
     
     cpdef add_ibd_from_containers(cPairIBD self, f1, f2, min_ibd_length = 0): 
         for founder in f1._founder_to_tree.keys():
@@ -322,7 +155,7 @@ cdef class cPairIBD:
                 for inter in intersections:
                     if inter[1]-inter[0] > min_ibd_length:
                         self.add_interval(inter[0], inter[1])
-        self.merge_intervals()
+        self.merge_intervals_fast()
         
     cpdef add_ibd_from_containers_only_admixed(cPairIBD self, f1, f2, min_ibd_length, f1_other, f2_other, ceu_inds, yri_inds): 
         for founder in f1._founder_to_tree.keys():
@@ -342,61 +175,45 @@ cdef class cPairIBD:
                             print other, int(other in yri_inds), int(other in yri_inds)
                             if int(other in yri_inds) != int(founder in yri_inds):
                                 self.add_interval(inter[0], inter[1])
-        self.merge_intervals()
+        self.merge_intervals_fast()
         
-    cpdef filter_by_length(self, min_length, max_length):
-    
-        cdef cpp_vector[interval_item] *new_intervals = new cpp_vector[interval_item]()
-        cdef interval_item p
-        #while i != self._intervals.end():
-        for i in range(self._intervals.size()):
-            p = self._intervals.at(i)
-            if p.length >= min_length and p.length <= max_length:
-                new_intervals.push_back(p) 
-        self._intervals = new_intervals
+    cpdef filter_by_length(self, float min_length, float max_length, GeneticMap gm):
+        cdef IntervalTree new_tree = IntervalTree()
+        cdef float length
+        cdef list intervals = self.to_list()
+        for interval in intervals:
+            length = gm.get_length(interval.start,interval.end)
+            if length >= min_length and length <= max_length:
+                new_tree.insert_interval(interval)
+        self._tree = new_tree
         
     cpdef filter_by_score(self, min_score, max_score):
-    
-        cdef cpp_vector[interval_item] *new_intervals = new cpp_vector[interval_item]()
-        cdef interval_item p
-        #while i != self._intervals.end():
-        for i in range(self._intervals.size()):
-            p = self._intervals.at(i)
-            if p.value >= min_score and p.value <= max_score:
-                new_intervals.push_back(p) 
-        self._intervals = new_intervals
+        cdef IntervalTree new_tree = IntervalTree()
+        cdef list intervals = self.to_list()
+        for interval in intervals:
+            if interval.value >= min_score and interval.value <= max_score:
+                new_tree.insert_interval(interval)
+        self._tree = new_tree
         
     cpdef filter_by_other_ibd(self, cPairIBD other_ibd):
-    
-        cdef cpp_vector[interval_item] *new_intervals = new cpp_vector[interval_item]()
-        cdef interval_item p
-        #while i != self._intervals.end():
-        for i in range(self._intervals.size()):
-            p = self._intervals.at(i)
-            if len(other_ibd.find(p.start,p.end)) > 0:
-                new_intervals.push_back(p) 
-        self._intervals = new_intervals
-        
+        cdef IntervalTree new_tree = IntervalTree()
+        cdef list intervals = self.to_list()
+        for interval in intervals:
+            if len(other_ibd.find(interval.start,interval.end)) > 0:
+                new_tree.insert_interval(interval)
+        self._tree = new_tree
+
     cpdef filter_out_other_ibd(self, cPairIBD other_ibd):
-    
-        cdef cpp_vector[interval_item] *new_intervals = new cpp_vector[interval_item]()
-        cdef interval_item p
-        #while i != self._intervals.end():
-        for i in range(self._intervals.size()):
-            p = self._intervals.at(i)
-            if len(other_ibd.find(p.start,p.end)) == 0:
-                new_intervals.push_back(p) 
-        self._intervals = new_intervals
-    
-    cpdef calc_dists(self, dists):
-        cdef interval_item p
-        #while i != self._intervals.end():
-        for i in range(self._intervals.size()):
-            self._intervals.at(i).length = dists[min(self._intervals.at(i).end,len(dists)-1)] - dists[min(self._intervals.at(i).start,len(dists)-1)] 
+        cdef IntervalTree new_tree = IntervalTree()
+        cdef list intervals = self.to_list()
+        for interval in intervals:
+            if len(other_ibd.find(interval.start,interval.end)) == 0:
+                new_tree.insert_interval(interval)
+        self._tree = new_tree
 
 cdef class cPopulationIBD:
     
-    cdef dict _ibd_dic
+    cdef public dict _ibd_dic
     
     def __cinit__(self):
         self._ibd_dic = {}
@@ -444,24 +261,6 @@ cdef class cPopulationIBD:
         for pair in self.keys():
             self.get_value(pair).merge_intervals_fast(overlap, max_val, merge_diff_vals)
     
-    cpdef stats(self, true_ibd, snp_num):
-        stats = []
-        for pair in true_ibd.keys():
-            if self.has_key(pair):
-                stats.append(self.get_value(pair).stats(true_ibd.get_value(pair),snp_num))
-            else:
-                TN = snp_num - true_ibd.get_value(pair).get_total_segments_length()
-                FN = true_ibd.get_value(pair).get_total_segments_length()
-                stats.append((0,0,TN,FN,0,0,0))
-        #print stats 
-        power = numpy.mean([x[4] for x in stats])
-        FDR = numpy.mean([x[5] for x in stats])
-        FPR = numpy.mean([x[6] for x in stats])
-        f = open("stats.txt","w")
-        f.writelines(string.join([str(x) for x in stats],"\n"))
-        f.close()
-        return (power,FDR,FPR)
-    
     cpdef stats_win(self, true_ibd, snp_num, window_size):
         stats = []
         for pair in true_ibd.keys():
@@ -485,28 +284,7 @@ cdef class cPopulationIBD:
         for pair in self._ibd_dic.keys():
             segments.append(self.get_value(pair).to_list())
         return segments 
-    
-#     cpdef calc_power_intervals(self, true_ibd, bins=[0,500,1000,1500,2000,2500,10000]):
-#         '''
-#         bins defines the bin edges, inluding the leftmost and rightmost edges.
-#         Returns an array of size len(bins)-1 with the power values:
-#         power[i] is the power to detect a segment of length >= bins[i-1] and <bins[i]  
-#         '''
-#         assert isinstance(true_ibd, cPopulationIBD)
-#         detected_all = []
-#         detected_segments_lengths = []
-#         all_segments_lengths = []
-#         for pair in true_ibd.keys():
-#             if self.has_key(pair):
-#                 detected = self._ibd_dic[pair].get_detected_segments(true_ibd.get_value(pair))
-#                 detected_all += detected
-#                 detected_segments_lengths += [x[1]-x[0] for x in detected]
-#                 all_segments_lengths += [x[1]-x[0] for x in true_ibd.get_value(pair).to_list()]
-#          
-#         (detected_hist, dummy) = numpy.histogram(detected_segments_lengths, bins)
-#         (all_hist, dummy) = numpy.histogram(all_segments_lengths, bins)
-#         return (numpy.nan_to_num(detected_hist/all_hist)).tolist()
-#     
+
     cpdef calc_power(self, true_ibd):
         assert isinstance(true_ibd, cPopulationIBD)
         detected_all = []
@@ -518,44 +296,7 @@ cdef class cPopulationIBD:
                 if len(detected) > 0:
                     detected_dict[pair] = detected
           
-#         if len(detected_all) == 0:
-#             return (0,detected_dict)
         return (float(len(detected_all)) / len(true_ibd.get_all_segments()), detected_dict)
-#     
-#     cpdef calc_false_positives(self, true_ibd):
-#         total_segments_num = 0
-#         false_positives = 0
-#         for pair in self.keys():
-#             segments_num = len(self._ibd_dic[pair].to_list())
-#             total_segments_num += segments_num
-#             if true_ibd.has_key(pair):
-#                 detected = self._ibd_dic[pair].get_detected_segments(true_ibd.get_value(pair))
-#                 false_positives += segments_num - len(detected)
-#             else:
-#                 false_positives += segments_num
-#          
-#         if total_segments_num == 0:
-#             return 1
-#         return float(false_positives) / total_segments_num
-#     
-#     cpdef calc_false_positives_intervals(self, true_ibd, bins=[0,500,1000,1500,2000,2500,10000]):
-#         all_segments = []
-#         false_positives = []
-#         for pair in self.keys():
-#             segments = self._ibd_dic[pair].to_list()
-#             all_segments += segments
-#             if true_ibd.has_key(pair):
-#                 detected = self._ibd_dic[pair].get_detected_segments_inv(true_ibd.get_value(pair))
-#                 for seg in detected:
-#                     if seg in segments:
-#                         segments.remove(seg)
-#             false_positives += segments
-#          
-#         all_segments_lengths = [x[1] - x[0] for x in all_segments]
-#         false_positives_lengths = [x[1] - x[0] for x in false_positives]
-#         (false_positives_hist, dummy) = numpy.histogram(false_positives_lengths, bins)
-#         (all_hist, dummy) = numpy.histogram(all_segments_lengths, bins)
-#         return (numpy.nan_to_num(false_positives_hist / all_hist)).tolist()
          
     cpdef filter_by_human_ids(self, human_ids):
         for pair in self.keys():
@@ -572,9 +313,9 @@ cdef class cPopulationIBD:
             if pair not in pairs:
                 self._ibd_dic.pop(pair)
                 
-    cpdef filter_by_length(self, min_length, max_length):
+    cpdef filter_by_length(self, float min_length, float max_length, GeneticMap gm):
         for pair in self.keys():
-            self._ibd_dic[pair].filter_by_length(min_length, max_length)
+            self._ibd_dic[pair].filter_by_length(min_length, max_length, gm)
             if len(self._ibd_dic[pair].to_list()) == 0:
                 self._ibd_dic.pop(pair)
                 
@@ -599,11 +340,7 @@ cdef class cPopulationIBD:
                 self._ibd_dic[pair].filter_out_other_ibd(other_ibd.get_value(pair))
                 if len(self._ibd_dic[pair].to_list()) == 0:
                     self._ibd_dic.pop(pair)
-                            
-    cpdef calc_dists(self, dists):
-        for pair in self.keys():
-            self._ibd_dic[pair].calc_dists(dists)
-    
+
     cpdef to_dict(self):
         d = {}
         for pair in self._ibd_dic.keys():
@@ -636,7 +373,7 @@ cdef class cPopulationIBD:
         return "".join(s)
     
     @classmethod
-    def from_string(cls, s, dists=[]):
+    def from_string(cls, s):
         assert isinstance(s, (str,list))
         p = cPopulationIBD()
         if type(s) is str:
@@ -647,34 +384,21 @@ cdef class cPopulationIBD:
             temp = pair_string.split(":")
             pair = temp[0].split(",")
             pair = (int(pair[0]),int(pair[1]))
-            pairIBD = cPairIBD()
+            pairibd = cPairIBD()
             for inter in temp[1].split(";"):
                 points = inter.split(",")
                 score = 0
                 if len(points) > 2:
                     score = float(points[2])
-                dist = 0
-                if len(dists) > 0:
-                    start = min(int(points[0]),len(dists)-1)
-                    end = min(int(points[1]),len(dists)-1)
-                    #if int(points[1]) >= len(dists) or int(points[0]) >= len(dists):
-                    #print pair, points, len(dists)
-                    dist = end - start
-                pairIBD.add_interval(int(points[0]),int(points[1]),score,dist)
-            p.add_human_pair(pair,pairIBD)
-            p.get_value(pair).calc_dists(dists)
+                pairibd.add_interval(int(points[0]),int(points[1]),score)
+            p.add_human_pair(pair,pairibd)
         return p
     
     @classmethod
-    def fast_deserialize(cls, file_name, gm_file_name=None):
-        dists = []
-        if gm_file_name != None:
-            gm_f = open(gm_file_name)
-            data = gm_f.readlines()
-            dists = [float(x.split(" ")[2]) for x in data]
+    def fast_deserialize(cls, file_name):
         f = open(file_name)
         s = f.readlines()
-        ibd = cPopulationIBD.from_string(s,dists)
+        ibd = cPopulationIBD.from_string(s)
         #ibd.merge_all()
         f.close()
         return ibd
