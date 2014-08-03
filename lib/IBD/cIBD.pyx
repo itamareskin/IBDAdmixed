@@ -6,7 +6,6 @@ Created on Jan 11, 2012
 from __future__ import division
 from IBD.IntervalTree cimport Interval, IntervalTree
 from IBD.IntervalTree import Interval, IntervalTree
-import IntervalUtils as iu 
 import numpy
 import string
 from libcpp.vector cimport vector as cpp_vector
@@ -37,7 +36,7 @@ cdef class cPairIBD:
         cdef list intervals = other_ibd.to_list()
         for interval in intervals:
             self.add_interval(interval[0], interval[1], interval[2])
-        self.merge_intervals_fast(max_val=max_val)
+        self.merge_intervals(max_val=max_val)
     
     cpdef to_string(cPairIBD self):
         s = []
@@ -60,7 +59,50 @@ cdef class cPairIBD:
             else:
                 p.add_interval(interval[0],interval[1])
         return p
-    
+
+    cpdef merge_intervals(cPairIBD self, int ovelap = 1, max_val=False, merge_diff_vals=False):
+
+        # get a list of all intervals in the IntervalTree
+        intervals = self._tree.to_list()
+        if len(intervals) == 0:
+            return
+
+        # clear the IntervalTree
+        self._tree = IntervalTree()
+
+        # sort the intervals according to their value
+        decorated = [(tup.value, tup) for tup in intervals]
+        if max_val:
+            decorated.sort()
+        else:
+            decorated.sort(reverse=True)
+        intervals = [tup for second, tup in decorated]
+
+        for interval in intervals:
+            intersections = self._tree.find(interval.start-ovelap,interval.end+ovelap)
+            if len(intersections) > 0:
+                non_intersecting = self._tree.to_list()
+                for curr_intersection in intersections:
+                    non_intersecting.remove(curr_intersection)
+
+                self._tree = IntervalTree()
+                for non in non_intersecting:
+                    self._tree.insert_interval(non)
+
+                new_intervals = []
+                for curr_inter in intersections:
+                    if curr_inter.value == interval.value or merge_diff_vals:
+                        interval=interval.merge(curr_inter,max_val)
+                    else:
+                        if (not max_val and curr_inter.value > interval.value) or (max_val and curr_inter.value < interval.value):
+                            new_intervals += curr_inter.substract(interval)
+
+                new_intervals.append(interval)
+                for new_int in new_intervals:
+                    self._tree.insert_interval(new_int)
+            else:
+                self._tree.insert_interval(interval)
+
     cpdef merge_intervals_fast(cPairIBD self, int overlap = 1, max_val=False, merge_diff_vals=False):
 
         # get a list of all intervals in the IntervalTree
@@ -101,33 +143,30 @@ cdef class cPairIBD:
                 prev_end = interval.end
                 prev_score = interval.value
     
-    cpdef get_num_windows(self, int window_size):
+    cpdef get_num_windows(self, int window_size = 1):
         l = self.to_list()
         total_length = 0
         for segment in l:
             total_length += round((segment[1]-segment[0])/float(window_size))
         return total_length
     
-    cpdef get_IBD_percent(cPairIBD self, int snp_num):
-        return  100 * float(sum([i[1]-i[0] for i in self.to_list()])) / snp_num
+    cpdef get_IBD_percent(cPairIBD self, GeneticMap gm):
+        return  100 * float(sum([i[1]-i[0] for i in self.to_list()])) / gm._snp_num
     
-    cpdef stats_win(cPairIBD self, cPairIBD true_ibd, int snp_num, int window_size):
-        if true_ibd == None:
+    cpdef stats_win(cPairIBD self, cPairIBD true_ibd, GeneticMap gm, int window_size = 1):
+        if true_ibd is None:
             return 0
-        #self.merge_intervals()
-        #true_ibd.merge_intervals()
-        tree = self._tree
         TP = 0
         FP = 0
         TN = 0
         FN = 0
-        intersections = iu.IntersectIntervalTrees(self._tree, true_ibd.to_list()) 
+        intersections = self._tree.intersect(true_ibd._tree)
         if len(intersections) > 0:
             for inter in intersections:
                 TP += round((inter[1] - inter[0])/float(window_size))
         FP = self.get_num_windows(window_size) - TP
         FN = true_ibd.get_num_windows(window_size) - TP
-        TN = snp_num/window_size - (TP + FP + FN)
+        TN = gm._snp_num/window_size - (TP + FP + FN)
         power = TP/(TP+FN) if TP+FN>0 else 0
         specificity = TN/(TN+FP) if TN+FP>0 else 1
         FPR = 1 - specificity
@@ -135,7 +174,7 @@ cdef class cPairIBD:
             FDR = 0
         else:
             FDR = FP/(TP+FP)
-        return (TP,FP,TN,FN,power,FDR,FPR)
+        return {'TP': TP, 'FP': FP, 'TN': TN, 'power': power, 'FDR': FDR, 'FPR': FPR}
     
     cpdef get_detected_segments(cPairIBD self, cPairIBD true_ibd):
         true_segments = true_ibd.to_list()
@@ -151,7 +190,7 @@ cdef class cPairIBD:
         for founder in f1._founder_to_tree.keys():
             if f2._founder_to_tree.has_key(founder):
                 intersections =\
-                iu.IntersectIntervalTrees(f1._founder_to_tree[founder], iu.get_interval_list(f2._founder_to_tree[founder]))
+                f1._founder_to_tree[founder].intersect(f2._founder_to_tree[founder])
                 for inter in intersections:
                     if inter[1]-inter[0] > min_ibd_length:
                         self.add_interval(inter[0], inter[1])
@@ -161,7 +200,7 @@ cdef class cPairIBD:
         for founder in f1._founder_to_tree.keys():
             if f2._founder_to_tree.has_key(founder):
                 intersections =\
-                iu.IntersectIntervalTrees(f1._founder_to_tree[founder], iu.get_interval_list(f2._founder_to_tree[founder]))
+                f1._founder_to_tree[founder].intersect(f2._founder_to_tree[founder])
                 for inter in intersections:
                     if inter[1]-inter[0] > min_ibd_length:
                         f1_other_founders = f1.get_founders_in_interval(inter[0], inter[1])
@@ -182,33 +221,33 @@ cdef class cPairIBD:
         cdef float length
         cdef list intervals = self.to_list()
         for interval in intervals:
-            length = gm.get_length(interval.start,interval.end)
+            length = gm.get_length(interval[0],interval[1])
             if length >= min_length and length <= max_length:
-                new_tree.insert_interval(interval)
+                new_tree.insert_interval(Interval(interval[0],interval[1],interval[2]))
         self._tree = new_tree
         
     cpdef filter_by_score(self, min_score, max_score):
         cdef IntervalTree new_tree = IntervalTree()
         cdef list intervals = self.to_list()
         for interval in intervals:
-            if interval.value >= min_score and interval.value <= max_score:
-                new_tree.insert_interval(interval)
+            if interval[2] >= min_score and interval[2] <= max_score:
+                new_tree.insert_interval(Interval(interval[0],interval[1],interval[2]))
         self._tree = new_tree
         
     cpdef filter_by_other_ibd(self, cPairIBD other_ibd):
         cdef IntervalTree new_tree = IntervalTree()
         cdef list intervals = self.to_list()
         for interval in intervals:
-            if len(other_ibd.find(interval.start,interval.end)) > 0:
-                new_tree.insert_interval(interval)
+            if len(other_ibd.find(interval[0],interval[1])) > 0:
+                new_tree.insert_interval(Interval(interval[0],interval[1],interval[2]))
         self._tree = new_tree
 
     cpdef filter_out_other_ibd(self, cPairIBD other_ibd):
         cdef IntervalTree new_tree = IntervalTree()
         cdef list intervals = self.to_list()
         for interval in intervals:
-            if len(other_ibd.find(interval.start,interval.end)) == 0:
-                new_tree.insert_interval(interval)
+            if len(other_ibd.find(interval[0],interval[1])) == 0:
+                new_tree.insert_interval(Interval(interval[0],interval[1],interval[2]))
         self._tree = new_tree
 
 cdef class cPopulationIBD:
@@ -261,13 +300,13 @@ cdef class cPopulationIBD:
         for pair in self.keys():
             self.get_value(pair).merge_intervals_fast(overlap, max_val, merge_diff_vals)
     
-    cpdef stats_win(self, true_ibd, snp_num, window_size):
+    cpdef stats_win(self, true_ibd, GeneticMap gm, window_size = 1):
         stats = []
         for pair in true_ibd.keys():
             if self.has_key(pair):
-                stats.append(self.get_value(pair).stats_win(true_ibd.get_value(pair),snp_num,window_size))
+                stats.append(self.get_value(pair).stats_win(true_ibd.get_value(pair),gm,window_size))
             else:
-                TN = snp_num/window_size - true_ibd.get_value(pair).get_num_windows(window_size)
+                TN = gm._snp_num/window_size - true_ibd.get_value(pair).get_num_windows(window_size)
                 FN = true_ibd.get_value(pair).get_num_windows(window_size)
                 stats.append((0,0,TN,FN,0,0,0))
         #print stats 
@@ -399,7 +438,6 @@ cdef class cPopulationIBD:
         f = open(file_name)
         s = f.readlines()
         ibd = cPopulationIBD.from_string(s)
-        #ibd.merge_all()
         f.close()
         return ibd
     

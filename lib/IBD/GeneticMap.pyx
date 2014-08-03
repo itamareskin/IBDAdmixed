@@ -99,4 +99,4 @@ cdef class GeneticMap(object):
 
 
     cpdef float get_length(self, int start_snp_idx, int end_snp_idx):
-        return self._genetic_dist[min(start_snp_idx,self._snp_num-1)] - self._genetic_dist[min(start_snp_idx,self._snp_num-1)]
+        return self._genetic_dist[min(end_snp_idx,self._snp_num-1)] - self._genetic_dist[start_snp_idx]

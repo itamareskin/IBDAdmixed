@@ -409,3 +409,11 @@ cdef class IntervalTree:
         if self.root is None:
             return None
         return self.root.traverse(fn)
+
+    def intersect(self, other):
+        if not isinstance(other, IntervalTree):
+            raise ValueError
+        intersections = []
+        for interval in other.to_list():
+            intersections += [(max(interval.start, i.start), min(interval.end, i.end)) for i in self.find(interval.start,interval.end)]
+        return intersections

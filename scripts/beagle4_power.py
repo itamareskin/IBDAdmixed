@@ -29,7 +29,7 @@ print power, FDR, FPR
 
 scores = [int(x[2]) for x in beagle.to_list()]
 print min(scores),max(scores)
-beagle2.merge_all_fast(overlap = 1, max_val = True, merge_diff_vals=True)
+beagle2.merge_all(overlap = 1, max_val = True, merge_diff_vals=True)
 beagle2.filter_by_length(0.1,1000,gm)
 (power, FDR, FPR) = beagle2.stats_win(true_ibd,116430,25)
 print power, FDR, FPR

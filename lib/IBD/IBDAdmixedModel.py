@@ -70,7 +70,7 @@ def ibdadmixed(map_file, beagle_model_files, obs_data, ibs_intervals=None, max_s
                     pairIBD.add_interval(start_snp+win[0],start_snp+win[1],win_scores[win])
         lod_scores[interval] = OrderedDict(sorted(lod_scores[interval].items(), key=lambda t: t[0][0]))
     lod_scores = OrderedDict(sorted(lod_scores.items(), key=lambda t: t[0][0]))
-    pairIBD.merge_intervals_fast(max_val=True,merge_diff_vals=True)
+    pairIBD.merge_intervals(max_val=True,merge_diff_vals=True)
     return (pairIBD, lod_scores)
     
     

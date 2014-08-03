@@ -47,7 +47,7 @@ ibd_admixed2 = cPopulationIBD.from_string(ibd_admixed.to_string())
 scores = [x[2] for x in ibd_admixed.to_list()]
 print min(scores),max(scores)
 ibd_admixed2.filter_by_score(-25,1e10)
-ibd_admixed2.merge_all_fast(overlap = 1, max_val = True, merge_diff_vals=True)
+ibd_admixed2.merge_all(overlap = 1, max_val = True, merge_diff_vals=True)
 ibd_admixed2.filter_by_score(-25,1e10)
 ibd_admixed2.filter_by_length(0.5,1000,gm)
 (power_sigs,detected_dict) = ibd_admixed2.calc_power(true_ibd)
@@ -66,7 +66,7 @@ print min(scores),max(scores)
 for score in range(min(scores),max(scores)+1,2):
     ibd_admixed2 = cPopulationIBD.from_string(ibd_admixed.to_string())
     ibd_admixed2.filter_by_score(-25,max(scores)+100)
-    ibd_admixed2.merge_all_fast(overlap = 1, max_val = True, merge_diff_vals=True)
+    ibd_admixed2.merge_all(overlap = 1, max_val = True, merge_diff_vals=True)
     ibd_admixed2.filter_by_length(0.8,1000,gm)
     
     ibd_admixed3 = cPopulationIBD.from_string(ibd_admixed.to_string())
