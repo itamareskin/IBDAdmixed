@@ -1,67 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="febcba82-e9fe-4b73-8aeb-036e109742f8" name="Default" comment="">
-      <change type="DELETED" beforePath="C:\Users\Itamar\Source\ibdadmixed\lib\IBD\cIBD.cpp" afterPath="" />
-      <change type="DELETED" beforePath="C:\Users\Itamar\Source\ibdadmixed\lib\IBD\cIBD.html" afterPath="" />
-      <change type="DELETED" beforePath="C:\Users\Itamar\Source\ibdadmixed\lib\IBD\cIBD.pyd" afterPath="" />
-      <change type="DELETED" beforePath="C:\Users\Itamar\Source\ibdadmixed\lib\IBD\cIBD.pyx" afterPath="" />
-      <change type="DELETED" beforePath="C:\Users\Itamar\Source\ibdadmixed\lib\IBD\cIBD.so" afterPath="" />
-      <change type="DELETED" beforePath="C:\Users\Itamar\Source\ibdadmixed\unittests\cIBDTests.py" afterPath="" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/utils/FoundersContainer.pyd" afterPath="$PROJECT_DIR$/lib/utils/FoundersContainer.pyd" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/utils/FoundersContainer.so" afterPath="$PROJECT_DIR$/lib/utils/FoundersContainer.so" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/IBD/GeneticMap.so" afterPath="$PROJECT_DIR$/lib/IBD/GeneticMap.so" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/IBD/GenotypePairModel.pyd" afterPath="$PROJECT_DIR$/lib/IBD/GenotypePairModel.pyd" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/IBD/GenotypePairModel.so" afterPath="$PROJECT_DIR$/lib/IBD/GenotypePairModel.so" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/IBD/InnerModel.pyd" afterPath="$PROJECT_DIR$/lib/IBD/InnerModel.pyd" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/IBD/LDModel.pyd" afterPath="$PROJECT_DIR$/lib/IBD/LDModel.pyd" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/IBD/LDModel.so" afterPath="$PROJECT_DIR$/lib/IBD/LDModel.so" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/utils/StringUtils.pyd" afterPath="$PROJECT_DIR$/lib/utils/StringUtils.pyd" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/utils/StringUtils.so" afterPath="$PROJECT_DIR$/lib/utils/StringUtils.so" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/IBD/TestSet.pyd" afterPath="$PROJECT_DIR$/lib/IBD/TestSet.pyd" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/IBD/TestSet.so" afterPath="$PROJECT_DIR$/lib/IBD/TestSet.so" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/utils/FoundersContainer.cpp" afterPath="$PROJECT_DIR$/lib/utils/FoundersContainer.cpp" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/utils/FoundersContainer.html" afterPath="$PROJECT_DIR$/lib/utils/FoundersContainer.html" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/IBD/GeneticMap.cpp" afterPath="$PROJECT_DIR$/lib/IBD/GeneticMap.cpp" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/IBD/GeneticMap.html" afterPath="$PROJECT_DIR$/lib/IBD/GeneticMap.html" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/IBD/GenotypePairModel.cpp" afterPath="$PROJECT_DIR$/lib/IBD/GenotypePairModel.cpp" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/IBD/GenotypePairModel.html" afterPath="$PROJECT_DIR$/lib/IBD/GenotypePairModel.html" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/IBD/GenotypePairModel.pyx" afterPath="$PROJECT_DIR$/lib/IBD/GenotypePairModel.pyx" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/IBD/IBDAdmixedModel.py" afterPath="$PROJECT_DIR$/lib/IBD/IBDAdmixedModel.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/IBD/InnerModel.cpp" afterPath="$PROJECT_DIR$/lib/IBD/InnerModel.cpp" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/IBD/InnerModel.html" afterPath="$PROJECT_DIR$/lib/IBD/InnerModel.html" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/IBD/IntervalTree.cpp" afterPath="$PROJECT_DIR$/lib/IBD/IntervalTree.cpp" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/IBD/LDModel.cpp" afterPath="$PROJECT_DIR$/lib/IBD/LDModel.cpp" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/IBD/LDModel.html" afterPath="$PROJECT_DIR$/lib/IBD/LDModel.html" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/IBD/NaiveModel.py" afterPath="$PROJECT_DIR$/lib/IBD/NaiveModel.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/utils/StringUtils.cpp" afterPath="$PROJECT_DIR$/lib/utils/StringUtils.cpp" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/utils/StringUtils.html" afterPath="$PROJECT_DIR$/lib/utils/StringUtils.html" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/IBD/TestSet.cpp" afterPath="$PROJECT_DIR$/lib/IBD/TestSet.cpp" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/IBD/TestSet.html" afterPath="$PROJECT_DIR$/lib/IBD/TestSet.html" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/IBD/TestSet.pyx" afterPath="$PROJECT_DIR$/lib/IBD/TestSet.pyx" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/unittests/TestSetTests.py" afterPath="$PROJECT_DIR$/unittests/TestSetTests.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/scripts/beagle4_power.py" afterPath="$PROJECT_DIR$/scripts/beagle4_power.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/scripts/compareResults.py" afterPath="$PROJECT_DIR$/scripts/compareResults.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/scripts/germline2ibd.py" afterPath="$PROJECT_DIR$/scripts/germline2ibd.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/scripts/germline_power.py" afterPath="$PROJECT_DIR$/scripts/germline_power.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/scripts/ibd_stats.py" afterPath="$PROJECT_DIR$/scripts/ibd_stats.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/scripts/ibd_to_windows.py" afterPath="$PROJECT_DIR$/scripts/ibd_to_windows.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/scripts/ibd_to_windows_long.py" afterPath="$PROJECT_DIR$/scripts/ibd_to_windows_long.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/scripts/merge_beagle.py" afterPath="$PROJECT_DIR$/scripts/merge_beagle.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/scripts/parente_power.py" afterPath="$PROJECT_DIR$/scripts/parente_power.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/setup.py" afterPath="$PROJECT_DIR$/lib/setup.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/scripts/simple_simulation.py" afterPath="$PROJECT_DIR$/scripts/simple_simulation.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/scripts/simulate_admixed_artificial_IBD.py" afterPath="$PROJECT_DIR$/scripts/simulate_admixed_artificial_IBD.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/scripts/simulate_african_americans.py" afterPath="$PROJECT_DIR$/scripts/simulate_african_americans.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/scripts/simulate_artificial_IBD.py" afterPath="$PROJECT_DIR$/scripts/simulate_artificial_IBD.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/scripts/simulate_single_anc.py" afterPath="$PROJECT_DIR$/scripts/simulate_single_anc.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/tests/test.py" afterPath="$PROJECT_DIR$/tests/test.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/tests/test1.py" afterPath="$PROJECT_DIR$/tests/test1.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/tests/test2.py" afterPath="$PROJECT_DIR$/tests/test2.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/tests/test3.py" afterPath="$PROJECT_DIR$/tests/test3.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/scripts/write_window_ibd.py" afterPath="$PROJECT_DIR$/scripts/write_window_ibd.py" />
-    </list>
+    <list default="true" id="febcba82-e9fe-4b73-8aeb-036e109742f8" name="Default" comment="" />
     <ignored path="ibdadmixed.iws" />
     <ignored path=".idea/workspace.xml" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -95,11 +35,11 @@
   </component>
   <component name="FileEditorManager">
     <leaf>
-      <file leaf-file-name="IBDSegments.pyx" pinned="false" current="true" current-in-tab="true">
+      <file leaf-file-name="IBDSegments.pyx" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/lib/IBD/IBDSegments.pyx">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="-0.38181818" vertical-offset="1326" max-vertical-offset="7633">
-              <caret line="57" column="32" selection-start-line="57" selection-start-column="32" selection-end-line="57" selection-end-column="32" />
+            <state vertical-scroll-proportion="0.0" vertical-offset="1989" max-vertical-offset="7633">
+              <caret line="139" column="62" selection-start-line="139" selection-start-column="62" selection-end-line="139" selection-end-column="62" />
               <folding />
             </state>
           </provider>
@@ -122,6 +62,16 @@
           <provider selected="true" editor-type-id="text-editor">
             <state vertical-scroll-proportion="0.0" vertical-offset="2754" max-vertical-offset="6579">
               <caret line="162" column="69" selection-start-line="162" selection-start-column="69" selection-end-line="162" selection-end-column="69" />
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="GeneticMap.pxd" pinned="false" current="true" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/lib/IBD/GeneticMap.pxd">
+          <provider selected="true" editor-type-id="text-editor">
+            <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="605">
+              <caret line="0" column="9" selection-start-line="0" selection-start-column="9" selection-end-line="0" selection-end-column="9" />
               <folding />
             </state>
           </provider>
@@ -150,18 +100,8 @@
       <file leaf-file-name="LDModel.pyx" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/lib/IBD/LDModel.pyx">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="238" max-vertical-offset="6766">
-              <caret line="14" column="24" selection-start-line="14" selection-start-column="24" selection-end-line="14" selection-end-column="24" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="LDModel.pxd" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/lib/IBD/LDModel.pxd">
-          <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="1768">
-              <caret line="0" column="2" selection-start-line="0" selection-start-column="2" selection-end-line="0" selection-end-column="2" />
+            <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="6715">
+              <caret line="2" column="19" selection-start-line="2" selection-start-column="19" selection-end-line="2" selection-end-column="19" />
               <folding />
             </state>
           </provider>
@@ -170,8 +110,8 @@
       <file leaf-file-name="test4.py" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/tests/test4.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="204" max-vertical-offset="578">
-              <caret line="12" column="52" selection-start-line="12" selection-start-column="52" selection-end-line="12" selection-end-column="52" />
+            <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="527">
+              <caret line="16" column="19" selection-start-line="16" selection-start-column="19" selection-end-line="16" selection-end-column="19" />
               <folding />
             </state>
           </provider>
@@ -242,8 +182,8 @@
   <component name="ProjectFrameBounds">
     <option name="x" value="54" />
     <option name="y" value="-8" />
-    <option name="width" value="1874" />
-    <option name="height" value="1096" />
+    <option name="width" value="1634" />
+    <option name="height" value="1066" />
   </component>
   <component name="ProjectInspectionProfilesVisibleTreeState">
     <entry key="Project Default">
@@ -545,7 +485,7 @@
   <component name="PropertiesComponent">
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="recentsLimit" value="5" />
-    <property name="options.lastSelected" value="project.propVCSSupport.Mappings" />
+    <property name="options.lastSelected" value="preferences.externalTools" />
     <property name="options.splitter.main.proportions" value="0.3" />
     <property name="options.splitter.details.proportions" value="0.2" />
     <property name="options.searchVisible" value="true" />
@@ -564,7 +504,7 @@
       <recent name="C:\Users\Itamar\Source\ibdadmixed\tests" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.test4">
+  <component name="RunManager" selected="JavaScript Debug.test4.py">
     <configuration default="false" name="test4.py" type="JavascriptDebugType" factoryName="JavaScript Debug" temporary="true" uri="http://soul.cs.tau.ac.il/tests/test4.py">
       <RunnerSettings RunnerId="JavascriptDebugRunner" />
       <ConfigurationWrapper RunnerId="JavascriptDebugRunner" />
@@ -875,9 +815,9 @@
     </list>
     <recent_temporary>
       <list size="5">
-        <item index="0" class="java.lang.String" itemvalue="Python.test4" />
-        <item index="1" class="java.lang.String" itemvalue="Python tests.Unittests in Test" />
-        <item index="2" class="java.lang.String" itemvalue="JavaScript Debug.test4.py" />
+        <item index="0" class="java.lang.String" itemvalue="JavaScript Debug.test4.py" />
+        <item index="1" class="java.lang.String" itemvalue="Python.test4" />
+        <item index="2" class="java.lang.String" itemvalue="Python tests.Unittests in Test" />
         <item index="3" class="java.lang.String" itemvalue="Python tests.Unittests in unittests" />
         <item index="4" class="java.lang.String" itemvalue="Python tests.Unittest Test.testnaivemodel" />
       </list>
@@ -916,16 +856,17 @@
     </todo-panel>
   </component>
   <component name="ToolWindowManager">
-    <frame x="54" y="-8" width="1874" height="1096" extended-state="6" />
+    <frame x="54" y="-8" width="1634" height="1066" extended-state="6" />
     <editor active="true" />
     <layout>
       <window_info id="Changes" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32905984" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.3295099" sideWeight="0.5" order="10" side_tool="false" content_ui="tabs" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.335845" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
+      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.32223415" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Database" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.3293147" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
-      <window_info id="Structure" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.17180617" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.17621145" sideWeight="0.6096423" order="0" side_tool="false" content_ui="combo" />
-      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.30855396" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
+      <window_info id="Structure" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.19796954" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.20304568" sideWeight="0.6096423" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.3179377" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.15760198" sideWeight="0.3888025" order="1" side_tool="true" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="8" side_tool="true" content_ui="tabs" />
       <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.31491137" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
@@ -933,7 +874,6 @@
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
-      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.3232534" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Commander" active="false" anchor="right" auto_hide="false" internal_type="SLIDING" type="SLIDING" visible="false" weight="0.4" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Hierarchy" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="2" side_tool="false" content_ui="combo" />
       <window_info id="Inspection" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.4" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
@@ -1130,14 +1070,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/lib/IBD/GeneticMap.pxd">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="595">
-          <caret line="22" column="11" selection-start-line="22" selection-start-column="11" selection-end-line="22" selection-end-column="11" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/tests/test2.py">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="714">
@@ -1194,18 +1126,11 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/lib/setup.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="510">
-          <caret line="18" column="45" selection-start-line="18" selection-start-column="30" selection-end-line="18" selection-end-column="45" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/unittests/GenotypePairModelTests.py">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.35023773" vertical-offset="0" max-vertical-offset="680">
           <caret line="17" column="19" selection-start-line="17" selection-start-column="19" selection-end-line="17" selection-end-column="19" />
+          <folding />
         </state>
       </provider>
     </entry>
@@ -1320,26 +1245,10 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/lib/IBD/LDModel.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="205101" max-vertical-offset="212976">
-          <caret line="12078" column="34" selection-start-line="12078" selection-start-column="34" selection-end-line="12078" selection-end-column="34" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/lib/IBD/LDModel.pxd">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="1768">
           <caret line="0" column="2" selection-start-line="0" selection-start-column="2" selection-end-line="0" selection-end-column="2" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/lib/IBD/LDModel.pyx">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="238" max-vertical-offset="6766">
-          <caret line="14" column="24" selection-start-line="14" selection-start-column="24" selection-end-line="14" selection-end-column="24" />
           <folding />
         </state>
       </provider>
@@ -1368,14 +1277,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/tests/test4.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="578">
-          <caret line="12" column="52" selection-start-line="12" selection-start-column="52" selection-end-line="12" selection-end-column="52" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/lib/IBD/IBDAdmixedModel.py">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="196" max-vertical-offset="1445">
@@ -1388,8 +1289,48 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/lib/IBD/IBDSegments.pyx">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="-0.38181818" vertical-offset="1326" max-vertical-offset="7633">
-          <caret line="57" column="32" selection-start-line="57" selection-start-column="32" selection-end-line="57" selection-end-column="32" />
+        <state vertical-scroll-proportion="0.0" vertical-offset="1989" max-vertical-offset="7633">
+          <caret line="139" column="62" selection-start-line="139" selection-start-column="62" selection-end-line="139" selection-end-column="62" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/tests/test4.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="527">
+          <caret line="16" column="19" selection-start-line="16" selection-start-column="19" selection-end-line="16" selection-end-column="19" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/lib/IBD/LDModel.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="302.14932" vertical-offset="0" max-vertical-offset="212976">
+          <caret line="10593" column="30" selection-start-line="10593" selection-start-column="30" selection-end-line="10593" selection-end-column="30" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/lib/setup.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.45637584" vertical-offset="0" max-vertical-offset="596">
+          <caret line="20" column="42" selection-start-line="20" selection-start-column="42" selection-end-line="20" selection-end-column="42" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/lib/IBD/LDModel.pyx">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="6715">
+          <caret line="2" column="19" selection-start-line="2" selection-start-column="19" selection-end-line="2" selection-end-column="19" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/lib/IBD/GeneticMap.pxd">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="605">
+          <caret line="0" column="9" selection-start-line="0" selection-start-column="9" selection-end-line="0" selection-end-column="9" />
           <folding />
         </state>
       </provider>
