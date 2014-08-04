@@ -3,7 +3,7 @@ from __future__ import division
 from WindowedModel import WindowedModel  # @UnresolvedImport
 from GenotypePairModel import GenotypePairModel  # @UnresolvedImport
 from LDModel import LDModel  # @UnresolvedImport
-from IBD.cIBD import cPairIBD
+from IBD.IBDSegments import PairIBD
 from collections import OrderedDict
 
 def get_ibdadmixed_inner_models(ldmodels, K, phased, ibd, g):
@@ -46,7 +46,7 @@ def ibdadmixed(map_file, beagle_model_files, obs_data, ibs_intervals=None, max_s
     gpmodels_noibd = get_ibdadmixed_inner_models(ldmodels, K, phased=phased, ibd=False, g=g)
     gpmodels_ibd = get_ibdadmixed_inner_models(ldmodels, K, phased=phased, ibd=True, g=g)
 
-    pairIBD = cPairIBD()
+    pairIBD = PairIBD()
     lod_scores = {}
     if ibs_intervals is None:
         ibs_intervals = [(0, obs_data._snp_num)]

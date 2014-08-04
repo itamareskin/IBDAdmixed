@@ -13,18 +13,18 @@ import math
 import random
 #from tables import *
 #import tables
-from IBD.cIBD import cPairIBD,cPopulationIBD
+from IBD.IBDSegments import PairIBD,PopIBD
 #from bx.intervals import IntervalTree, Interval
 import time
 
 ibdadmixed_f = open("ibdadmixed.ibd.txt", 'r')
-ibdAdmixed = cPopulationIBD.from_string(ibdadmixed_f.readlines())
+ibdAdmixed = PopIBD.from_string(ibdadmixed_f.readlines())
 ibdadmixed_f.close()
 beagle_f = open("beagle4.ibd.txt", 'r')
-beagle = cPopulationIBD.from_string(beagle_f.readlines())
+beagle = PopIBD.from_string(beagle_f.readlines())
 beagle_f.close()
 true_f = open("AfricanAmericans4.trueibd.dat", 'r')
-true_ibd = cPopulationIBD.from_string(true_f.readlines())
+true_ibd = PopIBD.from_string(true_f.readlines())
 true_f.close()
 
 beagle_power = beagle.calc_power_intervals(true_ibd)

@@ -8,7 +8,7 @@ import os, sys
 import random
 import string
 import logging
-from IBD.cIBD import cPairIBD, cPopulationIBD
+from IBD.IBDSegments import PairIBD, PopIBD
 from itertools import product
 
 logging.basicConfig(level=logging.DEBUG)
@@ -17,7 +17,7 @@ logger = logging.getLogger()
 trueibd_out = open("../data/AfricanAmericans5.trueibd.dat")
 ibd_string = trueibd_out.readlines()
 trueibd_out.close()
-ibd = cPopulationIBD.from_string(ibd_string)
+ibd = PopIBD.from_string(ibd_string)
 
 data_f = open("../data/AfricanAmericans5.genos.dat")
 data = data_f.readlines()

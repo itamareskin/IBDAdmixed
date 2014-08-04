@@ -12,7 +12,7 @@ import os, sys
 import random
 import string
 import logging
-from IBD.cIBD import cPairIBD, cPopulationIBD 
+from IBD.IBDSegments import PairIBD, PopIBD
 from itertools import product, combinations 
 from hapMapUtil import getHapMapMarkers
 from sys import stdout
@@ -26,7 +26,7 @@ def add_ibd(pop, ibd, pair, length, dists):
     dists_c = [abs(x-dists[start]-length) for x in dists]
     end = dists_c.index(min(dists_c))
     pop.individual(pair[1]).genotype()[start:end] = pop.individual(pair[0]).genotype()[start:end]
-    pairIBD = cPairIBD()
+    pairIBD = PairIBD()
     pairIBD.add_interval(start,end)
     ibd.add_human_pair(pair,pairIBD)
     
@@ -75,7 +75,7 @@ def create_artificial_pop(pops, alphas, num_composite, num_ibd_pairs, error_rate
     pairs = list(combinations(range(pop_composite.popSize()),2))
     random.shuffle(pairs)
     pairs = set(pairs)
-    ibd = cPopulationIBD()
+    ibd = PopIBD()
     it = iter(pairs)
     for ibd_length in [1,2,3,4,5]:
         for i in range(num_ibd_pairs):

@@ -3,7 +3,7 @@ from WindowedModel import WindowedModel  # @UnresolvedImport
 from GenotypeModel import GenotypeModel  # @UnresolvedImport
 from GenotypePairModel import GenotypePairModel  # @UnresolvedImport
 from LDModel import LDModel  # @UnresolvedImport
-from IBD.cIBD import cPairIBD
+from IBD.IBDSegments import PairIBD
 from collections import Counter
 from IBDAdmixedModel import run_windowed_model
 from collections import OrderedDict
@@ -74,7 +74,7 @@ def naivemodel(map_file, beagle_model_files, obs_data, ibs_intervals=None, max_s
     winmodel = WindowedModel(gmodels, snp_num, win_size)
     (breakpoints, local_anc) = get_ancestry_breakpoints(winmodel, obs_data)
 
-    pairIBD = cPairIBD()
+    pairIBD = PairIBD()
     lod_scores = {}
     print "Running Naive model between all ancestry breakpoints..."
     for interval_idx in range(len(breakpoints) - 1):

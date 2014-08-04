@@ -1,5 +1,5 @@
 __author__ = 'Itamar'
-from IBD.cIBD import cPairIBD
+from IBD.IBDSegments import PairIBD
 from IBD.IntervalTree import Interval,IntervalTree
 
 def merge_intervals_fast(p, overlap = 1, max_val=False, merge_diff_vals=False):
@@ -29,7 +29,7 @@ def merge_intervals_fast(p, overlap = 1, max_val=False, merge_diff_vals=False):
             prev_end = interval.end
             prev_score = interval.value
 
-p2 = cPairIBD()
+p2 = PairIBD()
 p2.add_interval(0,30,1)
 p2.add_interval(5,15,2)
 p2.add_interval(20,25,3)

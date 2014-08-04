@@ -8,7 +8,7 @@ import os, sys
 import random
 import string
 import logging
-from IBD.cIBD import cPairIBD, cPopulationIBD
+from IBD.IBDSegments import PairIBD, PopIBD
 from itertools import product
 
 logging.basicConfig(level=logging.DEBUG)
@@ -22,7 +22,7 @@ num_snps = int(sys.argv[1])
 ibd_f = open(sys.argv[2])
 ibd_string = ibd_f.readlines()
 ibd_f.close()
-ibd = cPopulationIBD.from_string(ibd_string)
+ibd = PopIBD.from_string(ibd_string)
 
 ibd_win_f = open(sys.argv[3], 'w')
 ibd_length_f = open(sys.argv[3] + ".length.txt", 'w')

@@ -11,7 +11,7 @@ import string
 from libcpp.vector cimport vector as cpp_vector
 from GeneticMap cimport GeneticMap
 
-cdef class cPairIBD:
+cdef class PairIBD:
     '''
     Represents segments of IBD shared by a pair of individuals
     Implemented using a IntervalTree to allow fast intersection queries
@@ -23,22 +23,22 @@ cdef class cPairIBD:
         self._tree = IntervalTree()
 
     property _list:
-        def __get__(cPairIBD self):
+        def __get__(PairIBD self):
             return self.to_list()
         
-    cpdef add_interval(cPairIBD self, int start, int end, float value=0):
+    cpdef add_interval(PairIBD self, int start, int end, float value=0):
         self._tree.insert_interval(Interval(start,end,value))
     
-    cpdef find(cPairIBD self,int start,int end):
+    cpdef find(PairIBD self,int start,int end):
         return self._tree.find(start,end)
     
-    cpdef update(cPairIBD self, cPairIBD other_ibd, max_val=False):
+    cpdef update(PairIBD self, PairIBD other_ibd, max_val=False):
         cdef list intervals = other_ibd.to_list()
         for interval in intervals:
             self.add_interval(interval[0], interval[1], interval[2])
         self.merge_intervals(max_val=max_val)
     
-    cpdef to_string(cPairIBD self):
+    cpdef to_string(PairIBD self):
         s = []
         intervals = self.to_list()
         for inter in intervals:
@@ -47,12 +47,12 @@ cdef class cPairIBD:
             s.pop()
         return "".join(s)
     
-    cpdef list to_list(cPairIBD self):
+    cpdef list to_list(PairIBD self):
         return [(x.start,x.end,x.value) for x in self._tree.to_list()]
     
     @classmethod
     def from_list(cls, list l):
-        p = cPairIBD()
+        p = PairIBD()
         for interval in l:
             if len(interval) > 2:
                 p.add_interval(interval[0],interval[1],interval[2])
@@ -60,7 +60,7 @@ cdef class cPairIBD:
                 p.add_interval(interval[0],interval[1])
         return p
 
-    cpdef merge_intervals(cPairIBD self, int ovelap = 1, max_val=False, merge_diff_vals=False):
+    cpdef merge_intervals(PairIBD self, int ovelap = 1, max_val=False, merge_diff_vals=False):
 
         # get a list of all intervals in the IntervalTree
         intervals = self._tree.to_list()
@@ -103,7 +103,7 @@ cdef class cPairIBD:
             else:
                 self._tree.insert_interval(interval)
 
-    cpdef merge_intervals_fast(cPairIBD self, int overlap = 1, max_val=False, merge_diff_vals=False):
+    cpdef merge_intervals_fast(PairIBD self, int overlap = 1, max_val=False, merge_diff_vals=False):
 
         # get a list of all intervals in the IntervalTree
         intervals = self._tree.to_list()
@@ -150,10 +150,10 @@ cdef class cPairIBD:
             total_length += round((segment[1]-segment[0])/float(window_size))
         return total_length
     
-    cpdef get_IBD_percent(cPairIBD self, GeneticMap gm):
+    cpdef get_IBD_percent(PairIBD self, GeneticMap gm):
         return  100 * float(sum([i[1]-i[0] for i in self.to_list()])) / gm._snp_num
     
-    cpdef stats_win(cPairIBD self, cPairIBD true_ibd, GeneticMap gm, int window_size = 1):
+    cpdef stats_win(PairIBD self, PairIBD true_ibd, GeneticMap gm, int window_size = 1):
         if true_ibd is None:
             return 0
         TP = 0
@@ -176,7 +176,7 @@ cdef class cPairIBD:
             FDR = FP/(TP+FP)
         return {'TP': TP, 'FP': FP, 'TN': TN, 'power': power, 'FDR': FDR, 'FPR': FPR}
     
-    cpdef get_detected_segments(cPairIBD self, cPairIBD true_ibd):
+    cpdef get_detected_segments(PairIBD self, PairIBD true_ibd):
         true_segments = true_ibd.to_list()
         cdef list detected = []
         tree = self._tree
@@ -186,7 +186,7 @@ cdef class cPairIBD:
                 detected.append(segment)
         return detected
     
-    cpdef add_ibd_from_containers(cPairIBD self, f1, f2, min_ibd_length = 0): 
+    cpdef add_ibd_from_containers(PairIBD self, f1, f2, min_ibd_length = 0):
         for founder in f1._founder_to_tree.keys():
             if f2._founder_to_tree.has_key(founder):
                 intersections =\
@@ -196,7 +196,7 @@ cdef class cPairIBD:
                         self.add_interval(inter[0], inter[1])
         self.merge_intervals_fast()
         
-    cpdef add_ibd_from_containers_only_admixed(cPairIBD self, f1, f2, min_ibd_length, f1_other, f2_other, ceu_inds, yri_inds): 
+    cpdef add_ibd_from_containers_only_admixed(PairIBD self, f1, f2, min_ibd_length, f1_other, f2_other, ceu_inds, yri_inds):
         for founder in f1._founder_to_tree.keys():
             if f2._founder_to_tree.has_key(founder):
                 intersections =\
@@ -234,7 +234,7 @@ cdef class cPairIBD:
                 new_tree.insert_interval(Interval(interval[0],interval[1],interval[2]))
         self._tree = new_tree
         
-    cpdef filter_by_other_ibd(self, cPairIBD other_ibd):
+    cpdef filter_by_other_ibd(self, PairIBD other_ibd):
         cdef IntervalTree new_tree = IntervalTree()
         cdef list intervals = self.to_list()
         for interval in intervals:
@@ -242,7 +242,7 @@ cdef class cPairIBD:
                 new_tree.insert_interval(Interval(interval[0],interval[1],interval[2]))
         self._tree = new_tree
 
-    cpdef filter_out_other_ibd(self, cPairIBD other_ibd):
+    cpdef filter_out_other_ibd(self, PairIBD other_ibd):
         cdef IntervalTree new_tree = IntervalTree()
         cdef list intervals = self.to_list()
         for interval in intervals:
@@ -250,7 +250,7 @@ cdef class cPairIBD:
                 new_tree.insert_interval(Interval(interval[0],interval[1],interval[2]))
         self._tree = new_tree
 
-cdef class cPopulationIBD:
+cdef class PopIBD:
     
     cdef public dict _ibd_dic
     
@@ -282,7 +282,7 @@ cdef class cPopulationIBD:
             return None
     
     cpdef update(self, other_ibd):
-        assert isinstance(other_ibd, cPopulationIBD)
+        assert isinstance(other_ibd, PopIBD)
         for pair in other_ibd.keys():
             if self.has_key(pair):
                 self._ibd_dic[pair].update(other_ibd.get_value(pair))
@@ -325,7 +325,7 @@ cdef class cPopulationIBD:
         return segments 
 
     cpdef calc_power(self, true_ibd):
-        assert isinstance(true_ibd, cPopulationIBD)
+        assert isinstance(true_ibd, PopIBD)
         detected_all = []
         detected_dict = {}
         for pair in true_ibd.keys():
@@ -364,7 +364,7 @@ cdef class cPopulationIBD:
             if len(self._ibd_dic[pair].to_list()) == 0:
                 self._ibd_dic.pop(pair)
                 
-    cpdef filter_by_other_ibd(self, cPopulationIBD other_ibd):
+    cpdef filter_by_other_ibd(self, PopIBD other_ibd):
         for pair in self.keys():
             if pair in other_ibd.keys():
                 self._ibd_dic[pair].filter_by_other_ibd(other_ibd.get_value(pair))
@@ -373,7 +373,7 @@ cdef class cPopulationIBD:
             else:
                 self._ibd_dic.pop(pair)
 
-    cpdef filter_out_other_ibd(self, cPopulationIBD other_ibd):
+    cpdef filter_out_other_ibd(self, PopIBD other_ibd):
         for pair in self.keys():
             if pair in other_ibd.keys():
                 self._ibd_dic[pair].filter_out_other_ibd(other_ibd.get_value(pair))
@@ -388,9 +388,9 @@ cdef class cPopulationIBD:
     
     @classmethod
     def from_dict(cls, d):
-        p = cPopulationIBD()
+        p = PopIBD()
         for pair in d.keys():
-            p.add_human_pair(pair,cPairIBD.from_list(d[pair]))
+            p.add_human_pair(pair,PairIBD.from_list(d[pair]))
         return p
     
     cpdef to_list(self):
@@ -414,7 +414,7 @@ cdef class cPopulationIBD:
     @classmethod
     def from_string(cls, s):
         assert isinstance(s, (str,list))
-        p = cPopulationIBD()
+        p = PopIBD()
         if type(s) is str:
             s = string.split(s, '\n')
             s = [x for x in s if x != '']
@@ -423,7 +423,7 @@ cdef class cPopulationIBD:
             temp = pair_string.split(":")
             pair = temp[0].split(",")
             pair = (int(pair[0]),int(pair[1]))
-            pairibd = cPairIBD()
+            pairibd = PairIBD()
             for inter in temp[1].split(";"):
                 points = inter.split(",")
                 score = 0
@@ -437,7 +437,7 @@ cdef class cPopulationIBD:
     def fast_deserialize(cls, file_name):
         f = open(file_name)
         s = f.readlines()
-        ibd = cPopulationIBD.from_string(s)
+        ibd = PopIBD.from_string(s)
         f.close()
         return ibd
     

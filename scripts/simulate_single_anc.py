@@ -13,7 +13,7 @@ import random
 import string
 import logging
 from utils import FoundersContainer.FoundersContainer
-from IBD.cIBD import cPairIBD, cPopulationIBD 
+from IBD.IBDSegments import PairIBD, PopIBD
 from itertools import product
 from hapMapUtil import getHapMapMarkers
 
@@ -160,8 +160,8 @@ if __name__ == '__main__':
     num_ibd_segments = 0
     total_ibd_length = 0
     count = 0
-    ibd = cPopulationIBD()
-    ibd_in_admixed = cPopulationIBD()
+    ibd = PopIBD()
+    ibd_in_admixed = PopIBD()
     for h1 in pop.individuals():
         count+=1
         if count > 100:
@@ -181,8 +181,8 @@ if __name__ == '__main__':
             if int(h1.info('ind_id')) >= int(h2.info('ind_id')):
                 continue
 
-            pairIBD = cPairIBD()
-            pairIBD_admixed = cPairIBD()
+            pairIBD = PairIBD()
+            pairIBD_admixed = PairIBD()
             for c1,c2 in [(0,0)]: #product([0,1],[0,1]):
                 pairIBD.add_ibd_from_containers(ind_to_cont_struct[int(h1.info('ind_id'))][c1],ind_to_cont_struct[int(h2.info('ind_id'))][c2],0)
                 #pairIBD_admixed.add_ibd_from_containers_only_admixed(ind_to_cont_struct[int(h1.info('ind_id'))][c1],ind_to_cont_struct[int(h2.info('ind_id'))][c2],0,ind_to_cont_struct[int(h1.info('ind_id'))][1-c1],ind_to_cont_struct[int(h2.info('ind_id'))][1-c2], ceu_inds, yri_inds)

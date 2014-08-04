@@ -8,7 +8,7 @@ import os
 import string
 import sys
 import argparse
-from IBD.cIBD import cPairIBD, cPopulationIBD
+from IBD.IBDSegments import PairIBD, PopIBD
 from IBD.GeneticMap import GeneticMap
 
 parser = argparse.ArgumentParser()
@@ -33,10 +33,10 @@ if (args.ibd_admixed + args.beagle + args.parente + args.germline) > 1:
 
 gm = GeneticMap(args.mapfile)
 
-true_ibd = cPopulationIBD.fast_deserialize(args.trueibdfile)
+true_ibd = PopIBD.fast_deserialize(args.trueibdfile)
 true_ibd.filter_by_length(args.min_length,1e4,gm)
 
-ibd_est = cPopulationIBD.fast_deserialize(args.estimatedibdfile)
+ibd_est = PopIBD.fast_deserialize(args.estimatedibdfile)
 
 if args.compare_same_inds:
     true_ibd.filter_by_human_pairs(ibd_est.keys())

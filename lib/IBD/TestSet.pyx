@@ -220,6 +220,13 @@ cdef class GenotypePair(TestSet):
     def cross_hamming_dist(self):
         return self.get_genotype(0).cross_hamming_dist(self.get_genotype(1))
 
+    def touch_all(self):
+        for snp_idx in range(self._snp_num):
+            x = self.chr1(snp_idx)
+            x = self.chr2(snp_idx)
+            x = self.chr3(snp_idx)
+            x = self.chr4(snp_idx)
+
 cdef class Genotype(TestSet):
  
     def __cinit__(self):

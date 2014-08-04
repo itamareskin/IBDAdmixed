@@ -6,7 +6,7 @@ Created on Mar 23, 2013
 
 from IBD.LDModel import LDModel
 from IBD.GenotypePairModel import GenotypePairModel
-from IBD.cIBD import cPairIBD,cPopulationIBD
+from IBD.IBDSegments import PairIBD,PopIBD
 from IBD.GeneticMap import GeneticMap
 #import IBD.LDModelUtils as ldu
 #from Logic.IBDGenoHMM import IBDGenoHMM
@@ -22,7 +22,7 @@ gm = GeneticMap("K:\\Projects\\ibdadmixed\\tests\\HapMap3_CEU_chr2.map", max_snp
 max_snp_num = 10000
 start_ibd = 2150
 end_ibd = 2550
-true_ibd = cPairIBD()
+true_ibd = PairIBD()
 true_ibd.add_interval(start_ibd,end_ibd)
 h = LDModel(map_file_name = "HapMap3_CEU_TSI_chr2.train.map",log_dir = ".",log_prefix = ".", k = 2,g = 8,win_size=200,max_snp_num = max_snp_num,eps = 1e-4,min_score = -50,phased = False,debug = True)
 h.set_alphas([0.5,0.5])
@@ -90,7 +90,7 @@ if True:
 #h.calc_top_level_ems_probs_inner(chr1,chr2,chr1,chr3)
 #for chr_pair in chr_pairs:
 chr_pair = (0,1,0,1)
-all_ibd = cPairIBD()
+all_ibd = PairIBD()
 for offset in range(0,200,25):
     h.set_offset(offset)
     
@@ -141,7 +141,7 @@ h.calc_ibd_prior()
 h.calc_anc_trans()
 h.top_level_alloc_mem()
 
-popIBD = cPopulationIBD()
+popIBD = PopIBD()
 pairs = [(29,81)]
 #pairs = combinations(range(h.get_haplo_num()/2),2)
 for (ind1,ind2) in pairs:

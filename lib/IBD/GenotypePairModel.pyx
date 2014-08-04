@@ -129,7 +129,7 @@ cdef class GenotypePairModel(InnerModel):
                                     self._emission_prob[snp_idx][node_idx1][node_idx2][node_idx3][node_idx4] = \
                                     self._m1._states[snp_idx][node_idx1].prob_em[p.chr1(snp_idx)] * self._m2._states[snp_idx][node_idx2].prob_em[p.chr2(snp_idx)] + \
                                     self._m1._states[snp_idx][node_idx1].prob_em[p.chr2(snp_idx)] * self._m2._states[snp_idx][node_idx2].prob_em[p.chr1(snp_idx)]
-                                
+
                                 if p.chr3(snp_idx) == p.chr4(snp_idx):
                                     self._emission_prob[snp_idx][node_idx1][node_idx2][node_idx3][node_idx4] *= \
                                     self._m3._states[snp_idx][node_idx3].prob_em[p.chr3(snp_idx)] * self._m4._states[snp_idx][node_idx4].prob_em[p.chr4(snp_idx)]
@@ -343,7 +343,7 @@ cdef class GenotypePairModel(InnerModel):
         cdef GenotypePair gp = <GenotypePair?>obs_data
         cdef int snp_idx       
         cdef likelihood = 0
-        
+
         self.alloc_mem()
         self.calc_emission_probs(gp)
         self.calc_forward_probs()

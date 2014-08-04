@@ -3,7 +3,7 @@ __author__ = 'Itamar'
 import sys
 import os
 from IBD.GeneticMap import GeneticMap
-from IBD.cIBD import cPopulationIBD
+from IBD.IBDSegments import PopIBD
 from itertools import islice
 
 def intervals_from_germline_file(germlinefile, pairs, pos_dict):
@@ -43,6 +43,6 @@ with open("K:\Data\IBDAdmixed\New4\ceu.tsi.yri.lwk.half2.trueibd.pairs.txt") as 
     pairs = [(int(x[0]), int(x[1])) for x in pairs]
 
 intervals = intervals_from_germline_file("K:\Data\IBDAdmixed\New4\ceu.tsi.yri.lwk.half2.match", pairs, pos_dict)
-ibd = cPopulationIBD.from_dict(intervals)
+ibd = PopIBD.from_dict(intervals)
 with open("K:\Data\IBDAdmixed\New4\ceu.tsi.yri.lwk.half2.germline.ibd.txt","w") as outf:
     outf.write(ibd.to_string())

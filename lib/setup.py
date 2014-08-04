@@ -16,7 +16,7 @@ setup(
                    Extension("utils.FoundersContainer", ["utils/FoundersContainer.pyx"], language="c++", extra_compile_args=["-O3"]), 
                    Extension("IBD.IntervalTree", ["IBD/IntervalTree.pyx"], language="c++", include_dirs=['.'], extra_compile_args=["-O3"]),
                    Extension("IBD.GeneticMap", ['IBD/GeneticMap.pyx', 'IBD/structs.cpp'], language="c++", include_dirs=['.', 'IBD', np.get_include()], extra_compile_args=["-O3"]),
-                   Extension("IBD.cIBD", ["IBD/cIBD.pyx", 'IBD/IntervalTree.pxd', 'IBD/GeneticMap.pxd'], language="c++", include_dirs=['.', 'IBD'], extra_compile_args=["-O3"]),
+                   Extension("IBD.IBDSegments", ["IBD/IBDSegments.pyx", 'IBD/IntervalTree.pxd', 'IBD/GeneticMap.pxd'], language="c++", include_dirs=['.', 'IBD'], extra_compile_args=["-O3"]),
                    Extension("IBD.LDModel", ['IBD/LDModel.pyx', 'IBD/GeneticMap.pxd', 'IBD/structs.cpp'], language="c++", include_dirs=['.', 'IBD', np.get_include()], extra_compile_args=["-O3"]),
                    Extension("IBD.TestSet", ['IBD/TestSet.pyx', 'IBD/GeneticMap.pxd', 'IBD/LDModel.pxd', 'IBD/structs.cpp'], language="c++", include_dirs=['.', 'IBD', np.get_include()], extra_compile_args=["-O3"]),
                    Extension("IBD.InnerModel", ['IBD/InnerModel.pyx', 'IBD/GeneticMap.pxd', 'IBD/TestSet.pxd', 'IBD/structs.cpp'], language="c++", include_dirs=['.', 'IBD', np.get_include()], extra_compile_args=["-O3"]),
