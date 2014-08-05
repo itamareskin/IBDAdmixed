@@ -163,9 +163,6 @@ cdef class PairIBD:
         if true_ibd is None:
             return 0
         TP = 0
-        FP = 0
-        TN = 0
-        FN = 0
         intersections = self._tree.intersect(true_ibd._tree)
         if len(intersections) > 0:
             for inter in intersections:
@@ -312,17 +309,30 @@ cdef class PopIBD:
             if self.has_key(pair):
                 stats.append(self.get_value(pair).stats_win(true_ibd.get_value(pair),gm,window_size))
             else:
-                TN = gm._snp_num/window_size - true_ibd.get_value(pair).get_num_windows(window_size)
-                FN = true_ibd.get_value(pair).get_num_windows(window_size)
-                stats.append((0,0,TN,FN,0,0,0))
-        #print stats 
-        power = numpy.mean([x[4] for x in stats])
-        FDR = numpy.mean([x[5] for x in stats])
-        FPR = numpy.mean([x[6] for x in stats])
-        f = open("stats.txt","w")
-        f.writelines(string.join([str(x) for x in stats],"\n"))
-        f.close()
-        return (power,FDR,FPR)
+                #TN = gm._snp_num/window_size - true_ibd.get_value(pair).get_num_windows(window_size)
+                #FN = true_ibd.get_value(pair).get_num_windows(window_size)
+                TP = 0
+                FP = 0
+                FN = true_ibd.get_value(pair).get_num_windows(window_size) - TP
+                TN = gm._snp_num/window_size - (TP + FP + FN)
+                power = TP/(TP+FN) if TP+FN>0 else 0
+                specificity = TN/(TN+FP) if TN+FP>0 else 1
+                FPR = 1 - specificity
+                if TP+FP == 0:
+                    FDR = 0
+                else:
+                    FDR = FP/(TP+FP)
+                stats.append({'TP': TP, 'FP': FP, 'TN': TN, 'power': power, 'FDR': FDR, 'FPR': FPR})
+        # calc stats
+        TP = numpy.sum([x['TP'] for x in stats])
+        FP = numpy.sum([x['FP'] for x in stats])
+        TN = numpy.sum([x['TN'] for x in stats])
+        power = numpy.mean([x['power'] for x in stats])
+        FDR = numpy.mean([x['FDR'] for x in stats])
+        FPR = numpy.mean([x['FPR'] for x in stats])
+        #with open("stats.txt","w") as f:
+        #    f.writelines(string.join([str(x) for x in stats],"\n"))
+        return {'TP': TP, 'FP': FP, 'TN': TN, 'power': power, 'FDR': FDR, 'FPR': FPR}
     
     cpdef get_all_segments(self):
         segments = []

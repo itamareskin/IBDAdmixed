@@ -176,6 +176,28 @@ class MyTestCase(unittest.TestCase):
         self.assertEqual(stats, {'FP': 2700.0, 'power': 0.75, 'TP': 600.0, 'TN': 96500.0, 'FDR': 0.8181818181818182, 'FPR': 0.027217741935483875})
 
 
+    def test_stats_win_pop(self):
+        gm = GeneticMap(os.path.join(self.resource_path, "HapMap3_CEU_chr2.map"), max_snp_num=100000)
+
+        pop = PopIBD()
+        p = PairIBD()
+        p.add_interval(0,1000,1)
+        p.add_interval(2000,2100,2)
+        p.add_interval(3000,3300,3)
+        true_ibd = PairIBD()
+        true_ibd.add_interval(0,1000,1)
+        true_ibd.add_interval(2000,2100,2)
+        true_ibd.add_interval(3000,3300,3)
+        pop.add_human_pair((1,2),p)
+
+        true_ibd_pop = PopIBD()
+        true_ibd = PairIBD()
+        true_ibd.add_interval(500,1000,1)
+        true_ibd.add_interval(3200,3500,3)
+        true_ibd_pop.add_human_pair((1,2),true_ibd)
+
+        stats = pop.stats_win(true_ibd_pop,gm)
+        self.assertEqual(stats, {'FP': 800.0, 'power': 0.75, 'TP': 600.0, 'TN': 98400.0, 'FDR': 0.5714285714285714, 'FPR': 0.008064516129032251})
 
 if __name__ == '__main__':
     unittest.main()
