@@ -59,6 +59,6 @@ with open(output_file_name, "w") as output_file:
         else:
             ibd_est.filter_by_score(score,args.max_score)
         stats = ibd_est.stats_win(true_ibd,gm)
-        line = score + " " + stats['power'] + " " + stats['FDR'] + " " + stats['FPR']
+        line = str(score) + " " + str(stats['power']) + " " + str(stats['FDR']) + " " + str(stats['FPR'])
         print line
         output_file.write(line+"\n")

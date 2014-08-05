@@ -3,7 +3,6 @@
   <component name="ChangeListManager">
     <list default="true" id="febcba82-e9fe-4b73-8aeb-036e109742f8" name="Default" comment="">
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/scripts/ibd_stats.py" afterPath="$PROJECT_DIR$/scripts/ibd_stats.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
     </list>
     <ignored path="ibdadmixed.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -15,7 +14,7 @@
   </component>
   <component name="ChangesViewManager" flattened_view="true" show_ignored="false" />
   <component name="CoverageDataManager">
-    <SUITE FILE_PATH="coverage/ibdadmixed$ibd_stats__2_.coverage" NAME="ibd_stats (2) Coverage Results" MODIFIED="1407227270353" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="/a/home/cc/cs/itamares/Data/IBDAdmixed/New4" />
+    <SUITE FILE_PATH="coverage/ibdadmixed$ibd_stats__2_.coverage" NAME="ibd_stats (2) Coverage Results" MODIFIED="1407228601119" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="/a/home/cc/cs/itamares/Data/IBDAdmixed/New4" />
     <SUITE FILE_PATH="coverage/ibdadmixed$Unittests_in_IBDSegmentsTests.coverage" NAME="Unittests in IBDSegmentsTests Coverage Results" MODIFIED="1407203533070" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unittests" />
     <SUITE FILE_PATH="coverage/ibdadmixed$Unittests_in_IBDAdmixedModelTests.coverage" NAME="Unittests in IBDAdmixedModelTests Coverage Results" MODIFIED="1407200973152" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unittests" />
     <SUITE FILE_PATH="coverage/ibdadmixed$ibd_stats__1_.coverage" NAME="ibd_stats (1) Coverage Results" MODIFIED="1407207531227" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="/a/home/cc/cs/itamares/Data/IBDAdmixed/New4" />
@@ -98,8 +97,8 @@
       <file leaf-file-name="ibd_stats.py" pinned="false" current="true" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/scripts/ibd_stats.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.23182711" vertical-offset="681" max-vertical-offset="1190">
-              <caret line="47" column="25" selection-start-line="47" selection-start-column="25" selection-end-line="47" selection-end-column="25" />
+            <state vertical-scroll-proportion="0.63261294" vertical-offset="681" max-vertical-offset="1190">
+              <caret line="59" column="41" selection-start-line="59" selection-start-column="41" selection-end-line="59" selection-end-column="41" />
               <folding>
                 <element signature="e#79#88#0" expanded="true" />
               </folding>
@@ -1327,8 +1326,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/scripts/ibd_stats.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.23182711" vertical-offset="681" max-vertical-offset="1190">
-          <caret line="47" column="25" selection-start-line="47" selection-start-column="25" selection-end-line="47" selection-end-column="25" />
+        <state vertical-scroll-proportion="0.63261294" vertical-offset="681" max-vertical-offset="1190">
+          <caret line="59" column="41" selection-start-line="59" selection-start-column="41" selection-end-line="59" selection-end-column="41" />
           <folding>
             <element signature="e#79#88#0" expanded="true" />
           </folding>
