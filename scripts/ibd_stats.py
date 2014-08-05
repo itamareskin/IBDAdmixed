@@ -51,10 +51,14 @@ scores = linspace(args.min_score,args.max_score,args.num_score_points)
 if args.lod_score:
     scores = reversed(scores)
 
-for score in scores:
-    if args.lod_score:
-        ibd_est.filter_by_score(args.min_score,score)
-    else:
-        ibd_est.filter_by_score(score,args.max_score)
-    stats = ibd_est.stats_win(true_ibd,gm)
-    print score, stats['power'], stats['FDR'], stats['FPR']
+output_file_name = args.estimatedibdfile + ".stats.txt"
+with open(output_file_name, "w") as output_file:
+    for score in scores:
+        if args.lod_score:
+            ibd_est.filter_by_score(args.min_score,score)
+        else:
+            ibd_est.filter_by_score(score,args.max_score)
+        stats = ibd_est.stats_win(true_ibd,gm)
+        line = score + " " + stats['power'] + " " + stats['FDR'] + " " + stats['FPR']
+        print line
+        output_file.write(line+"\n")
