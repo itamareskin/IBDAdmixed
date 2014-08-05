@@ -23,6 +23,9 @@ class Test(unittest.TestCase):
     def tearDownClass(cls):
         pass
 
+    def test_slice(self):
+        self.assertEqual(self.m._m1._snp_num - 25,self.m.slice_from_model(25,self.m._m1._snp_num)._m1._snp_num,"slice does not work")
+
     def testName(self):
         self.m.alloc_mem()
         p = GenotypePair()
@@ -30,7 +33,7 @@ class Test(unittest.TestCase):
         #self.m.calc_emission_probs(p)
         #self.m.calc_forward_probs()
         sliced = self.m.slice_from_model(0,250)
-        likelihood = sliced.calc_likelihood(p)
+        likelihood = sliced.calc_likelihood(p.get_slice(0,250))
         x = 1
 
 

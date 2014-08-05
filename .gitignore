@@ -17,3 +17,12 @@ scripts/out.ibdadmixed.txt
 scripts/out.lodscores.txt
 scripts/runIBDAdmixedCondor.py_OLD
 tests/stats.txt
+lib/IBD/GeneticMap.cpp
+lib/IBD/GenotypePairModel.cpp
+lib/IBD/IBDSegments.cpp
+lib/IBD/InnerModel.cpp
+lib/IBD/IntervalTree.cpp
+lib/IBD/LDModel.cpp
+lib/IBD/TestSet.cpp
+lib/utils/FoundersContainer.cpp
+lib/utils/StringUtils.cpp

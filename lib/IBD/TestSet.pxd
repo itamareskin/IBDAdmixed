@@ -1,8 +1,3 @@
-#cython: boundscheck=False
-#cython: cdivision=True
-#cython.wraparound=False
-#cython.nonecheck=False
-
 from libcpp cimport bool
 from LDModel import LDModel
 from LDModel cimport LDModel

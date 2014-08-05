@@ -1,9 +1,10 @@
+#cython: profile=True
 #cython: boundscheck=False
 #cython: cdivision=True
 #cython.wraparound=False
 #cython.nonecheck=False
 
-from TestSet import TestSet
+# from TestSet import TestSet
 from TestSet cimport TestSet
 
 cdef class InnerModel(object):

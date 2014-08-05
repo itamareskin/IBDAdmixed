@@ -25,6 +25,11 @@ class Test(unittest.TestCase):
         self.m.read_from_bgl_file(os.path.join(self.resource_path, "HapMap3_CEU_chr2.low.bgl.dag"))
         sliced = self.m.get_slice_model(0, 50)
         self.assertEqual(sliced._snp_num, 50, "wrong number of snps in slice")
+
+        sliced = self.m.get_slice_model(25, 500)
+        self.assertEqual(sliced._snp_num, 475, "wrong number of snps in slice")
+
+        x = 1
     
 #     def testread_from_bgl_file(self):
 #         self.m.read_from_bgl_file("K:\\Projects\\ibdadmixed\\tests\\HapMap3_CEU_chr2.low.bgl.dag")

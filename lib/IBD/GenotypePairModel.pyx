@@ -116,7 +116,7 @@ cdef class GenotypePairModel(InnerModel):
         cdef int node_idx3
         cdef int node_idx4
 
-        for snp_idx in range(self._m1._snp_num):
+        for snp_idx in range(p._snp_num):
             for node_idx1 in range(self._m1._layer_state_nums[snp_idx]):
                 for node_idx2 in range(self._m2._layer_state_nums[snp_idx]):
                     for node_idx3 in range(self._m3._layer_state_nums[snp_idx]):
@@ -224,7 +224,8 @@ cdef class GenotypePairModel(InnerModel):
         cdef int node_idx2
         cdef int node_idx3
         cdef int node_idx4
-        
+
+        self._scale_factor[snp_idx] = 0
         for node_idx1 in range(self._m1._layer_state_nums[snp_idx]):
             for node_idx2 in range(self._m2._layer_state_nums[snp_idx]):
                 for node_idx3 in range(self._m3._layer_state_nums[snp_idx]):
@@ -341,14 +342,15 @@ cdef class GenotypePairModel(InnerModel):
     
     cpdef double calc_likelihood(self, TestSet obs_data, bool free_mem=True):
         cdef GenotypePair gp = <GenotypePair?>obs_data
+        if gp._snp_num != self._m1._snp_num:
+            raise ValueError('inconsistent number of SNPs: ' + str(gp._snp_num) + ' SNPs observed, while model has ' + str(self._m1._snp_num) + ' SNPs')
         cdef int snp_idx       
         cdef likelihood = 0
-
         self.alloc_mem()
         self.calc_emission_probs(gp)
         self.calc_forward_probs()
-        #self.print_inner_prob() 
-        for snp_idx in range(self._m1._snp_num):
+        #self.print_inner_prob()
+        for snp_idx in range(gp._snp_num):
             likelihood = likelihood - log(self._scale_factor[snp_idx])
         if free_mem:
             self.free_mem()

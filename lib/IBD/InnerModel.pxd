@@ -1,8 +1,3 @@
-#cython: boundscheck=False
-#cython: cdivision=True
-#cython.wraparound=False
-#cython.nonecheck=False
-
 from TestSet import TestSet
 from TestSet cimport TestSet
 from libcpp cimport bool

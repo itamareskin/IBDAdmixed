@@ -43,8 +43,9 @@ class Test(unittest.TestCase):
                    alphas=[1], 
                    ibd_trans=[1e-5,1],
                    win_size=250,
-                   phased=False)
-        self.assertGreater(pairIBD.get_IBD_percent(self.ldm._snp_num), 80, "IBD was not detected")
+                   phased=False,
+                   max_snp_num=self.ldm._snp_num)
+        self.assertGreater(pairIBD.get_IBD_percent(self.ldm._gm), 80, "IBD was not detected")
 
         p = GenotypePair()
         p.generate_random_haps_inplace(self.ldm)
@@ -55,8 +56,9 @@ class Test(unittest.TestCase):
                    alphas=[1],
                    ibd_trans=[1e-5,1],
                    win_size=250,
-                   phased=False)
-        self.assertLess(pairIBD.get_IBD_percent(self.ldm._snp_num), 20, "IBD was not detected")
+                   phased=False,
+                   max_snp_num=self.ldm._snp_num)
+        self.assertLess(pairIBD.get_IBD_percent(self.ldm._gm), 20, "IBD was not detected")
 
 
 if __name__ == "__main__":

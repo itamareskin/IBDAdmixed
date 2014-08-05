@@ -1,3 +1,9 @@
+#cython: profile=True
+#cython: boundscheck=False
+#cython: cdivision=True
+#cython.wraparound=False
+#cython.nonecheck=False
+
 '''
 Created on Jan 11, 2012
 

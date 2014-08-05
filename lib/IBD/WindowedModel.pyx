@@ -1,8 +1,8 @@
-# cython: profile=True
-# cython: boundscheck=False
-# cython: cdivision=True
-# cython.wraparound=False
-# cython.nonecheck=False
+#cython: profile=True
+#cython: boundscheck=False
+#cython: cdivision=True
+#cython.wraparound=False
+#cython.nonecheck=False
 
 from __future__ import division
 import os
