@@ -17,6 +17,7 @@ from libcpp cimport bool
 from sys import stdout
 import numpy as np
 cimport numpy as np
+import gzip
  
 cdef extern from "string.h":
     char *strncpy(char *dest, char *src, size_t n)
@@ -162,9 +163,9 @@ cdef class LDModel(object):
             return
         
         print "reading from bgl model file: " + file_name
-        
+
         # identify allele coding
-        with open(file_name) as model_file:
+        with gzip.open(file_name, 'rb') as model_file:
             model_file.readline()
             model_file.readline()
             line = model_file.readline()

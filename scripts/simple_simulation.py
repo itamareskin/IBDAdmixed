@@ -6,19 +6,13 @@ Created on Mar 16, 2013
 
 import simuOpt
 simuOpt.setOptions(alleleType='binary', quiet=True, optimized=True)
-import simuPOP as sim
 from simuPOP import *
-import os, sys
 import random
 import string
 import logging
 from IBD.IBDSegments import PairIBD, PopIBD
-from itertools import product, combinations 
-from hapMapUtil import getHapMapMarkers
-from sys import stdout
-from IBD.LDModel import LDModel
+from itertools import combinations
 import math
-import numpy as np
 import argparse
 
 def add_ibd(pop, ibd, pair, length, dists):
@@ -101,10 +95,12 @@ def save_pop(pop,scramble=False, suffix=""):
     pop.save(args.out + ".pop")
 
     if "ibd" in pop.vars():
-        f = open(args.out + suffix + ".trueibd.txt" ,"w")
-        f.write(pop.dvars().ibd.to_string())
-        f.close()
-    
+        with open(args.out + suffix + ".trueibd.txt" ,"w") as f:
+            f.write(pop.dvars().ibd.to_string())
+
+        with open(args.out + suffix + ".trueibd.pairs.txt" ,"w") as f:
+            f.write(string.join([x[0] + "," + x[1] for x in pop.dvars().ibd.keys()],"\n"))
+
     map_out = open(args.out + suffix + ".genos.map", 'w')
     for locus in pop.lociNames():
         pos = '%d' % pop.locusPos(pop.locusByName(locus))
