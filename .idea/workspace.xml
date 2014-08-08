@@ -2,37 +2,20 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="febcba82-e9fe-4b73-8aeb-036e109742f8" name="Default" comment="">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/unittests/FormatConversionTests.py" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/lib/utils/FormatConversions.pyx" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/lib/utils/GermlineWrapper.pyx" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/unittests/GermlineWrapperTests.py" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/scripts/old_scripts/__init__.py" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/lib/utils/ped_to_bgl.cpp" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/lib/utils/ped_to_bgl.h" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/scripts/run_scenario.sh" />
-      <change type="DELETED" beforePath="C:\Users\Itamar\Source\ibdadmixed\resources\ceu.32.54.first10000.match" afterPath="" />
-      <change type="DELETED" beforePath="C:\Users\Itamar\Source\ibdadmixed\resources\ceu.32.54.match" afterPath="" />
-      <change type="DELETED" beforePath="C:\Users\Itamar\Source\ibdadmixed\scripts\beagle4_power.py" afterPath="" />
-      <change type="DELETED" beforePath="C:\Users\Itamar\Source\ibdadmixed\scripts\compareResults.py" afterPath="" />
-      <change type="DELETED" beforePath="C:\Users\Itamar\Source\ibdadmixed\scripts\germline2ibd.py" afterPath="" />
-      <change type="DELETED" beforePath="C:\Users\Itamar\Source\ibdadmixed\scripts\germline_power.py" afterPath="" />
-      <change type="DELETED" beforePath="C:\Users\Itamar\Source\ibdadmixed\scripts\hapMapUtil.py" afterPath="" />
-      <change type="DELETED" beforePath="C:\Users\Itamar\Source\ibdadmixed\scripts\ibd_to_windows.py" afterPath="" />
-      <change type="DELETED" beforePath="C:\Users\Itamar\Source\ibdadmixed\scripts\ibd_to_windows_long.py" afterPath="" />
-      <change type="DELETED" beforePath="C:\Users\Itamar\Source\ibdadmixed\scripts\merge_beagle.py" afterPath="" />
-      <change type="DELETED" beforePath="C:\Users\Itamar\Source\ibdadmixed\scripts\parente_power.py" afterPath="" />
-      <change type="DELETED" beforePath="C:\Users\Itamar\Source\ibdadmixed\scripts\prof.out" afterPath="" />
-      <change type="DELETED" beforePath="C:\Users\Itamar\Source\ibdadmixed\scripts\saveHapMapPlink.py" afterPath="" />
-      <change type="DELETED" beforePath="C:\Users\Itamar\Source\ibdadmixed\scripts\simulate_admixed_artificial_IBD.py" afterPath="" />
-      <change type="DELETED" beforePath="C:\Users\Itamar\Source\ibdadmixed\scripts\simulate_african_americans.py" afterPath="" />
-      <change type="DELETED" beforePath="C:\Users\Itamar\Source\ibdadmixed\scripts\simulate_artificial_IBD.py" afterPath="" />
-      <change type="DELETED" beforePath="C:\Users\Itamar\Source\ibdadmixed\scripts\simulate_single_anc.py" afterPath="" />
-      <change type="DELETED" beforePath="C:\Users\Itamar\Source\ibdadmixed\scripts\write_window_ibd.py" afterPath="" />
-      <change type="MOVED" beforePath="C:\Users\Itamar\Source\ibdadmixed\scripts\.generated.err" afterPath="$PROJECT_DIR$/external/germline-1-5-1/GERMLINE_0001.h" />
-      <change type="MOVED" beforePath="C:\Users\Itamar\Source\ibdadmixed\scripts\runIBDAdmixedCondor.py" afterPath="$PROJECT_DIR$/scripts/ibdadmx.py" />
+      <change type="DELETED" beforePath="C:\Users\Itamar\Source\ibdadmixed\resources\tmp_outputs.output\output.32.54.genos.dat" afterPath="" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/resources/HapMap3_CEU_chr2.bgl" afterPath="$PROJECT_DIR$/resources/HapMap3_CEU_chr2.bgl" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/resources/ceu.genos.match" afterPath="$PROJECT_DIR$/resources/ceu.genos.match" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/unittests/GenotypePairModelTests.py" afterPath="$PROJECT_DIR$/unittests/GenotypePairModelTests.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/unittests/GermlineWrapperTests.py" afterPath="$PROJECT_DIR$/unittests/GermlineWrapperTests.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/resources/HapMap3_CEU_chr2.markers" afterPath="$PROJECT_DIR$/resources/HapMap3_CEU_chr2.markers" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/unittests/IBDAdmixedModelTests.py" afterPath="$PROJECT_DIR$/unittests/IBDAdmixedModelTests.py" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/IBD/LDModel.pyx" afterPath="$PROJECT_DIR$/lib/IBD/LDModel.pyx" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/setup.py" afterPath="$PROJECT_DIR$/lib/setup.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/scripts/simple_simulation.py" afterPath="$PROJECT_DIR$/scripts/simple_simulation.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/unittests/LDModelTests.py" afterPath="$PROJECT_DIR$/unittests/LDModelTests.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/unittests/NaiveModuleTests.py" afterPath="$PROJECT_DIR$/unittests/NaiveModuleTests.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/unittests/TestSetTests.py" afterPath="$PROJECT_DIR$/unittests/TestSetTests.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/resources/output.cmdlog" afterPath="$PROJECT_DIR$/resources/output.cmdlog" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/resources/test.write.haplos.dat" afterPath="$PROJECT_DIR$/resources/test.write.haplos.dat" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/tests/test4.py" afterPath="$PROJECT_DIR$/tests/test4.py" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
     </list>
     <ignored path="ibdadmixed.iws" />
@@ -53,17 +36,17 @@
     <SUITE FILE_PATH="coverage/ibdadmixed$test4.coverage" NAME="test4 Coverage Results" MODIFIED="1407194350600" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/tests" />
     <SUITE FILE_PATH="coverage/ibdadmixed$Unittests_in_cIBDTests.coverage" NAME="Unittests in cIBDTests Coverage Results" MODIFIED="1407035214575" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unittests" />
     <SUITE FILE_PATH="coverage/ibdadmixed$test1.coverage" NAME="test1 Coverage Results" MODIFIED="1406596422290" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/tests" />
+    <SUITE FILE_PATH="coverage/ibdadmixed$Unittests_in_GeneticMapsTests.coverage" NAME="Unittests in GeneticMapsTests Coverage Results" MODIFIED="1407371646200" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unittests" />
     <SUITE FILE_PATH="coverage/ibdadmixed$ibd_stats.coverage" NAME="ibd_stats Coverage Results" MODIFIED="1407204282826" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/scripts" />
-    <SUITE FILE_PATH="coverage/ibdadmixed$Unittests_in_GeneticMapsTests.coverage" NAME="Unittests in GeneticMapsTests Coverage Results" MODIFIED="1407194730336" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unittests" />
     <SUITE FILE_PATH="coverage/ibdadmixed$Unittests_in_IntervalTreeTests.coverage" NAME="Unittests in IntervalTreeTests Coverage Results" MODIFIED="1406950078223" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unittests" />
     <SUITE FILE_PATH="coverage/ibdadmixed$Unittest_Test_testnaivemodel.coverage" NAME="Unittest Test.testnaivemodel Coverage Results" MODIFIED="1407035244837" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unittests" />
-    <SUITE FILE_PATH="coverage/ibdadmixed$Unittests_in_GermlineWrapperTests.coverage" NAME="Unittests in GermlineWrapperTests Coverage Results" MODIFIED="1407361686345" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unittests" />
+    <SUITE FILE_PATH="coverage/ibdadmixed$Unittests_in_GermlineWrapperTests.coverage" NAME="Unittests in GermlineWrapperTests Coverage Results" MODIFIED="1407372177595" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unittests" />
     <SUITE FILE_PATH="coverage/ibdadmixed$Unittests_in_LDModelTests.coverage" NAME="Unittests in LDModelTests Coverage Results" MODIFIED="1407200130380" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unittests" />
-    <SUITE FILE_PATH="coverage/ibdadmixed$Unittests_in_GenotypePairModelTests.coverage" NAME="Unittests in GenotypePairModelTests Coverage Results" MODIFIED="1407200249319" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unittests" />
-    <SUITE FILE_PATH="coverage/ibdadmixed$Unittests_in_unittests.coverage" NAME="Unittests in unittests Coverage Results" MODIFIED="1407203063381" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unittests" />
+    <SUITE FILE_PATH="coverage/ibdadmixed$Unittests_in_unittests.coverage" NAME="Unittests in unittests Coverage Results" MODIFIED="1407372234870" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unittests" />
+    <SUITE FILE_PATH="coverage/ibdadmixed$Unittests_in_GenotypePairModelTests.coverage" NAME="Unittests in GenotypePairModelTests Coverage Results" MODIFIED="1407372133275" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unittests" />
     <SUITE FILE_PATH="coverage/ibdadmixed$Unittests_in_TestSetTests.coverage" NAME="Unittests in TestSetTests Coverage Results" MODIFIED="1407105931254" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unittests" />
-    <SUITE FILE_PATH="coverage/ibdadmixed$ibdadmx.coverage" NAME="ibdadmx Coverage Results" MODIFIED="1407371126020" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/scripts" />
-    <SUITE FILE_PATH="coverage/ibdadmixed$Unittests_in_FormatConversionsTests.coverage" NAME="Unittests in FormatConversionsTests Coverage Results" MODIFIED="1407301347687" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unittests" />
+    <SUITE FILE_PATH="coverage/ibdadmixed$ibdadmx.coverage" NAME="ibdadmx Coverage Results" MODIFIED="1407372597690" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/scripts" />
+    <SUITE FILE_PATH="coverage/ibdadmixed$Unittests_in_FormatConversionsTests.coverage" NAME="Unittests in FormatConversionsTests Coverage Results" MODIFIED="1407371634184" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unittests" />
     <SUITE FILE_PATH="coverage/ibdadmixed$test3.coverage" NAME="test3 Coverage Results" MODIFIED="1406916846518" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/tests" />
   </component>
   <component name="CreatePatchCommitExecutor">
@@ -78,41 +61,51 @@
   </component>
   <component name="FileEditorManager">
     <leaf>
-      <file leaf-file-name="IBDSegments.pyx" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/lib/IBD/IBDSegments.pyx">
-          <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="4656" max-vertical-offset="7905">
-              <caret line="323" column="33" selection-start-line="323" selection-start-column="33" selection-end-line="323" selection-end-column="33" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="ibdadmx.py" pinned="false" current="true" current-in-tab="true">
+      <file leaf-file-name="ibdadmx.py" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/scripts/ibdadmx.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.33159268" vertical-offset="4888" max-vertical-offset="5967">
-              <caret line="295" column="0" selection-start-line="295" selection-start-column="0" selection-end-line="295" selection-end-column="0" />
+            <state vertical-scroll-proportion="-11.88" vertical-offset="3103" max-vertical-offset="5967">
+              <caret line="200" column="0" selection-start-line="200" selection-start-column="0" selection-end-line="200" selection-end-column="0" />
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="GeneticMap.pyx" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/lib/IBD/GeneticMap.pyx">
+      <file leaf-file-name="pydevd.py" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$APPLICATION_HOME_DIR$/helpers/pydev/pydevd.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="703" max-vertical-offset="1819">
-              <caret line="54" column="51" selection-start-line="54" selection-start-column="51" selection-end-line="54" selection-end-column="51" />
+            <state vertical-scroll-proportion="0.0" vertical-offset="19584" max-vertical-offset="28458">
+              <caret line="1225" column="0" selection-start-line="1225" selection-start-column="0" selection-end-line="1226" selection-end-column="0" />
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="pool.py" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://C:/Anaconda/Lib/multiprocessing/pool.py">
+      <file leaf-file-name="IBDAdmixedModel.py" pinned="false" current="true" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/lib/IBD/IBDAdmixedModel.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="9686" max-vertical-offset="12410">
-              <caret line="585" column="0" selection-start-line="585" selection-start-column="0" selection-end-line="585" selection-end-column="0" />
+            <state vertical-scroll-proportion="0.35524258" vertical-offset="470" max-vertical-offset="1360">
+              <caret line="46" column="48" selection-start-line="46" selection-start-column="48" selection-end-line="46" selection-end-column="48" />
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="GenotypePairModelTests.py" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/unittests/GenotypePairModelTests.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state vertical-scroll-proportion="0.0" vertical-offset="323" max-vertical-offset="731">
+              <caret line="31" column="21" selection-start-line="31" selection-start-column="21" selection-end-line="31" selection-end-column="21" />
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="TestSet.pyx" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/lib/IBD/TestSet.pyx">
+          <provider selected="true" editor-type-id="text-editor">
+            <state vertical-scroll-proportion="0.0" vertical-offset="3396" max-vertical-offset="4522">
+              <caret line="213" column="47" selection-start-line="213" selection-start-column="47" selection-end-line="213" selection-end-column="47" />
               <folding />
             </state>
           </provider>
@@ -121,29 +114,21 @@
       <file leaf-file-name="LDModel.pyx" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/lib/IBD/LDModel.pyx">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="-11.52" vertical-offset="2347" max-vertical-offset="6749">
-              <caret line="158" column="27" selection-start-line="158" selection-start-column="27" selection-end-line="158" selection-end-column="27" />
+            <state vertical-scroll-proportion="0.0" vertical-offset="4931" max-vertical-offset="6749">
+              <caret line="304" column="4" selection-start-line="304" selection-start-column="4" selection-end-line="304" selection-end-column="4" />
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="README" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/scripts/README">
+      <file leaf-file-name="GermlineWrapperTests.py" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/unittests/GermlineWrapperTests.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="-14.52" vertical-offset="1303" max-vertical-offset="1887">
-              <caret line="98" column="31" selection-start-line="98" selection-start-column="31" selection-end-line="98" selection-end-column="31" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="simple_simulation.py" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/scripts/simple_simulation.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="27.08" vertical-offset="2122" max-vertical-offset="3298">
-              <caret line="85" column="30" selection-start-line="85" selection-start-column="30" selection-end-line="85" selection-end-column="30" />
-              <folding />
+            <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="340">
+              <caret line="14" column="0" selection-start-line="14" selection-start-column="0" selection-end-line="14" selection-end-column="0" />
+              <folding>
+                <element signature="e#23#38#0" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -166,7 +151,6 @@
   <component name="IdeDocumentHistory">
     <option name="changedFiles">
       <list>
-        <option value="$PROJECT_DIR$/lib/IBD/GenotypeModel.pxd" />
         <option value="$PROJECT_DIR$/lib/IBD/GeneticMap.pxd" />
         <option value="$PROJECT_DIR$/lib/IBD/GenotypePairModel.pxd" />
         <option value="$PROJECT_DIR$/lib/IBD/InnerModel.pxd" />
@@ -213,18 +197,19 @@
         <option value="$PROJECT_DIR$/external/germline-1-5-1/Match.h" />
         <option value="$PROJECT_DIR$/external/germline-1-5-1/Match.cpp" />
         <option value="$PROJECT_DIR$/external/germline-1-5-1/GERMLINE.cpp" />
-        <option value="$PROJECT_DIR$/unittests/GermlineWrapperTests.py" />
-        <option value="$PROJECT_DIR$/lib/IBD/LDModel.pyx" />
         <option value="$PROJECT_DIR$/scripts/simple_simulation.py" />
         <option value="$PROJECT_DIR$/scripts/ibdadmx.py" />
+        <option value="$PROJECT_DIR$/tests/test4.py" />
+        <option value="$PROJECT_DIR$/lib/IBD/LDModel.pyx" />
+        <option value="$PROJECT_DIR$/unittests/GermlineWrapperTests.py" />
       </list>
     </option>
   </component>
   <component name="ProjectFrameBounds">
     <option name="x" value="54" />
     <option name="y" value="-8" />
-    <option name="width" value="1634" />
-    <option name="height" value="1066" />
+    <option name="width" value="1874" />
+    <option name="height" value="1096" />
   </component>
   <component name="ProjectInspectionProfilesVisibleTreeState">
     <entry key="Project Default">
@@ -414,34 +399,6 @@
             </PATH_ELEMENT>
             <PATH_ELEMENT>
               <option name="myItemId" value="unittests" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="ibdadmixed" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="ibdadmixed" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="scripts" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="ibdadmixed" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="ibdadmixed" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="lib" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
           </PATH>
@@ -790,9 +747,11 @@
       <module name="ibdadmixed" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" enabled="false" sample_coverage="true" runner="coverage.py" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/scripts/ibdadmx.py" />
-      <option name="PARAMETERS" value="ibd ../resources/ceu.genos ../resources/output ../resources/HapMap3_CEU_chr2.HapMap3_CEU_chr2.bgl.dag.gz -k 1 -a 1 --pairs-file ../resources/ceu.trueibd.pairs.1.txt --set-ibd-trans 1e-5 1 --germline-file ../resources/ceu.match -m -50 -w 100" />
+      <option name="PARAMETERS" value="ibd ../resources/ceu.genos ../resources/output.naive ../resources/HapMap3_CEU_chr2.HapMap3_CEU_chr2.bgl.dag.gz -k 1 -a 1 --pairs-file ../resources/ceu.trueibd.pairs.1.txt --set-ibd-trans 1e-5 1 --germline-file ../resources/ceu.match -m -50 -w 100 -n 10000 --naive" />
       <RunnerSettings RunnerId="PyDebugRunner" />
+      <RunnerSettings RunnerId="PythonRunner" />
       <ConfigurationWrapper RunnerId="PyDebugRunner" />
+      <ConfigurationWrapper RunnerId="PythonRunner" />
       <method />
     </configuration>
     <configuration default="false" name="Unittests in IBDAdmixedModelTests" type="tests" factoryName="Unittests">
@@ -867,7 +826,9 @@
       <option name="PARAMS" value="" />
       <option name="USE_PARAM" value="false" />
       <RunnerSettings RunnerId="PyDebugRunner" />
+      <RunnerSettings RunnerId="PythonRunner" />
       <ConfigurationWrapper RunnerId="PyDebugRunner" />
+      <ConfigurationWrapper RunnerId="PythonRunner" />
       <method />
     </configuration>
     <configuration default="false" name="Unittests in GenotypePairModelTests" type="tests" factoryName="Unittests">
@@ -892,7 +853,9 @@
       <option name="PARAMS" value="" />
       <option name="USE_PARAM" value="false" />
       <RunnerSettings RunnerId="PyDebugRunner" />
+      <RunnerSettings RunnerId="PythonRunner" />
       <ConfigurationWrapper RunnerId="PyDebugRunner" />
+      <ConfigurationWrapper RunnerId="PythonRunner" />
       <method />
     </configuration>
     <configuration default="false" name="Unittests in LDModelTests" type="tests" factoryName="Unittests">
@@ -994,7 +957,9 @@
       <option name="PARAMS" value="" />
       <option name="USE_PARAM" value="false" />
       <RunnerSettings RunnerId="PyDebugRunner" />
+      <RunnerSettings RunnerId="PythonRunner" />
       <ConfigurationWrapper RunnerId="PyDebugRunner" />
+      <ConfigurationWrapper RunnerId="PythonRunner" />
       <method />
     </configuration>
     <list size="15">
@@ -1016,8 +981,8 @@
     </list>
     <recent_temporary>
       <list size="4">
-        <item index="0" class="java.lang.String" itemvalue="Python.ibd_stats" />
-        <item index="1" class="java.lang.String" itemvalue="Python tests.Unittests in unittests" />
+        <item index="0" class="java.lang.String" itemvalue="Python tests.Unittests in unittests" />
+        <item index="1" class="java.lang.String" itemvalue="Python.ibd_stats" />
         <item index="2" class="java.lang.String" itemvalue="Python.test4" />
         <item index="3" class="java.lang.String" itemvalue="Python tests.Unittests in Test" />
       </list>
@@ -1056,7 +1021,7 @@
     </todo-panel>
   </component>
   <component name="ToolWindowManager">
-    <frame x="54" y="-8" width="1634" height="1066" extended-state="6" />
+    <frame x="54" y="-8" width="1874" height="1096" extended-state="6" />
     <editor active="true" />
     <layout>
       <window_info id="Changes" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32905984" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
@@ -1064,12 +1029,12 @@
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.335845" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33046287" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Database" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.3293147" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
-      <window_info id="Structure" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.17576142" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.20939086" sideWeight="0.6096423" order="0" side_tool="false" content_ui="combo" />
-      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.51883745" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
+      <window_info id="Structure" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.15253304" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.18171807" sideWeight="0.6096423" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.51883745" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.15760198" sideWeight="0.3888025" order="1" side_tool="true" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33046287" sideWeight="0.5" order="8" side_tool="true" content_ui="tabs" />
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.30247578" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.29301354" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32831" sideWeight="0.5" order="9" side_tool="false" content_ui="tabs" />
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
@@ -1145,57 +1110,19 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/unittests/GermlineWrapperTests.py</url>
-          <line>8</line>
+          <line>9</line>
           <option name="timeStamp" value="66" />
         </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/unittests/GenotypePairModelTests.py</url>
+          <line>29</line>
+          <option name="timeStamp" value="70" />
+        </line-breakpoint>
       </breakpoints>
-      <option name="time" value="69" />
+      <option name="time" value="71" />
     </breakpoint-manager>
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/unittests/IBDSegmentsTests.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="2959" max-vertical-offset="3553">
-          <caret line="197" column="0" selection-start-line="197" selection-start-column="0" selection-end-line="197" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/lib/IBD/TestSet.pyx">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="4522">
-          <caret line="20" column="0" selection-start-line="20" selection-start-column="0" selection-end-line="20" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/tests/test1.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="2771">
-          <caret line="17" column="43" selection-start-line="17" selection-start-column="43" selection-end-line="17" selection-end-column="43" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/R/draw_ROC.R">
-      <provider editor-type-id="com.intellij.persistence.database.editor.CsvTableFileEditorProvider">
-        <state />
-      </provider>
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="306" max-vertical-offset="1326">
-          <caret line="18" column="19" selection-start-line="18" selection-start-column="19" selection-end-line="18" selection-end-column="19" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/scripts/run_scenario.sh">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.114349775" vertical-offset="0" max-vertical-offset="892">
-          <caret line="6" column="0" selection-start-line="6" selection-start-column="0" selection-end-line="6" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/lib/IBD/structs.h">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.41325966" vertical-offset="0" max-vertical-offset="905">
@@ -1242,14 +1169,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.9376344" vertical-offset="975" max-vertical-offset="1598">
           <caret line="83" column="69" selection-start-line="83" selection-start-column="69" selection-end-line="83" selection-end-column="69" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/lib/IBD/IBDAdmixedModel.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="1360">
-          <caret line="15" column="69" selection-start-line="15" selection-start-column="69" selection-end-line="15" selection-end-column="69" />
           <folding />
         </state>
       </provider>
@@ -1501,16 +1420,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/unittests/GermlineWrapperTests.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="323">
-          <caret line="8" column="183" selection-start-line="8" selection-start-column="8" selection-end-line="8" selection-end-column="183" />
-          <folding>
-            <element signature="e#23#38#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/scripts/README">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="-14.52" vertical-offset="1303" max-vertical-offset="1887">
@@ -1535,14 +1444,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$APPLICATION_HOME_DIR$/helpers/pydev/pydevd.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.7083333" vertical-offset="28050" max-vertical-offset="28458">
-          <caret line="1732" column="0" selection-start-line="1732" selection-start-column="0" selection-end-line="1733" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://C:/Anaconda/Lib/multiprocessing/pool.py">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="9686" max-vertical-offset="12410">
@@ -1559,18 +1460,84 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/lib/IBD/GenotypePairModel.pyx">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="884" max-vertical-offset="7446">
+          <caret line="54" column="66" selection-start-line="54" selection-start-column="66" selection-end-line="54" selection-end-column="66" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/tests/test4.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="527">
+          <caret line="18" column="25" selection-start-line="18" selection-start-column="25" selection-end-line="18" selection-end-column="25" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/unittests/GenotypePairModelTests.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="323" max-vertical-offset="731">
+          <caret line="31" column="21" selection-start-line="31" selection-start-column="21" selection-end-line="31" selection-end-column="21" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/lib/IBD/TestSet.pyx">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="3396" max-vertical-offset="4522">
+          <caret line="213" column="47" selection-start-line="213" selection-start-column="47" selection-end-line="213" selection-end-column="47" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/lib/IBD/LDModel.pyx">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="-11.52" vertical-offset="2347" max-vertical-offset="6749">
-          <caret line="158" column="27" selection-start-line="158" selection-start-column="27" selection-end-line="158" selection-end-column="27" />
+        <state vertical-scroll-proportion="0.0" vertical-offset="4931" max-vertical-offset="6749">
+          <caret line="304" column="4" selection-start-line="304" selection-start-column="4" selection-end-line="304" selection-end-column="4" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/unittests/GermlineWrapperTests.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="340">
+          <caret line="14" column="0" selection-start-line="14" selection-start-column="0" selection-end-line="14" selection-end-column="0" />
+          <folding>
+            <element signature="e#23#38#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$APPLICATION_HOME_DIR$/helpers/pydev/pydevd.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="19584" max-vertical-offset="28458">
+          <caret line="1225" column="0" selection-start-line="1225" selection-start-column="0" selection-end-line="1226" selection-end-column="0" />
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/scripts/ibdadmx.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.33159268" vertical-offset="4888" max-vertical-offset="5967">
-          <caret line="295" column="0" selection-start-line="295" selection-start-column="0" selection-end-line="295" selection-end-column="0" />
+        <state vertical-scroll-proportion="-11.88" vertical-offset="3103" max-vertical-offset="5967">
+          <caret line="200" column="0" selection-start-line="200" selection-start-column="0" selection-end-line="200" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://C:/Anaconda/Lib/shutil.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.49406177" vertical-offset="4025" max-vertical-offset="9452">
+          <caret line="255" column="40" selection-start-line="255" selection-start-column="40" selection-end-line="255" selection-end-column="40" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/lib/IBD/IBDAdmixedModel.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.35524258" vertical-offset="470" max-vertical-offset="1360">
+          <caret line="46" column="48" selection-start-line="46" selection-start-column="48" selection-end-line="46" selection-end-column="48" />
           <folding />
         </state>
       </provider>

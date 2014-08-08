@@ -25,7 +25,7 @@ class Test(unittest.TestCase):
     def setUpClass(cls):
         cls.resource_path = os.path.join(os.path.split(os.path.split(__file__)[0])[0], "resources")
         cls.ldm = LDModel(os.path.join(cls.resource_path, "HapMap3_CEU_chr2.map"), 
-                          os.path.join(cls.resource_path, "HapMap3_CEU_chr2.low.bgl.dag"),
+                          os.path.join(cls.resource_path, "HapMap3_CEU_chr2.HapMap3_CEU_chr2.bgl.dag.gz"),
                           max_snp_num=1000)
         #cls.m = GenotypePairModel(cls.ldm,cls.ldm,cls.ldm,cls.ldm,False,0)
 
@@ -37,7 +37,7 @@ class Test(unittest.TestCase):
         p.generate_random_haps_inplace(self.ldm)
         p.set_ibd_segment(0,1000)
         (pairIBD,lod_scores) = ibdadmixed(os.path.join(self.resource_path, "HapMap3_CEU_chr2.map"),
-                   [os.path.join(self.resource_path, "HapMap3_CEU_chr2.low.bgl.dag")], 
+                   [os.path.join(self.resource_path, "HapMap3_CEU_chr2.HapMap3_CEU_chr2.bgl.dag.gz")],
                    p, 
                    g=8, 
                    alphas=[1], 
@@ -50,7 +50,7 @@ class Test(unittest.TestCase):
         p = GenotypePair()
         p.generate_random_haps_inplace(self.ldm)
         (pairIBD,lod_scores) = ibdadmixed(os.path.join(self.resource_path, "HapMap3_CEU_chr2.map"),
-                   [os.path.join(self.resource_path, "HapMap3_CEU_chr2.low.bgl.dag")],
+                   [os.path.join(self.resource_path, "HapMap3_CEU_chr2.HapMap3_CEU_chr2.bgl.dag.gz")],
                    p,
                    g=8,
                    alphas=[1],

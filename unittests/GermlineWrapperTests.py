@@ -5,6 +5,7 @@ from utils.GermlineWrapper import germline
 
 
 class MyTestCase(unittest.TestCase):
+    @unittest.skip("long test")
     def test_germline(self):
         germline(['germline','-prefix', '../resources/ceu.genos', '-bits', '64', '-min_m', '0.1', '-err_hom', '4', '-err_het', '2', '-map', '../resources/ceu.genos.map', '-w_extend'])
 

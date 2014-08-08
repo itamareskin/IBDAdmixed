@@ -187,7 +187,7 @@ cdef class LDModel(object):
         
         print "allele 0 symbol: " + str(self._allele_0) + "  allele 1 symbol: " + str(self._allele_1)
                 
-        with open(file_name) as model_file:
+        with gzip.open(file_name, 'rb') as model_file:
             
             blank_line = '\n'
             layer = 0

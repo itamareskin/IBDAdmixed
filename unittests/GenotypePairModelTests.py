@@ -15,7 +15,7 @@ class Test(unittest.TestCase):
     def setUpClass(cls):
         cls.resource_path = os.path.join(os.path.split(os.path.split(__file__)[0])[0], "resources")
         cls.ldm = LDModel(os.path.join(cls.resource_path, "HapMap3_CEU_chr2.map"), 
-                          os.path.join(cls.resource_path, "HapMap3_CEU_chr2.low.bgl.dag"),
+                          os.path.join(cls.resource_path, "HapMap3_CEU_chr2.HapMap3_CEU_chr2.bgl.dag.gz"),
                           max_snp_num=500)
         cls.m = GenotypePairModel(cls.ldm,cls.ldm,cls.ldm,cls.ldm,phased=False,ibd=0)
 

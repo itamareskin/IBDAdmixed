@@ -26,7 +26,7 @@ class Test(unittest.TestCase):
         
     def test_generate_random_haps_inplace(self):
         m = LDModel(os.path.join(self.resource_path, "HapMap3_CEU_chr2.map"), 
-                    os.path.join(self.resource_path, "HapMap3_CEU_chr2.low.bgl.dag"),
+                    os.path.join(self.resource_path, "HapMap3_CEU_chr2.HapMap3_CEU_chr2.bgl.dag.gz"),
                     max_snp_num=500)
         p = GenotypePair()
         p.generate_random_haps_inplace(m)
@@ -35,7 +35,7 @@ class Test(unittest.TestCase):
 
     def test_write_haplos(self):
         m = LDModel(os.path.join(self.resource_path, "HapMap3_CEU_chr2.map"),
-                    os.path.join(self.resource_path, "HapMap3_CEU_chr2.low.bgl.dag"),
+                    os.path.join(self.resource_path, "HapMap3_CEU_chr2.HapMap3_CEU_chr2.bgl.dag.gz"),
                     max_snp_num=500)
         p = GenotypePair()
         p.generate_random_haps_inplace(m)
@@ -43,7 +43,7 @@ class Test(unittest.TestCase):
 
     def test_chr1(self):
         m = LDModel(os.path.join(self.resource_path, "HapMap3_CEU_chr2.map"),
-                    os.path.join(self.resource_path, "HapMap3_CEU_chr2.low.bgl.dag"),
+                    os.path.join(self.resource_path, "HapMap3_CEU_chr2.HapMap3_CEU_chr2.bgl.dag.gz"),
                     max_snp_num=500)
         p = GenotypePair()
         p.generate_random_haps_inplace(m)
