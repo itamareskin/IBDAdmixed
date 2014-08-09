@@ -1,6 +1,6 @@
 #!/bin/bash
 
-data_dir=/a/home/cc/cs/itamares/Data/ibdadmxed/New4
+data_dir=/a/home/cc/cs/itamares/Data/IBDAdmixed/New4
 pop1_prefix=../New2/HapMap3_CEU_chr2
 pop2_prefix=../New2/HapMap3_YRI_chr2
 data_prefix=ceu.tsi.yri.lwk.half2
