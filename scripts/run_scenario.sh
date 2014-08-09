@@ -1,11 +1,11 @@
 #!/bin/bash
 
-data_dir = /a/home/cc/cs/itamares/Data/ibdadmxed/New4
-pop1_prefix = ../New2/HapMap3_CEU_chr2
-pop2_prefix = ../New2/HapMap3_YRI_chr2
-data_prefix = ceu.tsi.yri.lwk.half2
-output_name = $data_prefix.1
-beagle_dag1 = $pop1_prefix.$pop1_prefix.bgl.dag.gz
+data_dir=/a/home/cc/cs/itamares/Data/ibdadmxed/New4
+pop1_prefix=../New2/HapMap3_CEU_chr2
+pop2_prefix=../New2/HapMap3_YRI_chr2
+data_prefix=ceu.tsi.yri.lwk.half2
+output_name=$data_prefix.1
+beagle_dag1=$pop1_prefix.$pop1_prefix.bgl.dag.gz
 
 # run Beagle to create dag model
 python ibdadmx.py ped2bgl $data_dir/$pop1_prefix
