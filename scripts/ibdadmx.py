@@ -113,7 +113,7 @@ def intervals_from_germline_file(germlinefile, pairs, pos_dict):
             for line in lines:
                 if not line:
                     break
-                line = line.replace('\t', ' ')
+                line = line.replace('\t\t', ' ')
                 line = line.split(' ')
                 pair = (int(line[0]), int(line[2]))
                 if pair not in pairs:
@@ -167,12 +167,12 @@ def runPair(pair, input_file_name, args):
     with open(get_output_file_name(outdir, outfilename, pair, ".lodscores.txt"), 'w') as out_lodscores:
         for interval in lod_scores.keys():
             for win in lod_scores[interval].keys():
-                out_lodscores.write(str(ind1) + "\t" + \
-                                    str(ind2) + "\t" + \
-                                    str(interval[0]) + "\t" + \
-                                    str(interval[1] )+ "\t" + \
-                                    str(win[0]) + "\t" + \
-                                    str(win[1]) + "\t" + \
+                out_lodscores.write(str(ind1) + "\t\t" + \
+                                    str(ind2) + "\t\t" + \
+                                    str(interval[0]) + "\t\t" + \
+                                    str(interval[1] )+ "\t\t" + \
+                                    str(win[0]) + "\t\t" + \
+                                    str(win[1]) + "\t\t" + \
                                     str(lod_scores[interval][win]) + \
                                     "\n")
     
@@ -315,23 +315,35 @@ elif args.command == "stats":
 
     gm = GeneticMap(args.mapfile)
 
+    print "\nFiltering true IBD segments with length < " + str(args.min_length) + "cM"
+
     true_ibd = PopIBD.fast_deserialize(args.trueibdfile)
     true_ibd.filter_by_length(args.min_length,1e4,gm)
 
     ibd_est = PopIBD.fast_deserialize(args.estimatedibdfile)
 
     if args.compare_same_inds:
+        print "Considering only individuals that were found in the estimated IBD"
         true_ibd.filter_by_human_pairs(ibd_est.keys())
+
+    scores = [x[2] for x in ibd_est.to_list()]
+    print "\nmin score in estimated ibd: " + str(min(scores))
+    print "max score in estimated ibd: " + str(max(scores))
+    stats = ibd_est.stats_win(true_ibd,gm)
+    print "\nStatistics for unfiltered estimated ibd"
+    print "power: " + str(stats['power'])
+    print "FDR: " + str(stats['FDR'])
+    print "FPR: " + str(stats['FPR'])
 
     ibd_est.filter_by_score(args.min_score,args.max_score)
     ibd_est.merge_all(max_val = args.lod_score)
-    stats = ibd_est.stats_win(true_ibd,gm)
-    print stats['power'], stats['FDR'], stats['FPR']
 
     scores = linspace(args.min_score,args.max_score,args.num_score_points)
     if args.lod_score:
         scores = reversed(scores)
 
+    print "\nStatistics by min score"
+    print "Score\t\tPower\t\tFDR\t\tFPR"
     output_file_name = args.estimatedibdfile + ".stats.txt"
     with open(output_file_name, "w") as output_file:
         for score in scores:
@@ -340,6 +352,10 @@ elif args.command == "stats":
             else:
                 ibd_est.filter_by_score(score,args.max_score)
             stats = ibd_est.stats_win(true_ibd,gm)
-            line = str(score) + " " + str(stats['power']) + " " + str(stats['FDR']) + " " + str(stats['FPR'])
+
+            line = "{:02.4f}".format(score) + "\t\t" + \
+                   "{:02.4f}".format(stats['power']) + "\t\t" + \
+                   "{:02.4f}".format(stats['FDR']) + "\t\t" + \
+                   "{:02.4f}".format(stats['FPR']) + "\t\t"
             print line
             output_file.write(line+"\n")

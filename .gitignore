@@ -26,3 +26,6 @@ lib/IBD/LDModel.cpp
 lib/IBD/TestSet.cpp
 lib/utils/FoundersContainer.cpp
 lib/utils/StringUtils.cpp
+resources/ceu.ibdadmixed.txt.stats.txt
+resources/ceu.trueibd.txt.stats.txt
+resources/output.ibdadmixed.txt.stats.txt
