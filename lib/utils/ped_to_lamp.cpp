@@ -67,25 +67,38 @@ int ped2lamp(char *ped_file, char *map_file, char *lamp_file, bool phased)
 	    if (phased) {
 	        for(int a=0;a<2;a++) {
                 for(int h=0;h<nr_snp;h++) {
-                    if ((haplotype[a][i][h] != '1') && (haplotype[a][i][h] != '2')) {
-                        cerr << "alleles should be coded 0/1" << endl;
+                    if ((haplotype[a][i][h] != '0') && (haplotype[a][i][h] != '1') && (haplotype[a][i][h] != '2')) {
+                        cerr << "alleles should be coded 0/1/2" << endl;
                         return 0;
                     }
                     int allele1 = haplotype[a][i][h] - '0';
-                    file_lamp << allele1 - 1;
+                    if (allele1 == 0) {
+                        file_lamp << '?';
+                    } else {
+                        file_lamp << allele1 - 1;
+                    }
                 }
                 file_lamp << endl;
             }
 	    } else {
             for(int h=0;h<nr_snp;h++)
             {
-                if ((haplotype[0][i][h] != '1') && (haplotype[0][i][h] != '2') && (haplotype[1][i][h] != '1') && (haplotype[1][i][h] != '2')) {
-                    cerr << "alleles should be coded 0/1" << endl;
+                if (((haplotype[0][i][h] != '0') &&
+                     (haplotype[0][i][h] != '1') &&
+                     (haplotype[0][i][h] != '2')) ||
+                    ((haplotype[1][i][h] != '0') &&
+                     (haplotype[1][i][h] != '1') &&
+                     (haplotype[1][i][h] != '2'))) {
+                    cerr << "alleles should be coded 0/1/2" << endl;
                     return 0;
                 }
                 int allele1 = haplotype[0][i][h] - '0';
                 int allele2 = haplotype[1][i][h] - '0';
-                file_lamp << allele1 + allele2 - 2;
+                if ((allele1 == 0) || (allele2 == 0)) {
+                    file_lamp << '?';
+                } else {
+                    file_lamp << allele1 + allele2 - 2;
+                }
             }
             file_lamp << endl;
         }
