@@ -62,7 +62,7 @@ int ped2lamp(char *ped_file, char *map_file, char *lamp_file, bool phased)
 
 	// print sequences
 
-	for(int i=0;i<nr_samples;i+=2)
+	for(int i=0;i<nr_samples;i++)
 	{
 	    if (phased) {
 	        for(int a=0;a<2;a++) {
