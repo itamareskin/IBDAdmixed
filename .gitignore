@@ -29,3 +29,6 @@ lib/utils/StringUtils.cpp
 resources/ceu.ibdadmixed.txt.stats.txt
 resources/ceu.trueibd.txt.stats.txt
 resources/output.ibdadmixed.txt.stats.txt
+resources/HapMap3_CEU_chr2.lamp.dat
+resources/HapMap3_CEU_chr2.lamp.phased.dat
+resources/HapMap3_CEU_chr2.lamp.unphased.dat

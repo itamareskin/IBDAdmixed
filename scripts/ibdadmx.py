@@ -27,7 +27,7 @@ from IBD.IBDAdmixedModel import ibdadmixed
 from IBD.NaiveModel import naivemodel
 from IBD.GeneticMap import GeneticMap
 from IBD.IBDSegments import PopIBD
-from utils.FormatConversions import convert_ped_to_bgl
+from utils.FormatConversions import convert_ped_to_bgl,convert_ped_to_lamp
 from utils.GermlineWrapper import germline
 
 parser = argparse.ArgumentParser()
@@ -82,6 +82,10 @@ parser_d.add_argument("--ibd-admixed", action='store_true', default=False, dest=
 parser_d.add_argument("--beagle", action='store_true', default=False, dest='beagle', help='')
 parser_d.add_argument("--parente", action='store_true', default=False, dest='parente', help='')
 parser_d.add_argument("--germline", action='store_true', default=False, dest='germline', help='')
+
+parser_e = subparsers.add_parser('ped2lamp', help='convert plink format to LAMP format')
+parser_e.add_argument('prefix', type=str, help='plink prefix (name of ped/map files)')
+parser_e.add_argument("--phased", action='store_true', default=False, dest='phased', help='output in phased format')
 
 #parser.add_argument("--log-filename-prefix", dest='log_filename', default="ibdadmixed", help="name of log filename prefix")
 
@@ -359,3 +363,6 @@ elif args.command == "stats":
                    "{:02.4f}".format(stats['FPR']) + "\t\t"
             print line
             output_file.write(line+"\n")
+
+elif args.command == "ped2lamp":
+    convert_ped_to_lamp(args.prefix + ".ped", args.prefix + ".map", args.prefix + ".lamp", args.phased)
