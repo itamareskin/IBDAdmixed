@@ -9,7 +9,7 @@ using namespace std;
 const char MIS='0';
 const char HET='h';
 
-int ped2lamp(char *ped_file, char *map_file, char *lamp_file, bool phased)
+int ped2lamp(char *ped_file, char *map_file, char *lamp_file, char *markers_file, bool phased)
 {
 	string chrom, rsid, dist, pos, fam, id;
 	int nr_snp;
@@ -17,7 +17,8 @@ int ped2lamp(char *ped_file, char *map_file, char *lamp_file, bool phased)
 	ifstream file_ped(ped_file);
 	ifstream file_map(map_file);
 	ofstream file_lamp(lamp_file);
-	if(!file_ped || !file_map || !file_lamp) { cerr << "file could not be opened" << endl; return 0; }
+	ofstream file_markers(markers_file);
+	if(!file_ped || !file_map || !file_lamp || !markers_file) { cerr << "file could not be opened" << endl; return 0; }
 
 	// load marker names
 	vector<string> rsids;
@@ -104,6 +105,13 @@ int ped2lamp(char *ped_file, char *map_file, char *lamp_file, bool phased)
         }
 	}
 	file_ped.close();
+
+	// print pos file
+	for(int h=0;h<nr_snp;h++)
+	{
+		file_markers << positions[h] << endl;
+	}
+	file_markers.close();
 
 	return 1;
 }

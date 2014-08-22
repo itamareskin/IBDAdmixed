@@ -2,8 +2,11 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="febcba82-e9fe-4b73-8aeb-036e109742f8" name="Default" comment="">
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/unittests/FormatConversionTests.py" afterPath="$PROJECT_DIR$/unittests/FormatConversionTests.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/utils/FormatConversions.cpp" afterPath="$PROJECT_DIR$/lib/utils/FormatConversions.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/utils/FormatConversions.pyx" afterPath="$PROJECT_DIR$/lib/utils/FormatConversions.pyx" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/utils/ped_to_lamp.cpp" afterPath="$PROJECT_DIR$/lib/utils/ped_to_lamp.cpp" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/utils/ped_to_lamp.h" afterPath="$PROJECT_DIR$/lib/utils/ped_to_lamp.h" />
     </list>
     <ignored path="ibdadmixed.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -33,7 +36,7 @@
     <SUITE FILE_PATH="coverage/ibdadmixed$Unittests_in_unittests.coverage" NAME="Unittests in unittests Coverage Results" MODIFIED="1407372234870" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unittests" />
     <SUITE FILE_PATH="coverage/ibdadmixed$Unittests_in_TestSetTests.coverage" NAME="Unittests in TestSetTests Coverage Results" MODIFIED="1407105931254" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unittests" />
     <SUITE FILE_PATH="coverage/ibdadmixed$ibdadmx.coverage" NAME="ibdadmx Coverage Results" MODIFIED="1407372597690" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/scripts" />
-    <SUITE FILE_PATH="coverage/ibdadmixed$Unittests_in_FormatConversionsTests.coverage" NAME="Unittests in FormatConversionsTests Coverage Results" MODIFIED="1408733210105" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unittests" />
+    <SUITE FILE_PATH="coverage/ibdadmixed$Unittests_in_FormatConversionsTests.coverage" NAME="Unittests in FormatConversionsTests Coverage Results" MODIFIED="1408743257056" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unittests" />
     <SUITE FILE_PATH="coverage/ibdadmixed$test3.coverage" NAME="test3 Coverage Results" MODIFIED="1406916846518" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/tests" />
   </component>
   <component name="CreatePatchCommitExecutor">
@@ -51,8 +54,8 @@
       <file leaf-file-name="ibdadmx.py" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/scripts/ibdadmx.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="2542" max-vertical-offset="6341">
-              <caret line="90" column="0" selection-start-line="90" selection-start-column="0" selection-end-line="90" selection-end-column="0" />
+            <state vertical-scroll-proportion="0.0" vertical-offset="4751" max-vertical-offset="6341">
+              <caret line="289" column="37" selection-start-line="289" selection-start-column="37" selection-end-line="289" selection-end-column="37" />
               <folding />
             </state>
           </provider>
@@ -62,7 +65,7 @@
         <entry file="file://$PROJECT_DIR$/lib/utils/FormatConversions.pyx">
           <provider selected="true" editor-type-id="text-editor">
             <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="306">
-              <caret line="1" column="0" selection-start-line="1" selection-start-column="0" selection-end-line="1" selection-end-column="0" />
+              <caret line="12" column="63" selection-start-line="12" selection-start-column="63" selection-end-line="12" selection-end-column="63" />
               <folding />
             </state>
           </provider>
@@ -81,8 +84,8 @@
       <file leaf-file-name="FormatConversionTests.py" pinned="false" current="true" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/unittests/FormatConversionTests.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.5823096" vertical-offset="205" max-vertical-offset="612">
-              <caret line="26" column="0" selection-start-line="26" selection-start-column="0" selection-end-line="26" selection-end-column="0" />
+            <state vertical-scroll-proportion="0.5039002" vertical-offset="0" max-vertical-offset="680">
+              <caret line="19" column="55" selection-start-line="19" selection-start-column="55" selection-end-line="19" selection-end-column="55" />
               <folding>
                 <element signature="e#23#38#0" expanded="true" />
               </folding>
@@ -90,21 +93,11 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="setup.py" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/lib/setup.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="340" max-vertical-offset="697">
-              <caret line="20" column="19" selection-start-line="20" selection-start-column="19" selection-end-line="20" selection-end-column="19" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
       <file leaf-file-name="ped_to_bgl.cpp" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/lib/utils/ped_to_bgl.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="612" max-vertical-offset="1598">
-              <caret line="58" column="33" selection-start-line="58" selection-start-column="33" selection-end-line="58" selection-end-column="33" />
+            <state vertical-scroll-proportion="21.32" vertical-offset="720" max-vertical-offset="1598">
+              <caret line="11" column="78" selection-start-line="11" selection-start-column="58" selection-end-line="11" selection-end-column="78" />
               <folding />
             </state>
           </provider>
@@ -113,8 +106,18 @@
       <file leaf-file-name="ped_to_lamp.cpp" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/lib/utils/ped_to_lamp.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="-1.12" vertical-offset="1060" max-vertical-offset="1938">
-              <caret line="64" column="32" selection-start-line="64" selection-start-column="32" selection-end-line="64" selection-end-column="32" />
+            <state vertical-scroll-proportion="-7.48" vertical-offset="0" max-vertical-offset="2074">
+              <caret line="11" column="60" selection-start-line="11" selection-start-column="60" selection-end-line="11" selection-end-column="80" />
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="ped_to_bgl.h" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/lib/utils/ped_to_bgl.h">
+          <provider selected="true" editor-type-id="text-editor">
+            <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="119">
+              <caret line="1" column="78" selection-start-line="1" selection-start-column="78" selection-end-line="1" selection-end-column="78" />
               <folding />
             </state>
           </provider>
@@ -124,7 +127,7 @@
         <entry file="file://$PROJECT_DIR$/lib/utils/ped_to_lamp.h">
           <provider selected="true" editor-type-id="text-editor">
             <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="119">
-              <caret line="1" column="73" selection-start-line="1" selection-start-column="73" selection-end-line="1" selection-end-column="73" />
+              <caret line="1" column="80" selection-start-line="1" selection-start-column="80" selection-end-line="1" selection-end-column="80" />
               <folding />
             </state>
           </provider>
@@ -194,11 +197,11 @@
         <option value="$PROJECT_DIR$/lib/IBD/LDModel.pyx" />
         <option value="$PROJECT_DIR$/unittests/GermlineWrapperTests.py" />
         <option value="$PROJECT_DIR$/lib/setup.py" />
-        <option value="$PROJECT_DIR$/lib/utils/ped_to_lamp.h" />
-        <option value="$PROJECT_DIR$/unittests/FormatConversionTests.py" />
-        <option value="$PROJECT_DIR$/lib/utils/FormatConversions.pyx" />
         <option value="$PROJECT_DIR$/scripts/ibdadmx.py" />
         <option value="$PROJECT_DIR$/lib/utils/ped_to_lamp.cpp" />
+        <option value="$PROJECT_DIR$/lib/utils/ped_to_lamp.h" />
+        <option value="$PROJECT_DIR$/lib/utils/FormatConversions.pyx" />
+        <option value="$PROJECT_DIR$/unittests/FormatConversionTests.py" />
       </list>
     </option>
   </component>
@@ -1092,7 +1095,7 @@
       <window_info id="Database" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.3293147" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.15228426" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.18781726" sideWeight="0.6096423" order="0" side_tool="false" content_ui="combo" />
-      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.5339074" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
+      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.28202367" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.15760198" sideWeight="0.3888025" order="1" side_tool="true" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33046287" sideWeight="0.5" order="8" side_tool="true" content_ui="tabs" />
       <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.2917115" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
@@ -1185,13 +1188,6 @@
         <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="714">
           <caret line="10" column="30" selection-start-line="10" selection-start-column="0" selection-end-line="10" selection-end-column="30" />
           <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/lib/utils/ped_to_bgl.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.03469388" vertical-offset="0" max-vertical-offset="490">
-          <caret line="1" column="78" selection-start-line="1" selection-start-column="78" selection-end-line="1" selection-end-column="78" />
         </state>
       </provider>
     </entry>
@@ -1501,30 +1497,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/lib/utils/ped_to_bgl.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="510" max-vertical-offset="1598">
-          <caret line="58" column="33" selection-start-line="58" selection-start-column="33" selection-end-line="58" selection-end-column="33" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/lib/utils/ped_to_lamp.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="119">
-          <caret line="1" column="73" selection-start-line="1" selection-start-column="73" selection-end-line="1" selection-end-column="73" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/lib/utils/FormatConversions.pyx">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="306">
-          <caret line="1" column="0" selection-start-line="1" selection-start-column="0" selection-end-line="1" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/lib/IBD/LDModel.pyx">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="6749">
@@ -1535,24 +1507,56 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/scripts/ibdadmx.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="2542" max-vertical-offset="6341">
-          <caret line="90" column="0" selection-start-line="90" selection-start-column="0" selection-end-line="90" selection-end-column="0" />
+        <state vertical-scroll-proportion="0.0" vertical-offset="4751" max-vertical-offset="6341">
+          <caret line="289" column="37" selection-start-line="289" selection-start-column="37" selection-end-line="289" selection-end-column="37" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/lib/utils/ped_to_bgl.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="21.32" vertical-offset="720" max-vertical-offset="1598">
+          <caret line="11" column="78" selection-start-line="11" selection-start-column="58" selection-end-line="11" selection-end-column="78" />
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/lib/utils/ped_to_lamp.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="-1.12" vertical-offset="1060" max-vertical-offset="1938">
-          <caret line="64" column="32" selection-start-line="64" selection-start-column="32" selection-end-line="64" selection-end-column="32" />
+        <state vertical-scroll-proportion="-7.48" vertical-offset="0" max-vertical-offset="2074">
+          <caret line="11" column="60" selection-start-line="11" selection-start-column="60" selection-end-line="11" selection-end-column="80" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/lib/utils/ped_to_bgl.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="119">
+          <caret line="1" column="78" selection-start-line="1" selection-start-column="78" selection-end-line="1" selection-end-column="78" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/lib/utils/ped_to_lamp.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="119">
+          <caret line="1" column="80" selection-start-line="1" selection-start-column="80" selection-end-line="1" selection-end-column="80" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/lib/utils/FormatConversions.pyx">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="306">
+          <caret line="12" column="63" selection-start-line="12" selection-start-column="63" selection-end-line="12" selection-end-column="63" />
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/unittests/FormatConversionTests.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.5823096" vertical-offset="205" max-vertical-offset="612">
-          <caret line="26" column="0" selection-start-line="26" selection-start-column="0" selection-end-line="26" selection-end-column="0" />
+        <state vertical-scroll-proportion="0.5039002" vertical-offset="0" max-vertical-offset="680">
+          <caret line="19" column="55" selection-start-line="19" selection-start-column="55" selection-end-line="19" selection-end-column="55" />
           <folding>
             <element signature="e#23#38#0" expanded="true" />
           </folding>

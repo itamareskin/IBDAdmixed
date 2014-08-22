@@ -19,11 +19,15 @@ class MyTestCase(unittest.TestCase):
     def test_ped_tp_bgl(self):
         convert_ped_to_lamp(os.path.join(self.resource_path, "HapMap3_CEU_chr2.ped"),
                            os.path.join(self.resource_path, "HapMap3_CEU_chr2.map"),
-                           os.path.join(self.resource_path, "HapMap3_CEU_chr2.lamp.unphased.dat"),0)
+                           os.path.join(self.resource_path, "HapMap3_CEU_chr2.lamp.unphased.dat"),
+                           os.path.join(self.resource_path, "HapMap3_CEU_chr2.pos"),
+                           0)
 
         convert_ped_to_lamp(os.path.join(self.resource_path, "HapMap3_CEU_chr2.ped"),
                            os.path.join(self.resource_path, "HapMap3_CEU_chr2.map"),
-                           os.path.join(self.resource_path, "HapMap3_CEU_chr2.lamp.phased.dat"),1)
+                           os.path.join(self.resource_path, "HapMap3_CEU_chr2.lamp.phased.dat"),
+                           os.path.join(self.resource_path, "HapMap3_CEU_chr2.pos"),
+                           1)
         x = 1
 
 if __name__ == '__main__':
