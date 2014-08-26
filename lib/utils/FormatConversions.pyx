@@ -11,3 +11,4 @@ def convert_ped_to_bgl(ped_file, map_file, bgl_file, markers_file):
 
 def convert_ped_to_lamp(ped_file, map_file, lamp_file, markers_file, phased):
     return ped2lamp(ped_file, map_file, lamp_file, markers_file, phased)
+

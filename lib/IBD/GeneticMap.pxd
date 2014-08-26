@@ -22,4 +22,6 @@ cdef class GeneticMap(object):
     cpdef list get_genetic_dist_list(self)
 
     cpdef float get_length(self, int start_snp_idx, int end_snp_idx)
+
+    cpdef int get_length_bp(self, int start_snp_idx, int end_snp_idx)
     

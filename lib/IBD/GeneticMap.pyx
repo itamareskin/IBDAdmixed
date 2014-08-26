@@ -75,7 +75,7 @@ cdef class GeneticMap(object):
                 
                 for line in lines:
                     #print "line: " + line
-                    line = line.split(" ")
+                    line = line.split()
                     #print "pos: " + line[0]
                     self._genetic_dist[snp_idx] = float(line[2])
                     self._position[snp_idx] = long(line[3])
@@ -83,7 +83,10 @@ cdef class GeneticMap(object):
                     if snp_idx >= self._snp_num:
                         done = True;
                         break
-    
+
+    def get_position(self, snp_idx):
+        return self._position[snp_idx]
+
     cpdef dict get_position_dict(self):
         cdef snp_idx
         cdef dict pos_dict = {}
@@ -101,3 +104,6 @@ cdef class GeneticMap(object):
 
     cpdef float get_length(self, int start_snp_idx, int end_snp_idx):
         return self._genetic_dist[min(end_snp_idx,self._snp_num-1)] - self._genetic_dist[start_snp_idx]
+
+    cpdef int get_length_bp(self, int start_snp_idx, int end_snp_idx):
+        return self._position[min(end_snp_idx,self._snp_num-1)] - self._position[start_snp_idx]
