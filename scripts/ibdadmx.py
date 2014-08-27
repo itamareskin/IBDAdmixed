@@ -117,8 +117,8 @@ def intervals_from_germline_file(germlinefile, pairs, pos_dict):
             for line in lines:
                 if not line:
                     break
-                line = line.replace('\t\t', ' ')
-                line = line.split(' ')
+                #line = line.replace('\t\t', ' ')
+                line = line.split()
                 pair = (int(line[0]), int(line[2]))
                 if pair not in pairs:
                     continue
