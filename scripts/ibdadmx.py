@@ -198,7 +198,7 @@ def combine_results(args):
                     final_out_lodscores.write(lodscores)
     
     if not args.keeptemp:
-        os.rmdir(os.path.join(outdir,"tmp_outputs." + outfilename))
+        shutil.rmtree(os.path.join(outdir,"tmp_outputs." + outfilename),ignore_errors=True)
 
 if args.command == "ped2bgl":
     convert_ped_to_bgl(args.prefix + ".ped", args.prefix + ".map", args.prefix + ".bgl", args.prefix + ".markers")
@@ -248,7 +248,7 @@ elif args.command == "ibd":
 
         temp_path = os.path.join(os.path.dirname(args.out), "tmp_outputs." + os.path.basename(args.out))
         if os.path.exists(temp_path):
-            os.rmdir(temp_path)
+            shutil.rmtree(temp_path,ignore_errors=True)
         os.makedirs(temp_path)
 
         pairs = []
