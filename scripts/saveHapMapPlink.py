@@ -39,15 +39,14 @@ logger = logging.getLogger()
 pop = loadPopulation(sys.argv[1])
 
 path = sys.argv[1]
-(dir,file) = os.path.split(path)
-(file_prefix,ext) = os.path.splitext(file)
+(file_prefix,ext) = os.path.splitext(path)
 
-map_out = open(os.path.join([dir,string.join([file_prefix,"map"], ".")]), 'w')
+map_out = open(string.join([file_prefix,"map"], "."), 'w')
 for locus in pop.lociNames():
     pos = '%d' % pop.locusPos(pop.locusByName(locus))
     map_out.writelines(pop.chromNames()[0] + " " + locus + " " + str(pop.dvars().geneticMap[locus]) + " " + pos + "\n")
 map_out.close()
-ped_out = open(os.path.join([dir,string.join([file_prefix,"ped"], ".")]), 'w')
+ped_out = open(string.join([file_prefix,"ped"], "."), 'w')
 count=0
 for h1 in pop.individuals():
     count+=1
