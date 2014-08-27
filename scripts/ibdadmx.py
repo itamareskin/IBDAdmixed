@@ -204,7 +204,9 @@ if args.command == "ped2bgl":
     convert_ped_to_bgl(args.prefix + ".ped", args.prefix + ".map", args.prefix + ".bgl", args.prefix + ".markers")
 
 elif args.command == "bglmodel":
-    subprocess.call(['java', '-Xmx5000m', '-Djava.io.tmpdir=.', '-jar', '../external/beagle.jar',
+    dir = os.path.dirname(__file__)
+    filename = os.path.join(dir, '../external/beagle.jar')
+    subprocess.call(['java', '-Xmx5000m', '-Djava.io.tmpdir=.', '-jar', filename,
                      'data='+args.prefix+'.bgl',
                      'out='+args.prefix,
                      'scale-2.0',
