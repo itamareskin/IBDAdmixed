@@ -99,7 +99,7 @@ def save_pop(pop,scramble=False, suffix=""):
             f.write(pop.dvars().ibd.to_string())
 
         with open(args.out + suffix + ".trueibd.pairs.txt" ,"w") as f:
-            f.write(string.join([x[0] + "," + x[1] for x in pop.dvars().ibd.keys()],"\n"))
+            f.write(string.join([str(x[0]) + "," + str(x[1]) for x in pop.dvars().ibd.keys()],"\n"))
 
     map_out = open(args.out + suffix + ".genos.map", 'w')
     for locus in pop.lociNames():
