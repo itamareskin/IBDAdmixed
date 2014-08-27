@@ -356,8 +356,7 @@ if __name__ == '__main__':
         __doc__)
     #if not pars.getParam():
     #    sys.exit(1)
-    #pars.saveConfig("hapmap.config")
-    pars.loadConfig("hapmap.config")
+    pars.processArgs()
     import logging
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('loadHapMap3')
