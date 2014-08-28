@@ -21,7 +21,7 @@ import logging
 import logging.handlers
 from functools import partial
 from itertools import islice
-from numpy import linspace
+from numpy import linspace, logspace
 from IBD.TestSet import GenotypePair  # @UnresolvedImport
 from IBD.IBDAdmixedModel import ibdadmixed
 from IBD.NaiveModel import naivemodel
@@ -82,9 +82,9 @@ parser_d.add_argument("trueibdfile", type=str, help="true ibd file name")
 parser_d.add_argument("estimatedibdfile", type=str, help="estimated ibd file name")
 parser_d.add_argument("-l", "--min-length", type=float, dest='min_length', default=0, help="minimum length of IBD segments to consider as true IBD (in cM)")
 parser_d.add_argument("--filter-est-length", type=float, dest='min_est_length', default=0.8, help="filter short segments from estimated IBD")
-parser_d.add_argument("-s", "--min-score", type=float, dest='min_score', default=0, help="minimum score of IBD segments to consider")
-parser_d.add_argument("-m", "--max-score", type=float, dest='max_score', default=500, help="maximum score of IBD segments to consider")
-parser_d.add_argument("--num-score-points", type=int, dest='num_score_points', default=20, help="Number of score points to calculate stats on")
+parser_d.add_argument("-s", "--min-score", type=float, dest='min_score', default=0, help="minimum score of IBD segments to consider (if --lod-score is on, this shoule be a negative integer, and its absolute value + 1 will be used as the number of score points)")
+parser_d.add_argument("-m", "--max-score", type=float, dest='max_score', default=500, help="maximum score of IBD segments to consider (if --lod-score is off, this is ignored)")
+parser_d.add_argument("--num-score-points", type=int, dest='num_score_points', default=20, help="Number of score points to calculate stats on  (if --lod-score is off, this is ignored)")
 parser_d.add_argument("--lod-score", action='store_true', default=False, dest='lod_score', help='Score is LOD (the higher the better)')
 parser_d.add_argument("--compare-same-inds", action='store_true', default=False, dest='compare_same_inds', help='Calculate stats only on pairs of individuals that appear in both true and estimated IBD results')
 parser_d.add_argument("--ibd-admixed", action='store_true', default=False, dest='ibd_admixed', help='')
@@ -358,6 +358,9 @@ elif args.command == "stats":
     if (args.ibd_admixed + args.beagle + args.parente + args.germline) > 1:
         raise ValueError
 
+    if not args.lod_score and args.min_score > 0:
+        raise ValueError
+
     gm = GeneticMap(args.mapfile)
 
     print "\nFiltering true IBD segments with length < " + str(args.min_length) + "cM"
@@ -383,7 +386,10 @@ elif args.command == "stats":
     ibd_est.filter_by_score(args.min_score,args.max_score)
     ibd_est.merge_all(max_val = args.lod_score)
 
-    scores = linspace(args.min_score,args.max_score,args.num_score_points)
+    if args.lod_score:
+        scores = linspace(args.min_score,args.max_score,args.num_score_points)
+    else:
+        scores = logspace(int(args.min_score),0,1-int(args.min_score))
     if args.lod_score:
         scores = reversed(scores)
 
