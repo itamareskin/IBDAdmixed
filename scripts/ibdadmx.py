@@ -374,6 +374,8 @@ elif args.command == "stats":
         print "Considering only individuals that were found in the estimated IBD"
         true_ibd.filter_by_human_pairs(ibd_est.keys())
 
+    ibd_est.merge_all(max_val = args.lod_score)
+
     scores = [x[2] for x in ibd_est.to_list()]
     print "\nmin score in estimated ibd: " + str(min(scores))
     print "max score in estimated ibd: " + str(max(scores))
@@ -384,7 +386,6 @@ elif args.command == "stats":
     print "FPR: " + str(stats['FPR'])
 
     ibd_est.filter_by_score(args.min_score,args.max_score)
-    ibd_est.merge_all(max_val = args.lod_score)
 
     if args.lod_score:
         scores = linspace(args.min_score,args.max_score,args.num_score_points)

@@ -160,15 +160,16 @@ cdef class PairIBD:
         return  100 * float(sum([i[1]-i[0] for i in self.to_list()])) / gm._snp_num
     
     cpdef stats_win(PairIBD self, PairIBD true_ibd, GeneticMap gm, int window_size = 1):
-        if true_ibd is None:
-            return 0
         TP = 0
-        intersections = self._tree.intersect(true_ibd._tree)
-        if len(intersections) > 0:
-            for inter in intersections:
-                TP += round((inter[1] - inter[0])/float(window_size))
+        if true_ibd is not None:
+            intersections = self._tree.intersect(true_ibd._tree)
+            if len(intersections) > 0:
+                for inter in intersections:
+                    TP += round((inter[1] - inter[0])/float(window_size))
         FP = self.get_num_windows(window_size) - TP
-        FN = true_ibd.get_num_windows(window_size) - TP
+        FN = 0
+        if true_ibd is not None:
+            FN = true_ibd.get_num_windows(window_size) - TP
         TN = gm._snp_num/window_size - (TP + FP + FN)
         power = TP/(TP+FN) if TP+FN>0 else 0
         specificity = TN/(TN+FP) if TN+FP>0 else 1
