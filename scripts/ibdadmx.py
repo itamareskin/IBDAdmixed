@@ -390,8 +390,7 @@ elif args.command == "stats":
     if args.lod_score:
         scores = linspace(args.min_score,args.max_score,args.num_score_points)
     else:
-        scores = logspace(int(args.min_score),0,1-int(args.min_score))
-    scores = reversed(scores)
+        scores = reversed(logspace(int(args.min_score),0,1-int(args.min_score)))
 
     print "\nStatistics by min score"
     print "Score\t\tPower\t\tFDR\t\tFPR"
@@ -399,7 +398,7 @@ elif args.command == "stats":
     with open(output_file_name, "w") as output_file:
         for score in scores:
             if args.lod_score:
-                ibd_est.filter_by_score(args.min_score,score)
+                ibd_est.filter_by_score(score,args.max_score)
             else:
                 ibd_est.filter_by_score(0,score)
             stats = ibd_est.stats_win(true_ibd,gm)
