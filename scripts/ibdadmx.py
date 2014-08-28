@@ -251,7 +251,6 @@ elif args.command == "beagle4":
     subprocess.call(['java', '-Xmx5000m', '-Djava.io.tmpdir=.', '-jar', filename,
                      'gt='+args.prefix+'.vcf',
                      'map='+args.prefix+'.map',
-                     'ibdlength=0.2',
                      'ibdlod=2',
                      'out='+args.prefix+".out",
                      'ibd=true',

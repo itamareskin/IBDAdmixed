@@ -24,7 +24,7 @@ python $code_dir/scripts/ibdadmx.py ped2bgl $data_dir/$pop2_prefix
 python $code_dir/scripts/ibdadmx.py bglmodel $data_dir/$pop2_prefix
 
 # run simulation
-python $code_dir/scripts/simple_simulation.py $pop1_prefix.pop $pop2_prefix.pop $pop1_prefix.map $data_prefix -a 0.2 0.8 -n 100 -i 80 -e 0.005
+python $code_dir/scripts/simple_simulation.py $data_dir/$pop1_prefix.pop $data_dir/$pop2_prefix.pop $data_dir/$pop1_prefix.map $data_dir/$data_prefix -a 0.2 0.8 -n 100 -i 80 -e 0.005
 
 # run GERMLINE (necessary for ibdadmx)
 python $code_dir/scripts/ibdadmx.py germline $data_dir/$data_prefix.genos
@@ -40,6 +40,10 @@ python $code_dir/scripts/ibdadmx.py ped2bgl $data_dir/$data_prefix.genos
 python $code_dir/scripts/ibdadmx.py beagle3 $data_dir/$data_prefix.genos
 
 # run Beagle 4
+awk 'BEGIN{OFS=" "}NR==1{$1="I"; $2="id"; print; next}{for (i=3;i<=NF;i++) {if ($i=="1") $i="A"; else $i="G"}; print;}' $data_dir/$data_prefix.genos.bgl > $data_dir/$data_prefix.genos.fixed.bgl
+awk '{print $2,$4,"A","G"}' $data_dir/$data_prefix.genos.map > $data_dir/$data_prefix.genos.fixed.markers
+python $code_dir/scripts/ibdadmx.py bgl2vcf $data_dir/$data_prefix.genos.fixed
+sed 's/\//\|/g' $data_dir/$data_prefix.genos.fixed.vcf > $data_dir/$data_prefix.genos.vcf
 python $code_dir/scripts/ibdadmx.py beagle4 $data_dir/$data_prefix.genos
 
 # run Parente
@@ -59,4 +63,6 @@ awk 'NR==FNR{a[$3]=FNR; next;}{print $1,a[$2],a[$3]}' $data_dir/$pop1_prefix.tpe
 python $code_dir/scripts/ibdadmx.py germline $data_dir/$data_prefix.genos
 
 # calc stats
-python ibdadmx.py stats $data_dir/$data_prefix.trueibd.txt $data_dir/$output_name.ibdadmixed.txt
+python $code_dir/scripts/ibdadmx.py stats $data_dir/$data_prefix.trueibd.txt $data_dir/$output_name.ibdadmixed.txt
+python $code_dir/scripts/ibdadmx.py stats $data_dir/$data_prefix.trueibd.txt $data_dir/$output_name.ibdadmixed.txt
+python $code_dir/scripts/ibdadmx.py stats $data_dir/$pop1_prefix.map $data_dir/$data_prefix.trueibd.txt $data_dir/$data_prefix.parente.ibd.txt --parente
