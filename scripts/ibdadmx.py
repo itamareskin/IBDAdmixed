@@ -390,8 +390,7 @@ elif args.command == "stats":
         scores = linspace(args.min_score,args.max_score,args.num_score_points)
     else:
         scores = logspace(int(args.min_score),0,1-int(args.min_score))
-    if args.lod_score:
-        scores = reversed(scores)
+    scores = reversed(scores)
 
     print "\nStatistics by min score"
     print "Score\t\tPower\t\tFDR\t\tFPR"
