@@ -61,6 +61,9 @@ parser_a.add_argument("--recover", action='store_true', default=False, dest='rec
 parser_b = subparsers.add_parser('ped2bgl', help='convert ped file to bgl file')
 parser_b.add_argument('prefix', type=str, help='plink prefix (name of ped/map files)')
 
+parser_b2 = subparsers.add_parser('bgl2vcf', help='convert bgl file to vcf file')
+parser_b2.add_argument('prefix', type=str, help='plink prefix (name of bgl/markers files)')
+
 parser_c = subparsers.add_parser('bglmodel', help='run beagle to create the LD model')
 parser_c.add_argument('prefix', type=str, help='plink prefix (name of bgl/markers files)')
 
