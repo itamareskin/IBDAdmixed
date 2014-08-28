@@ -59,8 +59,6 @@ sed 's/\//\|/g' HapMap3_CEU_YRI_chr1.vcf > HapMap3_CEU_YRI_chr1.fixed.vcf
 java -jar ~/Software/b4.r1099.jar gt=AfricanAmericans8.genos.vcf ref=HapMap3_CEU_YRI_chr1.fixed.vcf map=AfricanAmericans8.genos.map ibdlength=0.2 ibdlod=2 out=AfricanAmericans.beagle.out2 ibd=true impute=false
 awk 'BEGIN{split("",ibd)}NR==FNR{pos[$4]=NR-1; next}{h1=$1; h2=$3; p=h1","h2; v=pos[$6]","pos[$7]","$8; if (p in ibd) ibd[p]=ibd[p]";"v; else ibd[p]=v}END{for (i in ibd) print i":"ibd[i]}' aritficial3.comp.test.genos.map aritficial3.comp.test.beagle4.out2.ibd > aritficial3.comp.test.beagle4.out2.ibd.txt
 
-
-
 #run parente
 ~/IVUS/plink --noweb --file  HapMap3_CEU_chr2 --recode --transpose --out  HapMap3_CEU_chr2
 ~/IVUS/plink --tfile HapMap3_CEU_chr2 --noweb --freq --out HapMap3_CEU_chr2

@@ -65,7 +65,13 @@ parser_c = subparsers.add_parser('bglmodel', help='run beagle to create the LD m
 parser_c.add_argument('prefix', type=str, help='plink prefix (name of bgl/markers files)')
 
 parser_c = subparsers.add_parser('germline', help='run germline')
-parser_c.add_argument('prefix', type=str, help='germline prefix (name of bgl/markers files)')
+parser_c.add_argument('prefix', type=str, help='plink prefix (name of ped/map files)')
+
+parser_c2 = subparsers.add_parser('beagle3', help='run beagle3')
+parser_c2.add_argument('prefix', type=str, help='beagle prefix (name of bgl/markers files)')
+
+parser_c3 = subparsers.add_parser('beagle4', help='run beagle4')
+parser_c3.add_argument('prefix', type=str, help='beagle prefix (name of bgl/markers files)')
 
 parser_d = subparsers.add_parser('stats', help='calc stats')
 parser_d.add_argument("mapfile", type=str, help="PLINK-format map file name")
@@ -204,6 +210,15 @@ def combine_results(args):
 if args.command == "ped2bgl":
     convert_ped_to_bgl(args.prefix + ".ped", args.prefix + ".map", args.prefix + ".bgl", args.prefix + ".markers")
 
+elif args.command == "bgl2vcf":
+    dir = os.path.dirname(__file__)
+    filename = os.path.join(dir, '../external/beagle2vcf.jar')
+    subprocess.call(['java', '-Xmx5000m', '-Djava.io.tmpdir=.', '-jar', filename,
+                     '1',
+                     args.prefix+'.markers',
+                     args.prefix+'.bgl',
+                     '0'], stdout=args.prefix+'.vcf')
+
 elif args.command == "bglmodel":
     dir = os.path.dirname(__file__)
     filename = os.path.join(dir, '../external/beagle.jar')
@@ -213,8 +228,30 @@ elif args.command == "bglmodel":
                      'scale-2.0',
                      'shift=0'])
 
-if args.command == "germline":
+elif args.command == "germline":
     germline(['germline','-prefix', args.prefix, '-silent', '-bits', '64', '-min_m', '0.1', '-err_hom', '4', '-err_het', '2', '-map', args.prefix+".map", '-w_extend'])
+
+elif args.command == "beagle3":
+    dir = os.path.dirname(__file__)
+    filename = os.path.join(dir, '../external/beagle.jar')
+    subprocess.call(['java', '-Xmx5000m', '-Djava.io.tmpdir=.', '-jar', filename,
+                     'unphased='+args.prefix+'.bgl',
+                     'missing=?',
+                     'fastibd=true',
+                     'out='+args.prefix,
+                     'fastibdthreshold=1e-11'])
+
+elif args.command == "beagle4":
+    dir = os.path.dirname(__file__)
+    filename = os.path.join(dir, '../external/b4.r1274.jar')
+    subprocess.call(['java', '-Xmx5000m', '-Djava.io.tmpdir=.', '-jar', filename,
+                     'gt='+args.prefix+'.vcf',
+                     'map='+args.prefix+'.map',
+                     'ibdlength=0.2',
+                     'ibdlod=2',
+                     'out='+args.prefix+".out",
+                     'ibd=true',
+                     'impute=false'])
 
 elif args.command == "ibd":
 
