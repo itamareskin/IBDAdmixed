@@ -130,7 +130,8 @@ def intervals_from_germline_file(germlinefile, pairs, pos_dict):
     return ibs_intervals
 
 @job(output="output.txt", error="error.txt")
-def runPair(pair, input_file_name, args):
+def runPair(x, args):
+    pair, input_file_name = x
     print "Running on pair: " + str(pair)
     logger = logging.getLogger('logger')
     (outdir, outfilename) = os.path.split(os.path.abspath(args.out))
@@ -303,13 +304,11 @@ elif args.command == "ibd":
             runPairPartial = partial(runPair, args=args)
             if args.num_cpus == 1:
                 result = map(runPairPartial,
-                             [pair for idx, pair in enumerate(args.ibs_intervals.keys())],
-                             [get_input_file_name(args.out,pair) for idx, pair in enumerate(args.ibs_intervals.keys())])
+                             [(pair, get_input_file_name(args.out,pair)) for idx, pair in enumerate(args.ibs_intervals.keys())])
             else:
                 pool = multiprocessing.Pool(args.num_cpus)
                 results = pool.map_async(runPairPartial,
-                                         [pair for idx, pair in enumerate(args.ibs_intervals.keys())],
-                                         [get_input_file_name(args.out,pair) for idx, pair in enumerate(args.ibs_intervals.keys())])
+                                         [(pair, get_input_file_name(args.out,pair)) for idx, pair in enumerate(args.ibs_intervals.keys())])
                 pool.close()
                 pool.join()
         combine_results(args)
