@@ -405,13 +405,13 @@ elif args.command == "stats":
             stats = ibd_est.stats_win(true_ibd,gm)
 
             if args.lod_score:
-                string_format = "{:02.4f}"
+                score_string_format = "{:02.4f}"
             else:
-                string_format = "{:02.4e}"
-            line = string_format.format(score) + "\t\t" + \
-                   string_format.format(stats['power']) + "\t\t" + \
-                   string_format.format(stats['FDR']) + "\t\t" + \
-                   string_format.format(stats['FPR']) + "\t\t"
+                score_string_format = "{:02.4e}"
+            line = score_string_format.format(score) + "\t\t" + \
+                   "{:02.4f}".format(stats['power']) + "\t\t" + \
+                   "{:02.4f}".format(stats['FDR']) + "\t\t" + \
+                   "{:02.4f}".format(stats['FPR']) + "\t\t"
             print line
             output_file.write(line+"\n")
 
