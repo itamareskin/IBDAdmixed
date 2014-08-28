@@ -216,11 +216,12 @@ if args.command == "ped2bgl":
 elif args.command == "bgl2vcf":
     dir = os.path.dirname(__file__)
     filename = os.path.join(dir, '../external/beagle2vcf.jar')
-    subprocess.call(['java', '-Xmx5000m', '-Djava.io.tmpdir=.', '-jar', filename,
-                     '1',
-                     args.prefix+'.markers',
-                     args.prefix+'.bgl',
-                     '0'], stdout=args.prefix+'.vcf')
+    with open(args.prefix+'.vcf',"w") as output_file:
+        subprocess.call(['java', '-Xmx5000m', '-Djava.io.tmpdir=.', '-jar', filename,
+                         '1',
+                         args.prefix+'.markers',
+                         args.prefix+'.bgl',
+                         '0'], stdout=output_file)
 
 elif args.command == "bglmodel":
     dir = os.path.dirname(__file__)
