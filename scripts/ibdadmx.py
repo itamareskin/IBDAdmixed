@@ -401,13 +401,17 @@ elif args.command == "stats":
             if args.lod_score:
                 ibd_est.filter_by_score(args.min_score,score)
             else:
-                ibd_est.filter_by_score(score,args.max_score)
+                ibd_est.filter_by_score(0,score)
             stats = ibd_est.stats_win(true_ibd,gm)
 
-            line = "{:02.4f}".format(score) + "\t\t" + \
-                   "{:02.4f}".format(stats['power']) + "\t\t" + \
-                   "{:02.4f}".format(stats['FDR']) + "\t\t" + \
-                   "{:02.4f}".format(stats['FPR']) + "\t\t"
+            if args.lod_score:
+                string_format = "{:02.4f}"
+            else:
+                string_format = "{:02.4e}"
+            line = string_format.format(score) + "\t\t" + \
+                   string_format.format(stats['power']) + "\t\t" + \
+                   string_format.format(stats['FDR']) + "\t\t" + \
+                   string_format.format(stats['FPR']) + "\t\t"
             print line
             output_file.write(line+"\n")
 
