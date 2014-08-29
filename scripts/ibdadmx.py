@@ -117,7 +117,7 @@ def get_output_file_name(outdir, outfilename, pair, suffix):
     else:
         return os.path.join(outdir, "tmp_outputs." + outfilename)
     
-def intervals_from_germline_file(germlinefile, pairs, pos_dict):
+def intervals_from_germline_file(germlinefile, pos_dict, pairs = None):
     ibs_intervals = {}
     buffer_size = 5000
     print "reading IBS intervals from GERMLINE file: " + germlinefile
@@ -135,7 +135,7 @@ def intervals_from_germline_file(germlinefile, pairs, pos_dict):
                 #line = line.replace('\t\t', ' ')
                 line = line.split()
                 pair = (int(line[0]), int(line[2]))
-                if pair not in pairs:
+                if pairs is not None and pair not in pairs:
                     continue
                 if not ibs_intervals.has_key(pair):
                     ibs_intervals[pair] = []
@@ -250,6 +250,8 @@ elif args.command == "germline":
     germline_args += ['-map', args.prefix+".map"]
     germline_args.append('-w_extend')
     germline(germline_args)
+    germline_intervals = intervals_from_germline_file(args.prefix + ".match", GeneticMap(args.prefix + ".map").get_position_dict())
+    x=1
 
 elif args.command == "beagle3":
     dir = os.path.dirname(__file__)
@@ -323,7 +325,7 @@ elif args.command == "ibd":
         gm = GeneticMap(args.input + ".map", args.num_snps)
         pos_dict = gm.get_position_dict()
         if args.germlinefile != None:
-            ibs_intervals = intervals_from_germline_file(args.germlinefile, pairs, pos_dict)
+            ibs_intervals = intervals_from_germline_file(args.germlinefile, pos_dict, pairs)
         args.ibs_intervals = ibs_intervals
 
         if len(args.ibs_intervals) == 0:
