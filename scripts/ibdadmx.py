@@ -400,30 +400,35 @@ elif args.command == "stats":
     ibd_est.merge_all(max_val = args.lod_score)
 
     scores = [x[2] for x in ibd_est.to_list()]
-    if not args.one_line:
-        print "\nmin score in estimated ibd: " + str(min(scores))
-        print "max score in estimated ibd: " + str(max(scores))
-    stats = ibd_est.stats_win(true_ibd,gm)
-    if not args.one_line:
-        print "\nStatistics for unfiltered estimated ibd"
-        print "power: " + str(stats['power'])
-        print "FDR: " + str(stats['FDR'])
-        print "FPR: " + str(stats['FPR'])
-    else:
-        print str(stats['power']) + " " + str(stats['FDR']) + " " + str(stats['FPR'])
 
-    if not args.one_line:
-        ibd_est.filter_by_score(args.min_score,args.max_score)
+    output_file_name = args.estimatedibdfile + ".stats.txt"
+    with open(output_file_name, "w") as output_file:
 
-        if args.lod_score:
-            scores = linspace(args.min_score,args.max_score,args.num_score_points)
+        if not args.one_line:
+            print "\nmin score in estimated ibd: " + str(min(scores))
+            print "max score in estimated ibd: " + str(max(scores))
+        stats = ibd_est.stats_win(true_ibd,gm)
+        if not args.one_line:
+            print "\nStatistics for unfiltered estimated ibd"
+            print "power: " + str(stats['power'])
+            print "FDR: " + str(stats['FDR'])
+            print "FPR: " + str(stats['FPR'])
         else:
-            scores = reversed(logspace(int(args.min_score),0,1-int(args.min_score)))
+            line = str(stats['power']) + " " + str(stats['FDR']) + " " + str(stats['FPR'])
+            print line
+            output_file.write(line+"\n")
 
-        print "\nStatistics by min score"
-        print "Score\t\tPower\t\tFDR\t\tFPR"
-        output_file_name = args.estimatedibdfile + ".stats.txt"
-        with open(output_file_name, "w") as output_file:
+        if not args.one_line:
+            ibd_est.filter_by_score(args.min_score,args.max_score)
+
+            if args.lod_score:
+                scores = linspace(args.min_score,args.max_score,args.num_score_points)
+            else:
+                scores = reversed(logspace(int(args.min_score),0,1-int(args.min_score)))
+
+            print "\nStatistics by min score"
+            print "Score\t\tPower\t\tFDR\t\tFPR"
+
             for score in scores:
                 if args.lod_score:
                     ibd_est.filter_by_score(score,args.max_score)
