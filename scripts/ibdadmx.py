@@ -69,6 +69,7 @@ parser_c.add_argument('prefix', type=str, help='plink prefix (name of bgl/marker
 
 parser_c = subparsers.add_parser('germline', help='run germline')
 parser_c.add_argument('prefix', type=str, help='plink prefix (name of ped/map files)')
+parser_c.add_argument('out', type=str, help='name of ibd output file')
 parser_c.add_argument("--verbose", action='store_true', default=False, dest='verbose', help='verbose mode')
 parser_c.add_argument("--bits", type=int, dest='bits', default=64, help="size of each slice (in markers) used for exact matching seeds")
 parser_c.add_argument('--min-m', type=float, dest='min_m', default=0.1, help='minimum length for match to be used for imputation (in cM or MB)')
@@ -251,7 +252,9 @@ elif args.command == "germline":
     germline_args.append('-w_extend')
     germline(germline_args)
     germline_intervals = intervals_from_germline_file(args.prefix + ".match", GeneticMap(args.prefix + ".map").get_position_dict())
-    x=1
+    germline_ibd = PopIBD.from_dict(germline_intervals)
+    with open(args.out + ".germline.ibd.txt") as germline_output_file:
+        germline_output_file.write(germline_ibd.to_string())
 
 elif args.command == "beagle3":
     dir = os.path.dirname(__file__)
