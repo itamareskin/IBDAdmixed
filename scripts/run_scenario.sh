@@ -28,14 +28,14 @@ python $code_dir/scripts/ibdadmx.py bglmodel $data_dir/$pop2_prefix
 python $code_dir/scripts/simple_simulation.py $data_dir/$pop1_prefix.pop $data_dir/$pop2_prefix.pop $data_dir/$pop1_prefix.map $data_dir/$data_prefix -a 0.2 0.8 -n 100 -i 80 -e 0.005
 
 # run GERMLINE (necessary for ibdadmx)
-python $code_dir/scripts/ibdadmx.py germline $data_dir/$data_prefix.genos
+python $code_dir/scripts/ibdadmx.py germline $data_dir/$data_prefix.genos $data_dir/$data_prefix.genos
 
 # run ibdadmx
 #python $code_dir/scripts/ibdadmx.py ibd $data_dir/$data_prefix.genos $data_dir/$output_name $data_dir/$beagle_dag1 -k 1 -a 1 --pairs-file $data_dir/$data_prefix.trueibd.pairs.txt -p 1 --set-ibd-trans 1e-5 1 --germline-file $data_dir/$data_prefix.genos.match -m -50 -w 100
 python $code_dir/scripts/ibdadmx.py ibd $data_dir/$data_prefix.genos $data_dir/$output_name $data_dir/$beagle_dag1 $data_dir/$beagle_dag2 -k 2 -a 0.2 0.8 --pairs-file $data_dir/$data_prefix.trueibd.pairs.txt -p 15 --set-ibd-trans 2e-4 1 1e-5 1 --germline-file $data_dir/$data_prefix.genos.match -m -50 -w 100
 
 # run Naive Model
-python $code_dir/scripts/ibdadmx.py ibd $data_dir/$data_prefix.genos $data_dir/$output_name.naive $data_dir/$beagle_dag1 -k 2 -a 0.2 0.8 --pairs-file $data_dir/$data_prefix.trueibd.pairs.txt -p 1 --set-ibd-trans 1e-5 1 --germline-file $data_dir/$data_prefix.genos.match -m -50 -w 100 --naive-model
+python $code_dir/scripts/ibdadmx.py ibd $data_dir/$data_prefix.genos $data_dir/$output_name.naive $data_dir/$beagle_dag1 $data_dir/$beagle_dag2 -k 2 -a 0.2 0.8 --pairs-file $data_dir/$data_prefix.trueibd.pairs.txt -p 1 --set-ibd-trans 2e-4 1 1e-5 1 --germline-file $data_dir/$data_prefix.genos.match -m -50 -w 100 --naive-model
 
 # run Beagle 3
 python $code_dir/scripts/ibdadmx.py ped2bgl $data_dir/$data_prefix.genos
@@ -65,8 +65,7 @@ awk 'NR==FNR{a[$3]=FNR; next;}{print $1,a[$2],a[$3]}' $data_dir/$pop2_prefix.tpe
 # run Parente2
 
 # run Germline
-python $code_dir/scripts/ibdadmx.py germline $data_dir/$data_prefix.genos
-
+python $code_dir/scripts/ibdadmx.py germline $data_dir/$data_prefix.genos $data_dir/$output_name --bits 128 --min-m 2 --err-hom 0 --err-het 0
 
 ## calc stats
 # ibdadmx

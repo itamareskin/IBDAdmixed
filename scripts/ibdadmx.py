@@ -253,7 +253,7 @@ elif args.command == "germline":
     germline(germline_args)
     germline_intervals = intervals_from_germline_file(args.prefix + ".match", GeneticMap(args.prefix + ".map").get_position_dict())
     germline_ibd = PopIBD.from_dict(germline_intervals)
-    with open(args.out + ".germline.ibd.txt") as germline_output_file:
+    with open(args.out + ".germline.ibd.txt",'w') as germline_output_file:
         germline_output_file.write(germline_ibd.to_string())
 
 elif args.command == "beagle3":
