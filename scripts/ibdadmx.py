@@ -66,6 +66,7 @@ parser_b2.add_argument('prefix', type=str, help='plink prefix (name of bgl/marke
 
 parser_c = subparsers.add_parser('bglmodel', help='run beagle to create the LD model')
 parser_c.add_argument('prefix', type=str, help='plink prefix (name of bgl/markers files)')
+parser_c.add_argument("--scale", type=float, dest='scale', default=2, help='scale parameter to beagle')
 
 parser_c = subparsers.add_parser('germline', help='run germline')
 parser_c.add_argument('prefix', type=str, help='plink prefix (name of ped/map files)')
@@ -234,11 +235,9 @@ elif args.command == "bgl2vcf":
 elif args.command == "bglmodel":
     dir = os.path.dirname(__file__)
     filename = os.path.join(dir, '../external/beagle.jar')
-    subprocess.call(['java', '-Xmx5000m', '-Djava.io.tmpdir=.', '-jar', filename,
-                     'data='+args.prefix+'.bgl',
-                     'out='+args.prefix,
-                     'scale-2.0',
-                     'shift=0'])
+    beagle_args = ['java', '-Xmx5000m', '-Djava.io.tmpdir=.', '-jar', filename, 'data=' + args.prefix + '.bgl',
+                   'out=' + args.prefix, 'scale=' + str(args.scale), 'shift=0']
+    subprocess.call(beagle_args)
 
 elif args.command == "germline":
     germline_args = ['germline','-prefix', args.prefix]
