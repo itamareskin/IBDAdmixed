@@ -98,6 +98,7 @@ parser_d.add_argument("--ibd-admixed", action='store_true', default=False, dest=
 parser_d.add_argument("--beagle", action='store_true', default=False, dest='beagle', help='')
 parser_d.add_argument("--parente", action='store_true', default=False, dest='parente', help='')
 parser_d.add_argument("--germline", action='store_true', default=False, dest='germline', help='')
+parser_d.add_argument("--one-line", action='store_true', default=False, dest='one_line', help='print just one line with power, FPR, FDR')
 
 parser_e = subparsers.add_parser('ped2lamp', help='convert plink format to LAMP format')
 parser_e.add_argument('prefix', type=str, help='plink prefix (name of ped/map files)')
@@ -384,7 +385,8 @@ elif args.command == "stats":
 
     gm = GeneticMap(args.mapfile)
 
-    print "\nFiltering true IBD segments with length < " + str(args.min_length) + "cM"
+    if not args.one_line:
+        print "\nFiltering true IBD segments with length < " + str(args.min_length) + "cM"
 
     true_ibd = PopIBD.fast_deserialize(args.trueibdfile)
     true_ibd.filter_by_length(args.min_length,1e4,gm)
@@ -398,42 +400,47 @@ elif args.command == "stats":
     ibd_est.merge_all(max_val = args.lod_score)
 
     scores = [x[2] for x in ibd_est.to_list()]
-    print "\nmin score in estimated ibd: " + str(min(scores))
-    print "max score in estimated ibd: " + str(max(scores))
+    if not args.one_line:
+        print "\nmin score in estimated ibd: " + str(min(scores))
+        print "max score in estimated ibd: " + str(max(scores))
     stats = ibd_est.stats_win(true_ibd,gm)
-    print "\nStatistics for unfiltered estimated ibd"
-    print "power: " + str(stats['power'])
-    print "FDR: " + str(stats['FDR'])
-    print "FPR: " + str(stats['FPR'])
-
-    ibd_est.filter_by_score(args.min_score,args.max_score)
-
-    if args.lod_score:
-        scores = linspace(args.min_score,args.max_score,args.num_score_points)
+    if not args.one_line:
+        print "\nStatistics for unfiltered estimated ibd"
+        print "power: " + str(stats['power'])
+        print "FDR: " + str(stats['FDR'])
+        print "FPR: " + str(stats['FPR'])
     else:
-        scores = reversed(logspace(int(args.min_score),0,1-int(args.min_score)))
+        print str(stats['power']) + " " + str(stats['FDR']) + " " + str(stats['FPR'])
 
-    print "\nStatistics by min score"
-    print "Score\t\tPower\t\tFDR\t\tFPR"
-    output_file_name = args.estimatedibdfile + ".stats.txt"
-    with open(output_file_name, "w") as output_file:
-        for score in scores:
-            if args.lod_score:
-                ibd_est.filter_by_score(score,args.max_score)
-            else:
-                ibd_est.filter_by_score(0,score)
-            stats = ibd_est.stats_win(true_ibd,gm)
+    if not args.one_line:
+        ibd_est.filter_by_score(args.min_score,args.max_score)
 
-            if args.lod_score:
-                score_string_format = "{:02.4f}"
-            else:
-                score_string_format = "{:02.4e}"
-            line = score_string_format.format(score) + "\t\t" + \
-                   "{:02.4f}".format(stats['power']) + "\t\t" + \
-                   "{:02.4f}".format(stats['FDR']) + "\t\t" + \
-                   "{:02.4f}".format(stats['FPR']) + "\t\t"
-            print line
-            output_file.write(line+"\n")
+        if args.lod_score:
+            scores = linspace(args.min_score,args.max_score,args.num_score_points)
+        else:
+            scores = reversed(logspace(int(args.min_score),0,1-int(args.min_score)))
+
+        print "\nStatistics by min score"
+        print "Score\t\tPower\t\tFDR\t\tFPR"
+        output_file_name = args.estimatedibdfile + ".stats.txt"
+        with open(output_file_name, "w") as output_file:
+            for score in scores:
+                if args.lod_score:
+                    ibd_est.filter_by_score(score,args.max_score)
+                else:
+                    ibd_est.filter_by_score(0,score)
+                stats = ibd_est.stats_win(true_ibd,gm)
+
+                if args.lod_score:
+                    score_string_format = "{:02.4f}"
+                else:
+                    score_string_format = "{:02.4e}"
+                line = score_string_format.format(score) + "\t\t" + \
+                       "{:02.4f}".format(stats['power']) + "\t\t" + \
+                       "{:02.4f}".format(stats['FDR']) + "\t\t" + \
+                       "{:02.4f}".format(stats['FPR']) + "\t\t"
+                print line
+                output_file.write(line+"\n")
 
 elif args.command == "ped2lamp":
     convert_ped_to_lamp(args.prefix + ".ped", args.prefix + ".map", args.prefix + ".lamp", args.phased)

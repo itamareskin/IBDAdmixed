@@ -65,7 +65,13 @@ awk 'NR==FNR{a[$3]=FNR; next;}{print $1,a[$2],a[$3]}' $data_dir/$pop2_prefix.tpe
 # run Parente2
 
 # run Germline
-python $code_dir/scripts/ibdadmx.py germline $data_dir/$data_prefix.genos $data_dir/$output_name --bits 128 --min-m 2 --err-hom 0 --err-het 0
+
+for i in {1..20}
+do
+	min_m=$(awk -v i=$i 'BEGIN { print ((i) / 10) }')
+	#echo $min_m
+	python $code_dir/scripts/ibdadmx.py germline $data_dir/$data_prefix.genos $data_dir/$output_name --bits 64 --min-m $min_m --err-hom 0 --err-het 0
+done
 
 ## calc stats
 # ibdadmx
@@ -76,3 +82,5 @@ python $code_dir/scripts/ibdadmx.py stats $data_dir/$pop1_prefix.map $data_dir/$
 python $code_dir/scripts/ibdadmx.py stats $data_dir/$pop1_prefix.map $data_dir/$data_prefix.trueibd.txt $data_dir/$data_prefix.genos.beagle4.ibd.txt --lod-score
 # parente
 python $code_dir/scripts/ibdadmx.py stats $data_dir/$pop1_prefix.map $data_dir/$data_prefix.trueibd.txt $data_dir/$data_prefix.parente.ibd.txt --parente --lod-score --min-score -20 --max-score 50
+# germline
+python $code_dir/scripts/ibdadmx.py stats $data_dir/$pop1_prefix.map $data_dir/$data_prefix.trueibd.txt $data_dir/$output_name.germline.ibd.txt
