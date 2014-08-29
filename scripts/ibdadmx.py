@@ -383,7 +383,7 @@ elif args.command == "stats":
     if not args.lod_score and args.min_score > 0:
         raise ValueError
 
-    gm = GeneticMap(args.mapfile)
+    gm = GeneticMap(args.mapfile, verbose=False)
 
     if not args.one_line:
         print "\nFiltering true IBD segments with length < " + str(args.min_length) + "cM"
