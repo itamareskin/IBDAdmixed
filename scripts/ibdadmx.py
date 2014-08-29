@@ -69,6 +69,12 @@ parser_c.add_argument('prefix', type=str, help='plink prefix (name of bgl/marker
 
 parser_c = subparsers.add_parser('germline', help='run germline')
 parser_c.add_argument('prefix', type=str, help='plink prefix (name of ped/map files)')
+parser_c.add_argument("--verbose", action='store_true', default=False, dest='verbose', help='verbose mode')
+parser_a.add_argument("--bits", type=int, dest='bits', default=64, help="size of each slice (in markers) used for exact matching seeds")
+parser_c.add_argument('--min-m', type=float, dest='min_m', default=0.1, help='minimum length for match to be used for imputation (in cM or MB)')
+parser_c.add_argument('--err-hom', type=int, dest='err_hom', default=4,  help='the maximum number of mismatching homozygous markers for a slice to still be considered part of a match')
+parser_c.add_argument('--err-het', type=int, dest='err_het', default=2,  help='the maximum number of mismatching heterozygous markers for a slice to still be considered part of a match')
+parser_c.add_argument('--h-extend', action='store_true', default=False, dest='h_extend', help='extends from exact seeds using haplotypes rather than genotypes; useful when data is well-phased (e.g. trios)')
 
 parser_c2 = subparsers.add_parser('beagle3', help='run beagle3')
 parser_c2.add_argument('prefix', type=str, help='beagle prefix (name of bgl/markers files)')
@@ -233,7 +239,17 @@ elif args.command == "bglmodel":
                      'shift=0'])
 
 elif args.command == "germline":
-    germline(['germline','-prefix', args.prefix, '-silent', '-bits', '64', '-min_m', '0.1', '-err_hom', '4', '-err_het', '2', '-map', args.prefix+".map", '-w_extend'])
+    germline_args = ['germline','-prefix', args.prefix]
+    if not args.verbose:
+        germline_args.append('-silent')
+    germline_args.append += ['-bits', args.bits]
+    germline_args.append += ['-min_m', args.min_m]
+    germline_args.append += ['-err_hom', args.err_hom]
+    germline_args.append += ['-err_het', args.err_het]
+    germline_args.append += ['-err_het', args.err_het]
+    germline_args.append += ['-map', args.prefix+".map"]
+    germline_args.append('-w_extend')
+    germline(germline_args)
 
 elif args.command == "beagle3":
     dir = os.path.dirname(__file__)
