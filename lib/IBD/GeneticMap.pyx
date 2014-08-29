@@ -17,8 +17,10 @@ cdef class GeneticMap(object):
     represents the genetic map data for a chromosome 
     '''
     
-    def __cinit__(self, map_file_name=None, int max_snp_num=1000000000):
-        
+    def __cinit__(self, map_file_name=None, int max_snp_num=1000000000, verbose=True):
+
+        self._verbose = verbose
+
         # total number of SNPs to be analyzed
         if map_file_name is not None:
             with open(map_file_name) as map_file:
@@ -29,8 +31,9 @@ cdef class GeneticMap(object):
             self._genetic_dist = <double *> malloc(self._snp_num * sizeof(double))
             
             self.read_map(map_file_name)
-        
-            print "genetic map created"
+
+            if self._verbose:
+                print "genetic map created"
 
         self._is_slice = False
             
@@ -45,6 +48,7 @@ cdef class GeneticMap(object):
         other._position = self._position + start_snp
         other._genetic_dist = self._genetic_dist + start_snp
         other._is_slice = True
+        other._verbose = self._verbose
         return other
         
     def read_map(self, map_file_name):
@@ -54,8 +58,9 @@ cdef class GeneticMap(object):
         if not os.path.exists(map_file_name):
             print "the file: " + map_file_name + " does not exist!"
             exit(-1)
-        
-        print "reading from map file: " + map_file_name
+
+        if self._verbose:
+            print "reading from map file: " + map_file_name
         
         with open(map_file_name) as map_file:
             

@@ -6,6 +6,7 @@ cdef class GeneticMap(object):
     '''
 
     cdef bool _is_slice
+    cdef bool _verbose
 
     cdef public int _snp_num
     
