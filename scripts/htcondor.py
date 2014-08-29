@@ -24,7 +24,7 @@ import random
 import string
 
 pickle_protocol = cPickle.HIGHEST_PROTOCOL
-default_submit = 'htcondor.sub'
+default_submit = os.path.join(os.path.dirname(__file__), 'htcondor.sub')
 
 ############################################################
 #
