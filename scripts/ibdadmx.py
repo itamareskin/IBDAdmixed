@@ -70,7 +70,11 @@ parser_c.add_argument('prefix', type=str, help='plink prefix (name of bgl/marker
 parser_c = subparsers.add_parser('germline', help='run germline')
 parser_c.add_argument('prefix', type=str, help='plink prefix (name of ped/map files)')
 parser_c.add_argument("--verbose", action='store_true', default=False, dest='verbose', help='verbose mode')
+<<<<<<< HEAD
 parser_c.add_argument("--bits", type=int, dest='bits', default=64, help="size of each slice (in markers) used for exact matching seeds")
+=======
+parser_a.add_argument("--bits", type=int, dest='bits', default=64, help="size of each slice (in markers) used for exact matching seeds")
+>>>>>>> 5c119809c0fc552607a53b726b16812fbaef331b
 parser_c.add_argument('--min-m', type=float, dest='min_m', default=0.1, help='minimum length for match to be used for imputation (in cM or MB)')
 parser_c.add_argument('--err-hom', type=int, dest='err_hom', default=4,  help='the maximum number of mismatching homozygous markers for a slice to still be considered part of a match')
 parser_c.add_argument('--err-het', type=int, dest='err_het', default=2,  help='the maximum number of mismatching heterozygous markers for a slice to still be considered part of a match')
