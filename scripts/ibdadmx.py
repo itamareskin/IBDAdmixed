@@ -242,11 +242,11 @@ elif args.command == "germline":
     germline_args = ['germline','-prefix', args.prefix]
     if not args.verbose:
         germline_args.append('-silent')
-    germline_args.append += ['-bits', args.bits]
-    germline_args.append += ['-min_m', args.min_m]
-    germline_args.append += ['-err_hom', args.err_hom]
-    germline_args.append += ['-err_het', args.err_het]
-    germline_args.append += ['-err_het', args.err_het]
+    germline_args.append += ['-bits', str(args.bits)]
+    germline_args.append += ['-min_m', str(args.min_m)]
+    germline_args.append += ['-err_hom', str(args.err_hom)]
+    germline_args.append += ['-err_het', str(args.err_het)]
+    germline_args.append += ['-err_het', str(args.err_het)]
     germline_args.append += ['-map', args.prefix+".map"]
     germline_args.append('-w_extend')
     germline(germline_args)
