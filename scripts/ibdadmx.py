@@ -218,6 +218,9 @@ def combine_results(args):
     if not args.keeptemp:
         shutil.rmtree(os.path.join(outdir,"tmp_outputs." + outfilename),ignore_errors=True)
 
+autorun(write_dag=False)
+set_filename(os.path.basename(args.out) + ".dag")
+
 if args.command == "ped2bgl":
     convert_ped_to_bgl(args.prefix + ".ped", args.prefix + ".map", args.prefix + ".bgl", args.prefix + ".markers")
 
@@ -299,9 +302,6 @@ elif args.command == "ibd":
         raise ValueError
     if args.K > 1 and len(args.alphas) != args.K:
         args.alphas = [1.0/args.K] * args.K
-
-    autorun(write_dag=False)
-    set_filename(os.path.basename(args.out) + ".dag")
 
     if not args.recover:
         with  open(args.out + ".cmdlog", 'w') as logf:
