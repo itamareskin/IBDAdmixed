@@ -1,3 +1,5 @@
 universe = vanilla
 transfer_input_files = /a/home/cc/cs/itamares/Projects/ibdadmixed/scripts/htcondor.py,$(job_files)
+requirements = Machine == "rack-bio-eran-01.cs.tau.ac.il" || Machine == "rack-bio-eran-02.cs.tau.ac.il" || Machine == "rack-bio-eran-03.cs.tau.ac.il" || Machine == "rack-bio-eran-04.cs.tau.ac.il" || Machine == "rack-bio-eran-05.cs.tau.ac.il" || Machine == "rack-bio-eran-06.cs.tau.ac.il" || Machine == "rack-bio-eran-07.cs.tau.ac.il" || Machine == "rack-bio-eran-08.cs.tau.ac.il" || Machine == "rack-bio-eran-09.cs.tau.ac.il" || Machine == "rack-bio-eran-10.cs.tau.ac.il" || Machine == "rack-bio-eran-11.cs.tau.ac.il" || Machine == "rack-bio-eran-12.cs.tau.ac.il" || Machine == "rack-bio-eran-13.cs.tau.ac.il" || Machine == "rack-bio-eran-14.cs.tau.ac.il" || Machine == "rack-bio-eran-15.cs.tau.ac.il" || Machine == "rack-bio-eran-16.cs.tau.ac.il" || Machine == "rack-bio-eran-17.cs.tau.ac.il" || Machine == "rack-bio-eran-18.cs.tau.ac.il" || Machine == "rack-bio-eran-19.cs.tau.ac.il" || Machine == "rack-bio-eran-20.cs.tau.ac.il" || Machine == "rack-bio-eran-21.cs.tau.ac.il" || Machine == "rack-bio-eran-22.cs.tau.ac.il"
+Rank = Memory
 queue $(processes)
