@@ -1,4 +1,4 @@
 universe = vanilla
-initialdir = /specific/a/nas-eran-01/groups/eran_halperin/itamare/Projects/ibdadmixed/scripts
+initialdir = /specific/a/nas-eran-01/groups/eran_halperin/itamares/Projects/ibdadmixed/scripts
 transfer_input_files = htcondor.py,$(job_files)
 queue $(processes)
