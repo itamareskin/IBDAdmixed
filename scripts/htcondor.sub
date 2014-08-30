@@ -1,3 +1,4 @@
 universe = vanilla
-transfer_input_files = ~/Projects/ibdadmixed/scripts/htcondor.py,$(job_files)
+initialdir = ~/Projects/ibdadmixed/scripts
+transfer_input_files = htcondor.py,$(job_files)
 queue $(processes)
