@@ -6,7 +6,6 @@ Created on Mar 23, 2013
 @author: eskin3
 '''
 
-from IBD.TestSet import TestSet  # @UnresolvedImport
 # from Logic.IBDGenoHMM import IBDGenoHMM
 # import Logic.LDModelUtils as ldu
 import os
@@ -22,7 +21,7 @@ import logging.handlers
 from functools import partial
 from itertools import islice
 from numpy import linspace, logspace
-from IBD.TestSet import GenotypePair  # @UnresolvedImport
+from IBD.TestSet import TestSet,GenotypePair  # @UnresolvedImport
 from IBD.IBDAdmixedModel import ibdadmixed
 from IBD.NaiveModel import naivemodel
 from IBD.GeneticMap import GeneticMap
