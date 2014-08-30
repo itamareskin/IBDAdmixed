@@ -349,7 +349,7 @@ elif args.command == "ibd":
 
         if not args.recover:
             for idx, pair in enumerate(args.ibs_intervals.keys()):
-                curr_job = runPair.queue(pair, get_input_file_name(args.out,pair), args)
+                curr_job = runPair.queue((pair, get_input_file_name(args.out,pair)), args)
                 jobs.append(curr_job)
 
         last_job = combine_results.queue(args)
