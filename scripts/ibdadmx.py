@@ -339,10 +339,10 @@ elif args.command == "ibd":
                     pairs = [x.split(",") for x in pairs]
                     pairs = [(int(x[0]), int(x[1])) for x in pairs]
 
-            args.ibs_intervals = {}
-            gm = GeneticMap(args.input + ".map", args.num_snps)
-            if args.germlinefile != None:
-                args.ibs_intervals = intervals_from_germline_file(args.germlinefile, gm.get_position_dict(), pairs)
+        args.ibs_intervals = {}
+        gm = GeneticMap(args.input + ".map", args.num_snps)
+        if args.germlinefile != None:
+            args.ibs_intervals = intervals_from_germline_file(args.germlinefile, gm.get_position_dict(), pairs)
 
         if len(args.ibs_intervals) == 0:
             print "No pair of haplotypes to analyze"
