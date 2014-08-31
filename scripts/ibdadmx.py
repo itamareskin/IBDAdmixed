@@ -9,6 +9,7 @@ Created on Mar 23, 2013
 # from Logic.IBDGenoHMM import IBDGenoHMM
 # import Logic.LDModelUtils as ldu
 import os
+import fnmatch
 import string
 import sys
 import subprocess
@@ -55,7 +56,8 @@ parser_a.add_argument("--naive-model", action='store_true', default=False, dest=
 parser_a.add_argument("--scramble", action='store_true', default=False, dest='scramble', help='scramble phase of genotypes')
 parser_a.add_argument("--condor", action='store_true', default=False, dest='condor', help='send jobs to htcondor')
 parser_a.add_argument("--keep-temp", action='store_true', default=False, dest='keeptemp', help='keep temoporary files')
-parser_a.add_argument("--recover", action='store_true', default=False, dest='recover', help='recover unfinished run')
+parser_a.add_argument("--rerun", action='store_true', default=False, dest='rerun', help='rerun failed jobs')
+parser_a.add_argument("--recover", action='store_true', default=False, dest='recover', help='recover results from all finished jobs')
 
 parser_b = subparsers.add_parser('ped2bgl', help='convert ped file to bgl file')
 parser_b.add_argument('prefix', type=str, help='plink prefix (name of ped/map files)')
@@ -304,31 +306,43 @@ elif args.command == "ibd":
         args.alphas = [1.0/args.K] * args.K
 
     if not args.recover:
-        with  open(args.out + ".cmdlog", 'w') as logf:
+        with open(args.out + ".cmdlog", 'w') as logf:
             logf.write(str(args) + "\n")
 
         temp_path = os.path.join(os.path.dirname(args.out), "tmp_outputs." + os.path.basename(args.out))
-        if os.path.exists(temp_path):
-            shutil.rmtree(temp_path,ignore_errors=True)
-        os.makedirs(temp_path)
 
-        pairs = []
-        if args.pair is not None:
-            pairs = [tuple(args.pair)]
+        if args.rerun:
+            if not os.path.exists(temp_path):
+                print "output directory does not exist"
+                exit(-1)
 
-        if args.pairs_file != None:
-            with open(args.pairs_file) as pairs_f:
-                pairs = pairs_f.readlines()
-                pairs = [x.strip("\n") for x in pairs]
-                pairs = [x.split(",") for x in pairs]
-                pairs = [(int(x[0]), int(x[1])) for x in pairs]
+            pairs = []
+            for geons_file in os.listdir(temp_path):
+                if fnmatch.fnmatch(geons_file, '*.genos.dat'):
+                    pairs.append(tuple([int(x) for x in geons_file.split(".")[-4:-2]]))
+            for res_file in os.listdir(temp_path):
+                if fnmatch.fnmatch(res_file, '*.ibdadmixed.txt'):
+                    pairs.remove(tuple([int(x) for x in res_file.split(".")[-4:-2]]))
+        else:
+            if os.path.exists(temp_path):
+                shutil.rmtree(temp_path,ignore_errors=True)
+            os.makedirs(temp_path)
 
-        ibs_intervals = {}
-        gm = GeneticMap(args.input + ".map", args.num_snps)
-        pos_dict = gm.get_position_dict()
-        if args.germlinefile != None:
-            ibs_intervals = intervals_from_germline_file(args.germlinefile, pos_dict, pairs)
-        args.ibs_intervals = ibs_intervals
+            pairs = []
+            if args.pair is not None:
+                pairs = [tuple(args.pair)]
+
+            if args.pairs_file != None:
+                with open(args.pairs_file) as pairs_f:
+                    pairs = pairs_f.readlines()
+                    pairs = [x.strip("\n") for x in pairs]
+                    pairs = [x.split(",") for x in pairs]
+                    pairs = [(int(x[0]), int(x[1])) for x in pairs]
+
+            args.ibs_intervals = {}
+            gm = GeneticMap(args.input + ".map", args.num_snps)
+            if args.germlinefile != None:
+                args.ibs_intervals = intervals_from_germline_file(args.germlinefile, gm.get_position_dict(), pairs)
 
         if len(args.ibs_intervals) == 0:
             print "No pair of haplotypes to analyze"
