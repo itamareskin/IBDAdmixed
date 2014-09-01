@@ -2,9 +2,9 @@ from __future__ import division
 import os, sys
 from IBD.GeneticMap import GeneticMap
 
-gm = GeneticMap(sys.argv[2])
-with open(sys.argv[1]) as input_file:
-    print "anc0 anc1 anc2 tot_length avg_lengths\n"
+gm = GeneticMap(os.path.expanduser(sys.argv[2]))
+with open(os.path.expanduser(ys.argv[1])) as input_file:
+    print "anc0 anc1 anc2 tot_length avg_lengths"
     while True:
         prev_anc1 = 0
         prev_anc2 = 0
