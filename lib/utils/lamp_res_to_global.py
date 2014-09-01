@@ -6,8 +6,8 @@ gm = GeneticMap(os.path.expanduser(sys.argv[2]),verbose=False)
 with open(os.path.expanduser(sys.argv[1])) as input_file:
     print "anc0 anc1 anc2 tot_length avg_lengths"
     while True:
-        prev_anc1 = 0
-        prev_anc2 = 0
+        prev_anc1 = -1
+        prev_anc2 = -1
         prev_breakpoint1=0
         prev_breakpoint2=0
         anc_lens = [0]*3
