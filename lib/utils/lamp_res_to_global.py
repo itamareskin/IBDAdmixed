@@ -4,6 +4,7 @@ from IBD.GeneticMap import GeneticMap
 
 gm = GeneticMap(sys.argv[2])
 with open(sys.argv[1]) as input_file:
+    print "anc0 anc1 anc2 tot_length avg_lengths\n"
     while True:
         prev_anc1 = 0
         prev_anc2 = 0
@@ -32,7 +33,7 @@ with open(sys.argv[1]) as input_file:
                 prev_breakpoint2 = int(segment[1])
             prev_loc = int(segment[1])
         tot = sum(anc_lens)
-        print str(anc_lens[0]/tot) + " " + str(anc_lens[1]/tot) + " " + str(anc_lens[2]/tot) + " " + str(sum(segment_lengths)/len(segment_lengths))
+        print str(anc_lens[0]/tot) + " " + str(anc_lens[1]/tot) + " " + str(anc_lens[2]/tot) + " " + str(sum(segment_lengths)) + " " + str(sum(segment_lengths)/len(segment_lengths))
 
 
 
