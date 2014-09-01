@@ -221,7 +221,6 @@ def combine_results(args):
         shutil.rmtree(os.path.join(outdir,"tmp_outputs." + outfilename),ignore_errors=True)
 
 autorun(write_dag=False)
-set_filename(os.path.basename(args.out) + ".dag")
 
 if args.command == "ped2bgl":
     convert_ped_to_bgl(args.prefix + ".ped", args.prefix + ".map", args.prefix + ".bgl", args.prefix + ".markers")
@@ -359,8 +358,9 @@ elif args.command == "ibd":
         print "Finished writing inputs for individuals jobs."
 
     if args.condor:
-        jobs = []
+        set_filename(os.path.basename(args.out) + ".dag")
 
+        jobs = []
         if not args.recover:
             for idx, pair in enumerate(args.ibs_intervals.keys()):
                 curr_job = runPair.queue((pair, get_input_file_name(args.out,pair)), args)
