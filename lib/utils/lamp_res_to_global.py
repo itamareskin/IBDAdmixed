@@ -4,7 +4,7 @@ from IBD.GeneticMap import GeneticMap
 
 gm = GeneticMap(os.path.expanduser(sys.argv[2]),verbose=False)
 with open(os.path.expanduser(sys.argv[1])) as input_file:
-    print "anc0 anc1 anc2 tot_length avg_lengths"
+    print "anc0 anc1 anc2 tot_length"
     while True:
         prev_anc1 = -1
         prev_anc2 = -1
