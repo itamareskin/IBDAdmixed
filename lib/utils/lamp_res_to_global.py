@@ -17,23 +17,24 @@ with open(os.path.expanduser(sys.argv[1])) as input_file:
         if len(line) == 0 or line is None:
             break
         line = line.split()
+        tot = 0
         for segment in line:
             segment = segment.split(":")
             anc1 = int(segment[0][0])
             anc2 = int(segment[0][1])
             anc_lens[anc1] += gm.get_length_bp(prev_loc, int(segment[1]))
             anc_lens[anc2] += gm.get_length_bp(prev_loc, int(segment[1]))
-            if anc1 != prev_anc1:
-                prev_anc1 = anc1
-                segment_lengths.append(gm.get_length_bp(prev_breakpoint1, int(segment[1])))
-                prev_breakpoint1 = int(segment[1])
-            if anc2 != prev_anc2:
-                prev_anc2 = anc2
-                segment_lengths.append(gm.get_length_bp(prev_breakpoint2, int(segment[1])))
-                prev_breakpoint2 = int(segment[1])
+            tot += gm.get_length_bp(prev_loc, int(segment[1]))
+            # if anc1 != prev_anc1:
+            #     prev_anc1 = anc1
+            #     segment_lengths.append(gm.get_length_bp(prev_breakpoint1, int(segment[1])))
+            #     prev_breakpoint1 = int(segment[1])
+            # if anc2 != prev_anc2:
+            #     prev_anc2 = anc2
+            #     segment_lengths.append(gm.get_length_bp(prev_breakpoint2, int(segment[1])))
+            #     prev_breakpoint2 = int(segment[1])
             prev_loc = int(segment[1])
-        tot = sum(anc_lens)
-        print str(anc_lens[0]/tot) + " " + str(anc_lens[1]/tot) + " " + str(anc_lens[2]/tot) + " " + str(sum(segment_lengths)) + " " + str(sum(segment_lengths)/len(segment_lengths))
+        print str(anc_lens[0]/tot) + " " + str(anc_lens[1]/tot) + " " + str(anc_lens[2]/tot) + " " + str(tot)
 
 
 
