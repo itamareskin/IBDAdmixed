@@ -267,14 +267,14 @@ elif args.command == "beagle3":
 
     seeds = range(args.nruns)
     # launch async calls:
-    procs = [subprocess.Popen(['java', '-Xmx5000m', '-Djava.io.tmpdir=.', '-jar', filename,
+    procs = [subprocess.Popen(['java', '-Xmx3000m', '-Djava.io.tmpdir=.', '-jar', filename,
                                'unphased='+args.prefix+'.bgl',
                                'missing=?',
                                'fastibd=true',
                                'gprobs=false',
                                'seed='+str(seed),
                                'out='+(args.out if args.nruns == 1 else args.out + "." + str(seed)),
-                               'fastibdthreshold=1e-11']) for seed in seeds]
+                               'fastibdthreshold=1e-2']) for seed in seeds]
     # wait.
     for proc in procs:
         proc.wait()
