@@ -296,9 +296,14 @@ cdef class PopIBD:
     cpdef keys(self):
         return self._ibd_dic.keys()
         
-    cpdef merge_all(self, int overlap = 1, max_val = False, merge_diff_vals=False):
+    cpdef merge_all(self, int overlap = 1, max_val = False, merge_diff_vals=False, verbose=False):
+        cdef int num_pairs = len(self.keys())
+        cdef int idx = 0
         for pair in self.keys():
+            if verbose:
+                print "Merging segments for pair " + str(idx) + " out of " + str(num_pairs) + " total pairs"
             self.get_value(pair).merge_intervals(overlap, max_val, merge_diff_vals)
+            idx += 1
             
     cpdef merge_all_fast(self, int overlap = 1, max_val = False, merge_diff_vals=False):
         for pair in self.keys():
@@ -453,6 +458,7 @@ cdef class PopIBD:
                 if (min_score is None or score >= min_score) and (max_score is None or score <= max_score):
                     pairibd.add_interval(int(points[0]),int(points[1]),score)
             p.add_human_pair(pair,pairibd)
+            idx += 1
         return p
     
     @classmethod
