@@ -82,7 +82,7 @@ parser_c.add_argument('--h-extend', action='store_true', default=False, dest='h_
 parser_c2 = subparsers.add_parser('beagle3', help='run beagle3')
 parser_c2.add_argument('prefix', type=str, help='beagle prefix (name of bgl/markers files)')
 parser_c2.add_argument('out', type=str, help='beagle output name')
-parser_c.add_argument("--nruns", type=int, dest='nruns', default=10, help="Number of beagle runs to perform")
+parser_c2.add_argument("--nruns", type=int, dest='nruns', default=10, help="Number of beagle runs to perform")
 
 parser_c3 = subparsers.add_parser('beagle4', help='run beagle4')
 parser_c3.add_argument('prefix', type=str, help='beagle prefix (name of bgl/markers files)')
