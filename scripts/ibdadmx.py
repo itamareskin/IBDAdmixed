@@ -81,6 +81,7 @@ parser_c.add_argument('--h-extend', action='store_true', default=False, dest='h_
 
 parser_c2 = subparsers.add_parser('beagle3', help='run beagle3')
 parser_c2.add_argument('prefix', type=str, help='beagle prefix (name of bgl/markers files)')
+parser_c.add_argument("--nruns", type=int, dest='nruns', default=10, help="Number of beagle runs to perform")
 
 parser_c3 = subparsers.add_parser('beagle4', help='run beagle4')
 parser_c3.add_argument('prefix', type=str, help='beagle prefix (name of bgl/markers files)')
@@ -262,12 +263,24 @@ elif args.command == "germline":
 elif args.command == "beagle3":
     dir = os.path.dirname(__file__)
     filename = os.path.join(dir, '../external/beagle.jar')
-    subprocess.call(['java', '-Xmx5000m', '-Djava.io.tmpdir=.', '-jar', filename,
-                     'unphased='+args.prefix+'.bgl',
-                     'missing=?',
-                     'fastibd=true',
-                     'out='+args.prefix,
-                     'fastibdthreshold=1e-11'])
+
+    seeds = range(args.nruns)
+    # launch async calls:
+    procs = [subprocess.Popen(['java', '-Xmx5000m', '-Djava.io.tmpdir=.', '-jar', filename,
+                               'unphased='+args.prefix+'.bgl',
+                               'missing=?',
+                               'fastibd=true',
+                               'gprobs=false',
+                               'seed='+str(seed),
+                               'out='+(args.prefix if args.nruns == 1 else args.prefix + "." + str(seed)),
+                               'fastibdthreshold=1e-11']) for seed in seeds]
+    # wait.
+    for proc in procs:
+        proc.wait()
+    # check for results:
+    if any(proc.returncode != 0 for proc in procs):
+        print 'Beagle3 failed...'
+        exit(-1)
 
 elif args.command == "beagle4":
     dir = os.path.dirname(__file__)
@@ -275,10 +288,12 @@ elif args.command == "beagle4":
     subprocess.call(['java', '-Xmx5000m', '-Djava.io.tmpdir=.', '-jar', filename,
                      'gt='+args.prefix+'.vcf',
                      'map='+args.prefix+'.map',
-                     'ibdlod=2',
+                     'ibdlod=1',
                      'out='+args.prefix+".out",
                      'ibd=true',
-                     'impute=false'])
+                     'impute=false',
+                     'nthreads=16',
+                     'gprobs=false'])
 
 elif args.command == "ibd":
 
