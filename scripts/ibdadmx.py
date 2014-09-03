@@ -416,8 +416,9 @@ elif args.command == "stats":
 
     if not args.one_line:
         print "\nLoading true IBD segments..."
-    max_score = args.max_score if args.lod_score else pow(10,args.min_score)
-    true_ibd = PopIBD.fast_deserialize(args.trueibdfile,max_score=max_score)
+    min_score = args.min_score if args.lod_score else pow(10,args.min_score)
+    max_score = args.max_score if args.lod_score else pow(10,args.max_score)
+    true_ibd = PopIBD.fast_deserialize(args.trueibdfile,min_score=min_score,max_score=max_score)
 
     if not args.one_line:
         print "Filtering true IBD segments with length < " + str(args.min_length) + "cM"
@@ -461,7 +462,7 @@ elif args.command == "stats":
             if args.lod_score:
                 scores = linspace(args.min_score,args.max_score,args.num_score_points)
             else:
-                scores = reversed(logspace(int(args.min_score),0,1-int(args.min_score)))
+                scores = reversed(logspace(int(args.min_score),int(args.max_score),int(args.max_score)+1-int(args.min_score)))
 
             print "\nStatistics by min score"
             print "Score\t\tPower\t\tFDR\t\tFPR"
