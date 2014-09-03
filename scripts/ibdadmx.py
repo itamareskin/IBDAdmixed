@@ -95,8 +95,10 @@ parser_d.add_argument("trueibdfile", type=str, help="true ibd file name")
 parser_d.add_argument("estimatedibdfile", type=str, help="estimated ibd file name")
 parser_d.add_argument("-l", "--min-length", type=float, dest='min_length', default=0, help="minimum length of IBD segments to consider as true IBD (in cM)")
 parser_d.add_argument("--filter-est-length", type=float, dest='min_est_length', default=0.8, help="filter short segments from estimated IBD")
-parser_d.add_argument("-s", "--min-score", type=float, dest='min_score', default=0, help="minimum score of IBD segments to consider (if --lod-score is on, this shoule be a negative integer, and its absolute value + 1 will be used as the number of score points)")
-parser_d.add_argument("-m", "--max-score", type=float, dest='max_score', default=500, help="maximum score of IBD segments to consider (if --lod-score is off, this is ignored)")
+parser_d.add_argument("-s", "--min-score", type=float, dest='min_score', default=0, help="minimum score of IBD segments to consider")
+parser_d.add_argument("-m", "--max-score", type=float, dest='max_score', default=500, help="maximum score of IBD segments to consider")
+parser_d.add_argument("-s", "--min-score-point", type=float, dest='min_score_point', default=0, help="score of IBD segments to consider as first point in graph (if --lod-score is on, this shoule be a negative integer, and its absolute value + 1 will be used as the number of score points)")
+parser_d.add_argument("-m", "--max-score-point", type=float, dest='max_score_point', default=500, help="score of IBD segments to consider as last point in graph (if --lod-score is off, this is ignored)")
 parser_d.add_argument("--num-score-points", type=int, dest='num_score_points', default=20, help="Number of score points to calculate stats on  (if --lod-score is off, this is ignored)")
 parser_d.add_argument("--lod-score", action='store_true', default=False, dest='lod_score', help='Score is LOD (the higher the better)')
 parser_d.add_argument("--compare-same-inds", action='store_true', default=False, dest='compare_same_inds', help='Calculate stats only on pairs of individuals that appear in both true and estimated IBD results')
@@ -410,7 +412,7 @@ elif args.command == "stats":
     if (args.ibd_admixed + args.beagle + args.parente + args.germline) > 1:
         raise ValueError
 
-    if not args.lod_score and args.min_score > 0:
+    if not args.lod_score and (args.min_score > 0 or args.min_score_point > 0):
         raise ValueError
 
     gm = GeneticMap(args.mapfile, verbose=False)
@@ -459,12 +461,17 @@ elif args.command == "stats":
             output_file.write(line+"\n")
 
         if not args.one_line:
-            ibd_est.filter_by_score(args.min_score,args.max_score)
+            if not args.one_line:
+                min_score = args.min_score if args.lod_score else pow(10,args.min_score)
+                max_score = args.max_score if args.lod_score else pow(10,args.max_score)
+                print "Filtering by min score:" + str(min_score)
+                print "Filtering by max score:" + str(max_score)
+                ibd_est.filter_by_score(min_score,max_score)
 
             if args.lod_score:
-                scores = linspace(args.min_score,args.max_score,args.num_score_points)
+                scores = linspace(args.min_score_point,args.max_score_point,args.num_score_points)
             else:
-                scores = reversed(logspace(int(args.min_score),int(args.max_score),int(args.max_score)+1-int(args.min_score)))
+                scores = reversed(logspace(int(args.min_score_point),int(args.max_score_point),int(args.max_score_point)+1-int(args.min_score_point)))
 
             print "\nStatistics by min score"
             print "Score\t\tPower\t\tFDR\t\tFPR"
