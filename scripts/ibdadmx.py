@@ -424,7 +424,7 @@ elif args.command == "stats":
 
     if not args.one_line:
         print "Loading estimated IBD segments..."
-    ibd_est = PopIBD.fast_deserialize(args.estimatedibdfile)
+    ibd_est = PopIBD.fast_deserialize(args.estimatedibdfile, verbose=True)
 
     if args.compare_same_inds:
         if not args.one_line:
@@ -433,7 +433,7 @@ elif args.command == "stats":
 
     if not args.one_line:
         print "Merging IBD segments..."
-    ibd_est.merge_all(max_val = args.lod_score)
+    ibd_est.merge_all(max_val = args.lod_score, verbose=True)
 
     scores = [x[2] for x in ibd_est.to_list()]
 
