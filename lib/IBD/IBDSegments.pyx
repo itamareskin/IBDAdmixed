@@ -429,14 +429,18 @@ cdef class PopIBD:
         return "".join(s)
     
     @classmethod
-    def from_string(cls, s):
+    def from_string(cls, s, verbose=False, min_score = None, max_score = None):
         assert isinstance(s, (str,list))
         p = PopIBD()
         if type(s) is str:
             s = string.split(s, '\n')
             s = [x for x in s if x != '']
         s = [string.strip(x, '\n') for x in s]
+        num_inds = len(s)
+        idx = 0
         for pair_string in s:
+            if verbose and int(idx / int(num_inds / 100)) == 0:
+                print "Getting individual " + str(idx) + " out of " + str(num_inds) + " individuals"
             temp = pair_string.split(":")
             pair = temp[0].split(",")
             pair = (int(pair[0]),int(pair[1]))
@@ -446,15 +450,16 @@ cdef class PopIBD:
                 score = 0
                 if len(points) > 2:
                     score = float(points[2])
-                pairibd.add_interval(int(points[0]),int(points[1]),score)
+                if (min_score is None or score >= min_score) and (max_score is None or score <= max_score):
+                    pairibd.add_interval(int(points[0]),int(points[1]),score)
             p.add_human_pair(pair,pairibd)
         return p
     
     @classmethod
-    def fast_deserialize(cls, file_name):
+    def fast_deserialize(cls, file_name, verbose=False, min_score = None, max_score = None):
         f = open(file_name)
         s = f.readlines()
-        ibd = PopIBD.from_string(s)
+        ibd = PopIBD.from_string(s, verbose, min_score, max_score)
         f.close()
         return ibd
     
