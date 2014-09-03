@@ -415,17 +415,24 @@ elif args.command == "stats":
     gm = GeneticMap(args.mapfile, verbose=False)
 
     if not args.one_line:
-        print "\nFiltering true IBD segments with length < " + str(args.min_length) + "cM"
-
+        print "\nLoading true IBD segments..."
     true_ibd = PopIBD.fast_deserialize(args.trueibdfile)
+
+    if not args.one_line:
+        print "Filtering true IBD segments with length < " + str(args.min_length) + "cM"
     true_ibd.filter_by_length(args.min_length,1e4,gm)
 
+    if not args.one_line:
+        print "Loading estimated IBD segments..."
     ibd_est = PopIBD.fast_deserialize(args.estimatedibdfile)
 
     if args.compare_same_inds:
-        print "Considering only individuals that were found in the estimated IBD"
+        if not args.one_line:
+            print "Considering only individuals that were found in the estimated IBD"
         true_ibd.filter_by_human_pairs(ibd_est.keys())
 
+    if not args.one_line:
+        print "Merging IBD segments..."
     ibd_est.merge_all(max_val = args.lod_score)
 
     scores = [x[2] for x in ibd_est.to_list()]
