@@ -84,6 +84,7 @@ parser_c2.add_argument('prefix', type=str, help='beagle prefix (name of bgl/mark
 parser_c2.add_argument('out', type=str, help='beagle output name')
 parser_c2.add_argument("--nruns", type=int, dest='nruns', default=10, help="Number of beagle runs to perform")
 parser_c2.add_argument("--seed", type=int, dest='seed', default=0, help="First seed for beagle")
+parser_c2.add_argument("--fastIBD-threshold", type=float, dest='fastIBD_threshold', default=1e-5, help="Maximal score to report as IBD")
 
 parser_c3 = subparsers.add_parser('beagle4', help='run beagle4')
 parser_c3.add_argument('prefix', type=str, help='beagle prefix (name of bgl/markers files)')
@@ -275,7 +276,7 @@ elif args.command == "beagle3":
                                'gprobs=false',
                                'seed='+str(seed+args.seed),
                                'out='+(args.out if args.nruns == 1 else args.out + "." + str(seed+args.seed)),
-                               'fastibdthreshold=1e-2']) for seed in seeds]
+                               'fastibdthreshold'+str(args.fastIBD_threshold)]) for seed in seeds]
     # wait.
     for proc in procs:
         proc.wait()
@@ -430,8 +431,9 @@ elif args.command == "stats":
 
     if args.compare_same_inds:
         if not args.one_line:
-            print "Considering only individuals that were found in the estimated IBD"
+            print "Considering only individuals that were found in both estimated IBD and true IBD"
         true_ibd.filter_by_human_pairs(ibd_est.keys())
+        ibd_est.filter_by_human_pairs(true_ibd.keys())
 
     if not args.one_line:
         print "Merging IBD segments..."
