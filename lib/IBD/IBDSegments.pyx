@@ -444,7 +444,7 @@ cdef class PopIBD:
         num_inds = len(s)
         idx = 0
         for pair_string in s:
-            if verbose and int(idx / int(num_inds / 100)) == 0:
+            if verbose and int(idx % int(num_inds / 100)) == 0:
                 print "Getting individual " + str(idx) + " out of " + str(num_inds) + " individuals"
             temp = pair_string.split(":")
             pair = temp[0].split(",")
