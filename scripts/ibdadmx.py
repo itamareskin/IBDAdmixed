@@ -416,7 +416,8 @@ elif args.command == "stats":
 
     if not args.one_line:
         print "\nLoading true IBD segments..."
-    true_ibd = PopIBD.fast_deserialize(args.trueibdfile)
+    max_score = args.max_score if args.lod_score else pow(10,args.min_score)
+    true_ibd = PopIBD.fast_deserialize(args.trueibdfile,max_score=max_score)
 
     if not args.one_line:
         print "Filtering true IBD segments with length < " + str(args.min_length) + "cM"
