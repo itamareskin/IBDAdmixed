@@ -81,6 +81,7 @@ parser_c.add_argument('--h-extend', action='store_true', default=False, dest='h_
 
 parser_c2 = subparsers.add_parser('beagle3', help='run beagle3')
 parser_c2.add_argument('prefix', type=str, help='beagle prefix (name of bgl/markers files)')
+parser_c2.add_argument('out', type=str, help='beagle output name')
 parser_c.add_argument("--nruns", type=int, dest='nruns', default=10, help="Number of beagle runs to perform")
 
 parser_c3 = subparsers.add_parser('beagle4', help='run beagle4')
@@ -272,7 +273,7 @@ elif args.command == "beagle3":
                                'fastibd=true',
                                'gprobs=false',
                                'seed='+str(seed),
-                               'out='+(args.prefix if args.nruns == 1 else args.prefix + "." + str(seed)),
+                               'out='+(args.out if args.nruns == 1 else args.out + "." + str(seed)),
                                'fastibdthreshold=1e-11']) for seed in seeds]
     # wait.
     for proc in procs:
