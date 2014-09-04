@@ -82,6 +82,8 @@ parser_c.add_argument('--h-extend', action='store_true', default=False, dest='h_
 parser_c2 = subparsers.add_parser('beagle3', help='run beagle3')
 parser_c2.add_argument('prefix', type=str, help='beagle prefix (name of bgl/markers files)')
 parser_c2.add_argument('out', type=str, help='beagle output name')
+parser_c2.add_argument('ref1', type=str, help='reference 1 file prefix')
+parser_c2.add_argument('ref2', type=str, help='reference 2 file prefix')
 parser_c2.add_argument("--nruns", type=int, dest='nruns', default=10, help="Number of beagle runs to perform")
 parser_c2.add_argument("--seed", type=int, dest='seed', default=0, help="First seed for beagle")
 parser_c2.add_argument("--fastIBD-threshold", type=float, dest='fastIBD_threshold', default=1e-5, help="Maximal score to report as IBD")
@@ -272,6 +274,8 @@ elif args.command == "beagle3":
     seeds = range(args.nruns)
     # launch async calls:
     procs = [subprocess.Popen(['java', '-Xmx3000m', '-Djava.io.tmpdir=.', '-jar', filename,
+                               'phased='+args.ref1+'.bgl',
+                               'phased='+args.ref2+'.bgl',
                                'unphased='+args.prefix+'.bgl',
                                'missing=?',
                                'fastibd=true',
