@@ -274,6 +274,7 @@ elif args.command == "beagle3":
     seeds = range(args.nruns)
     # launch async calls:
     procs = [subprocess.Popen(['java', '-Xmx3000m', '-Djava.io.tmpdir=.', '-jar', filename,
+                               'markers='+args.ref1+'.markers',
                                'phased='+args.ref1+'.bgl',
                                'phased='+args.ref2+'.bgl',
                                'unphased='+args.prefix+'.bgl',
