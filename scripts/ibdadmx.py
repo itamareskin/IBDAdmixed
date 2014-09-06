@@ -82,8 +82,7 @@ parser_c.add_argument('--h-extend', action='store_true', default=False, dest='h_
 parser_c2 = subparsers.add_parser('beagle3', help='run beagle3')
 parser_c2.add_argument('prefix', type=str, help='beagle prefix (name of bgl/markers files)')
 parser_c2.add_argument('out', type=str, help='beagle output name')
-parser_c2.add_argument('ref1', type=str, help='reference 1 file prefix')
-parser_c2.add_argument('ref2', type=str, help='reference 2 file prefix')
+parser_c2.add_argument('ref', type=str, nargs='*', default=[], help='reference panels file prefixes')
 parser_c2.add_argument("--nruns", type=int, dest='nruns', default=10, help="Number of beagle runs to perform")
 parser_c2.add_argument("--seed", type=int, dest='seed', default=0, help="First seed for beagle")
 parser_c2.add_argument("--fastIBD-threshold", type=float, dest='fastIBD_threshold', default=1e-5, help="Maximal score to report as IBD")
@@ -270,21 +269,20 @@ elif args.command == "germline":
 elif args.command == "beagle3":
     dir = os.path.dirname(__file__)
     filename = os.path.join(dir, '../external/beagle.jar')
-
-    seeds = range(args.nruns)
+    procs = []
     # launch async calls:
-    procs = [subprocess.Popen(['java', '-Xmx3000m', '-Djava.io.tmpdir=.', '-jar', filename,
-                               'markers='+args.ref1+'.markers',
-                               'phased='+args.ref1+'.bgl',
-                               'phased='+args.ref2+'.bgl',
-                               'unphased='+args.prefix+'.bgl',
-                               'missing=?',
-                               'fastibd=true',
-                               'gprobs=false',
-                               'seed='+str(seed+args.seed),
-                               'out='+(args.out if args.nruns == 1 else args.out + "." + str(seed+args.seed)),
-                               'fastibdthreshold'+str(args.fastIBD_threshold)]) for seed in seeds]
-    # wait.
+    for seed in range(args.nruns):
+        beagle_args = ['java', '-Xmx3000m', '-Djava.io.tmpdir=.', '-jar', filename,
+                       'markers='+args.prefix+'.markers']
+        beagle_args += ['phased='+x+'.bgl' for x in args.ref]
+        beagle_args += ['unphased='+args.prefix+'.bgl',
+                        'missing=?',
+                        'fastibd=true',
+                        'gprobs=false',
+                        'seed='+str(seed+args.seed),
+                        'out='+(args.out if args.nruns == 1 else args.out + "." + str(seed+args.seed)),
+                        'fastibdthreshold'+str(args.fastIBD_threshold)]
+        procs.append(subprocess.Popen(beagle_args))
     for proc in procs:
         proc.wait()
     # check for results:
