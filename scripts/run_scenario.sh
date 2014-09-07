@@ -1,17 +1,17 @@
 #!/bin/bash
 
-code_dir=~/Projects/ibdadmixed
-data_dir=~/Data/IBDAdmixed/New5 #/a/home/cc/cs/itamares/Data/IBDAdmixed/New4
+code_dir=/a/home/cc/cs/itamares/Projects/ibdadmixed
+data_dir=/home/nasheran/itamares/Data/IBDAdmixed/New6 #/a/home/cc/cs/itamares/Data/IBDAdmixed/New4
 pop1_prefix=HapMap3_CEU_chr2
 pop2_prefix=HapMap3_YRI_chr2
-pop3_prefix=HapMap3__chr2
+pop3_prefix=HapMap3_JPT+CHB_chr2
 data_prefix=ceu.yri.jpt
 output_name=$data_prefix
 beagle_dag1=$pop1_prefix.$pop1_prefix.bgl.dag.gz
 beagle_dag2=$pop2_prefix.$pop2_prefix.bgl.dag.gz
 beagle_dag3=$pop3_prefix.$pop3_prefix.bgl.dag.gz
-plink=~/Software/plink-1.07-x86_64/plink
-parente=~/Software/parente
+plink=/home/nasheran/itamares/Software/plink-1.07-x86_64/plink
+parente=/home/nasheran/itamares/Software/parente
 
 # download HapMap files (run this in data_dir)
 #python $code_dir/scripts/loadHapMap3.py 
@@ -19,47 +19,34 @@ parente=~/Software/parente
 # convert to plink format
 python $code_dir/scripts/saveHapMapPlink.py $data_dir/$pop1_prefix.pop
 python $code_dir/scripts/saveHapMapPlink.py $data_dir/$pop2_prefix.pop
-#python $code_dir/scripts/saveHapMapPlink.py $data_dir/$pop3_prefix.pop
+python $code_dir/scripts/saveHapMapPlink.py $data_dir/$pop3_prefix.pop
 
 # run Beagle to create dag model
-python $code_dir/scripts/ibdadmx.py ped2bgl $data_dir/$pop1_prefix
-python $code_dir/scripts/ibdadmx.py bglmodel $data_dir/$pop1_prefix
-python $code_dir/scripts/ibdadmx.py ped2bgl $data_dir/$pop2_prefix
-python $code_dir/scripts/ibdadmx.py bglmodel $data_dir/$pop2_prefix
-python $code_dir/scripts/ibdadmx.py ped2bgl $data_dir/$pop3_prefix
-#python $code_dir/scripts/ibdadmx.py bglmodel $data_dir/$pop3_prefix
+#python $code_dir/scripts/ibdadmx.py ped2bgl $data_dir/$pop1_prefix
+python $code_dir/scripts/ibdadmx.py bglmodel $data_dir/$pop1_prefix --scale 4
+#python $code_dir/scripts/ibdadmx.py ped2bgl $data_dir/$pop2_prefix
+python $code_dir/scripts/ibdadmx.py bglmodel $data_dir/$pop2_prefix --scale 4
+#python $code_dir/scripts/ibdadmx.py ped2bgl $data_dir/$pop3_prefix
+python $code_dir/scripts/ibdadmx.py bglmodel $data_dir/$pop3_prefix --scale 4
 
 # run simulation
-python $code_dir/scripts/simple_simulation.py $data_dir/$pop1_prefix.pop $data_dir/$pop2_prefix.pop $data_dir/$pop1_prefix.map $data_dir/$data_prefix -a 0.5 0.5 -n 100 -i 80 -e 0.005
+python $code_dir/scripts/simple_simulation.py $data_dir/$pop1_prefix.pop $data_dir/$pop2_prefix.pop $data_dir/$pop3_prefix.pop $data_dir/$pop1_prefix.map $data_dir/$data_prefix -a 0.2 0.4 0.4 -n 100 -i 80 -e 0.005
 
 # run GERMLINE (necessary for ibdadmx)
 python $code_dir/scripts/ibdadmx.py germline $data_dir/$data_prefix.genos $data_dir/$data_prefix.genos --bits 50 --err-hom 2 --err-het 4 --min-m 0.1
 
 # run ibdadmx
 #python $code_dir/scripts/ibdadmx.py ibd $data_dir/$data_prefix.genos $data_dir/$output_name $data_dir/$beagle_dag1 -k 1 -a 1 --pairs-file $data_dir/$data_prefix.trueibd.pairs.txt -p 1 --set-ibd-trans 1e-5 1 --germline-file $data_dir/$data_prefix.genos.match -m -50 -w 100
-nohup python $code_dir/scripts/ibdadmx.py ibd $data_dir/$data_prefix.genos $data_dir/$output_name $data_dir/$beagle_dag1 $data_dir/$beagle_dag2 -k 2 -a 0.5 0.5 --pairs-file $data_dir/$data_prefix.trueibd.pairs.txt --set-ibd-trans 2e-4 1 1e-5 1 --germline-file $data_dir/$data_prefix.genos.match -m -50 -w 100 --condor &
+nohup python $code_dir/scripts/ibdadmx.py ibd $data_dir/$data_prefix.genos $data_dir/$output_name $data_dir/$beagle_dag1 $data_dir/$beagle_dag2 $data_dir/$beagle_dag3 -k 3 -a 0.2 0.4 0.4 --pairs-file $data_dir/$data_prefix.trueibd.pairs.txt --set-ibd-trans 2e-4 1 1e-5 1 1e-5 1 --germline-file $data_dir/$data_prefix.genos.match -m -50 -w 100 -p 16 &
 
 # run Naive Model
-nohup python $code_dir/scripts/ibdadmx.py ibd $data_dir/$data_prefix.genos $data_dir/$output_name.naive $data_dir/$beagle_dag1 $data_dir/$beagle_dag2 -k 2 -a 0.5 0.5 --pairs-file $data_dir/$data_prefix.trueibd.pairs.txt --set-ibd-trans 2e-4 1 1e-5 1 --germline-file $data_dir/$data_prefix.genos.match -m -50 -w 100 --naive-model --condor --recover &
+nohup python $code_dir/scripts/ibdadmx.py ibd $data_dir/$data_prefix.genos $data_dir/$output_name.naive $data_dir/$beagle_dag1 $data_dir/$beagle_dag2 $data_dir/$beagle_dag3 -k 3 -a 0.2 0.4 0.4 --pairs-file $data_dir/$data_prefix.trueibd.pairs.txt --set-ibd-trans 2e-4 1 1e-5 1 --germline-file $data_dir/$data_prefix.genos.match -m -50 -w 100 --naive-model --condor --recover &
 
 # run Beagle 3 fastIBD
 python $code_dir/scripts/ibdadmx.py ped2bgl $data_dir/$data_prefix.genos
-nohup python $code_dir/scripts/ibdadmx.py beagle3 $data_dir/$data_prefix.genos $data_dir/$output_name --nruns 7 &
+nohup python $code_dir/scripts/ibdadmx.py beagle3 $data_dir/$data_prefix.genos $data_dir/$output_name $data_dir/$pop1_prefix $data_dir/$pop2_prefix $data_dir/$pop3_prefix --nruns 7 &
 gunzip $data_dir/$output_name.*$data_prefix.genos.bgl.fibd.gz
 awk -v maxscore="1e-5" 'BEGIN{split("",ibd)}$5<=maxscore{split($1,a,"."); split($2,b,"."); h1=int((a[2]-3)/2); h2=int((b[2]-3)/2); p=h1","h2; v=$3-1","$4-1","$5; if (p in ibd) ibd[p]=ibd[p]";"v; else ibd[p]=v}END{for (i in ibd) print i":"ibd[i]}' $data_dir/$output_name.*$data_prefix.genos.bgl.fibd > $data_dir/$output_name.genos.beagle3.ibd.txt
-
-# run Beagle 3 with second pop
-python $code_dir/scripts/ibdadmx.py ped2bgl $data_dir/$data_prefix.genos
-python $code_dir/scripts/ibdadmx.py beagle3 $data_dir/$data_prefix.genos $data_dir/$output_name
-gunzip $data_dir/$output_name.$output_name.bgl.fibd.gz
-awk 'BEGIN{split("",ibd)}{split($1,a,"."); split($2,b,"."); h1=int((a[2]-3)/2); h2=int((b[2]-3)/2); p=h1","h2; v=$3-1","$4-1","$5; if (p in ibd) ibd[p]=ibd[p]";"v; else ibd[p]=v}END{for (i in ibd) print i":"ibd[i]}' $data_dir/$data_prefix.genos.$data_prefix.genos.bgl.fibd > $data_dir/$output_name.genos.beagle3.ibd.txt
-
-# run Beagle 3 with merged pops
-$plink --noweb --file $data_dir/$pop1_prefix --merge $data_dir/$pop2_prefix.ped $data_dir/$pop2_prefix.map --recode --out 
-python $code_dir/scripts/ibdadmx.py ped2bgl $data_dir/$data_prefix.genos
-python $code_dir/scripts/ibdadmx.py beagle3 $data_dir/$data_prefix.genos
-gunzip $data_dir/$data_prefix.genos.$data_prefix.genos.bgl.fibd.gz
-awk 'BEGIN{split("",ibd)}{split($1,a,"."); split($2,b,"."); h1=int((a[2]-3)/2); h2=int((b[2]-3)/2); p=h1","h2; v=$3-1","$4-1","$5; if (p in ibd) ibd[p]=ibd[p]";"v; else ibd[p]=v}END{for (i in ibd) print i":"ibd[i]}' $data_dir/$data_prefix.genos.$data_prefix.genos.bgl.fibd > $data_dir/$output_name.genos.beagle3.ibd.txt
 
 # run Beagle 4
 awk 'BEGIN{OFS=" "}NR==1{$1="I"; $2="id"; print; next}{for (i=3;i<=NF;i++) {if ($i=="1") $i="A"; else $i="G"}; print;}' $data_dir/$data_prefix.genos.bgl > $data_dir/$data_prefix.genos.fixed.bgl
@@ -110,3 +97,5 @@ do
 	#echo $min_m
 	python $code_dir/scripts/ibdadmx.py stats $data_dir/$pop1_prefix.map $data_dir/$data_prefix.trueibd.txt $data_dir/$output_name.$i.germline.ibd.txt --one-line
 done
+
+awk '{print NR,$1,$2,$3}' `ls -v $data_dir/$output_name.*.germline.ibd.txt.stats.txt` > $data_dir/$output_name.germline.ibd.txt.stats.txt
