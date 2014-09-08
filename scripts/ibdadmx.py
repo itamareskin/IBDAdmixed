@@ -281,7 +281,7 @@ elif args.command == "beagle3":
                         'gprobs=false',
                         'seed='+str(seed+args.seed),
                         'out='+(args.out if args.nruns == 1 else args.out + "." + str(seed+args.seed)),
-                        'fastibdthreshold'+str(args.fastIBD_threshold)]
+                        'fastibdthreshold='+str(args.fastIBD_threshold)]
         procs.append(subprocess.Popen(beagle_args))
     for proc in procs:
         proc.wait()
