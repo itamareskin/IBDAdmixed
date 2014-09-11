@@ -434,6 +434,10 @@ elif args.command == "stats":
     #max_score = args.max_score if args.lod_score else pow(10,args.max_score)
     ibd_est = PopIBD.fast_deserialize(args.estimatedibdfile, verbose=True)
 
+    if not args.one_line:
+        print "Filtering estimated IBD segments with length < " + str(args.min_est_length) + "cM"
+    ibd_est.filter_by_length(args.min_est_length,1e4,gm)
+
     if args.compare_same_inds:
         if not args.one_line:
             print "Considering only individuals that were found in both estimated IBD and true IBD"
