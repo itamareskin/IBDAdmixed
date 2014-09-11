@@ -95,6 +95,7 @@ parser_d.add_argument("mapfile", type=str, help="PLINK-format map file name")
 parser_d.add_argument("trueibdfile", type=str, help="true ibd file name")
 parser_d.add_argument("estimatedibdfile", type=str, help="estimated ibd file name")
 parser_d.add_argument("-l", "--min-length", type=float, dest='min_length', default=0, help="minimum length of IBD segments to consider as true IBD (in cM)")
+parser_d.add_argument("--max-length", type=float, dest='max_length', default=1e4, help="maximum length of IBD segments to consider as true IBD (in cM)")
 parser_d.add_argument("--filter-est-length", type=float, dest='min_est_length', default=0.8, help="filter short segments from estimated IBD")
 parser_d.add_argument("-s", "--min-score", type=float, dest='min_score', default=0, help="minimum score of IBD segments to consider")
 parser_d.add_argument("-m", "--max-score", type=float, dest='max_score', default=500, help="maximum score of IBD segments to consider")
@@ -426,17 +427,14 @@ elif args.command == "stats":
 
     if not args.one_line:
         print "Filtering true IBD segments with length < " + str(args.min_length) + "cM"
-    true_ibd.filter_by_length(args.min_length,1e4,gm)
+        print "Filtering true IBD segments with length > " + str(args.max_length) + "cM"
+    true_ibd.filter_by_length(args.min_length,args.max_length,gm)
 
     if not args.one_line:
         print "Loading estimated IBD segments..."
     #min_score = args.min_score if args.lod_score else pow(10,args.min_score)
     #max_score = args.max_score if args.lod_score else pow(10,args.max_score)
     ibd_est = PopIBD.fast_deserialize(args.estimatedibdfile, verbose=True)
-
-    if not args.one_line:
-        print "Filtering estimated IBD segments with length < " + str(args.min_est_length) + "cM"
-    ibd_est.filter_by_length(args.min_est_length,1e4,gm)
 
     if args.compare_same_inds:
         if not args.one_line:
@@ -447,6 +445,10 @@ elif args.command == "stats":
     if not args.one_line:
         print "Merging IBD segments..."
     ibd_est.merge_all(max_val = args.lod_score, verbose=True)
+
+    if not args.one_line:
+        print "Filtering estimated IBD segments with length < " + str(args.min_est_length) + "cM"
+    ibd_est.filter_by_length(args.min_est_length,1e4,gm)
 
     scores = [x[2] for x in ibd_est.to_list()]
 
