@@ -109,6 +109,7 @@ parser_d.add_argument("--beagle", action='store_true', default=False, dest='beag
 parser_d.add_argument("--parente", action='store_true', default=False, dest='parente', help='')
 parser_d.add_argument("--germline", action='store_true', default=False, dest='germline', help='')
 parser_d.add_argument("--one-line", action='store_true', default=False, dest='one_line', help='print just one line with power, FPR, FDR')
+parser_d.add_argument("--out", dest='out', help="output file name")
 
 parser_e = subparsers.add_parser('ped2lamp', help='convert plink format to LAMP format')
 parser_e.add_argument('prefix', type=str, help='plink prefix (name of ped/map files)')
@@ -452,7 +453,10 @@ elif args.command == "stats":
 
     scores = [x[2] for x in ibd_est.to_list()]
 
-    output_file_name = args.estimatedibdfile + ".stats.txt"
+    if args.out is None:
+        output_file_name = args.estimatedibdfile + ".stats.txt"
+    else:
+        output_file_name = args.out + ".stats.txt"
     with open(output_file_name, "w") as output_file:
 
         if not args.one_line:
