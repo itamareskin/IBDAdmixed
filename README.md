@@ -1,12 +1,7 @@
-# IBDAdmixed - Detection of IBD segments in Admixed individuals#
+# IBDAdmixed #
 
-This README would normally document whatever steps are necessary to get your application up and running.
-
-### What is this repository for? ###
-
-* Quick summary
-* Version
-* [Learn Markdown](https://bitbucket.org/tutorials/markdowndemo)
+* This is a python library and associated set of scripts for the detection of IBD segments in Admixed individuals. 
+* Version 1.0.1
 
 ### How do I get set up? ###
 
