@@ -1,16 +1,19 @@
 License:
 --------
 ibdadmx.py
+
 This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
 Program available for download at: 
 ----------------------------------
+
 https://github.com/itamareskin/IBDAdmixed
 
 About:
 ------
+
 ibadmx.py is a python program for detecting segments of identity-by-descent (IBD) on datasets of admixed individuals. The program was developed by Itamar (Eskin) Afek at Tel Aviv University. Full description of the algorithm is included in the paper "IBDAdmixed: Fine-Scale Detection of Identity-by-Descent in Admixed Populations".
 
 Dependencies:
@@ -78,3 +81,5 @@ Options:
 Testing:
 --------
 
+In a unix command line, run:
+python -m unittest discover
