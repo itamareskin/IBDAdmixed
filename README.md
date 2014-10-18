@@ -5,10 +5,10 @@
 
 ### How do I get set up? ###
 
-* Summary of set up
-* Configuration
 * Dependencies
-* Database configuration
+** Python 2.7
+** Cython
+** SimuPOP (Optional - for simulating )
 * How to run tests
 * Deployment instructions
 
