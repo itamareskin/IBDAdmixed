@@ -35,3 +35,5 @@ resources/HapMap3_CEU_chr2.lamp.unphased.dat
 resources/HapMap3_CEU_chr2.pos
 .idea/workspace.xml
 *.o
+R/.Rhistory
+R/3way.stats.txt
