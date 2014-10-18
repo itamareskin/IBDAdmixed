@@ -1,51 +1,60 @@
-
-prefix ="ceu.yri"
-output.name = paste(prefix,"4",sep=".")
-data.dir = "K:\\Data\\IBDAdmixed\\New5\\"
-
-data = c()
-
-curr.data = read.table(paste(data.dir,output.name,".ibdadmixed.txt.stats.txt",sep=""))
-curr.data$Method = "IBDAdmixed"
-data = rbind(data,curr.data)
-
-curr.data = read.table(paste(data.dir,output.name,".naive.ibdadmixed.txt.stats.txt",sep=""))
-curr.data$Method = "Naive"
-data = rbind(data,curr.data)
-
-curr.data = read.table(paste(data.dir,output.name,".genos.beagle3.ibd.txt.stats.txt",sep=""))
-curr.data$Method = "Beagle3"
-data = rbind(data,curr.data)
-
-curr.data = read.table(paste(data.dir,prefix,".parente.ibd.txt.stats.txt",sep=""))
-curr.data$Method = "Parente"
-data = rbind(data,curr.data)
-
-colnames(data) = c("Score","Sensitivity","FDR","FPR","Method")
-
-#colnames(data) = c("Method","Score","segs","Sensitivity","FDR","FPR")
-%data = data[data$Method %in% c("IBDAdmixed","IBDAdmixedNaive","PARENTE","IBDAdmixed>0.8","fastIBD","fastIBD>0.8"),]
-#data = data[data$Method %in% c("IBDAdmixed","IBDAdmixed>0.8","fastIBD","fastIBD>0.8","PARENTE"),]
 library(ggplot2)
 library("grid")
 require(mgcv)
 require(splines)
 require(MASS)
-cbPalette <- c("#56B4E9", "#0072B2", "#009E73", "#E69F00", "#D55E00", "#CC79A7")
-# new.data = data[data$Method == "IBDAdmixed",]
-# new.data = rbind(new.data, new.data[1:2, ])
-# new.data$FDR[29] = 0
-# new.data$Sensitivity[29] = 0
-# new.data$FDR[30] = 1
-# new.data$Sensitivity[30] = 0
 
-#idxs = chull(new.data$FDR,-new.data$Sensitivity)
-ggplot(data=data, aes(x=FPR, y=Sensitivity, group=Method, colour=Method, shape=Method)) + 
-  stat_smooth(method = "lm", formula = y ~ ns(x, 15), n=80, size = 1.3, se=FALSE, fullrange=TRUE) + 
-  geom_point(size=4) + 
-  scale_x_continuous(expand = c(0,0), limits = c(0, 0.05)) +
+prefix ="ceu.yri"
+output.name = paste(prefix,"4",sep=".")
+data.dir = "K:\\Data\\IBDAdmixed\\New5\\"
+seglen = "3.cM"
+
+data = c()
+
+curr.data = read.table(paste(data.dir,output.name,".ibdadmixed.txt.",seglen,".stats.txt",sep=""))
+curr.data$Method = "IBDAdmixed"
+data = rbind(data,curr.data)
+
+# curr.data = read.table(paste(data.dir,output.name,".ibdadmixed.0.5.txt.stats.txt",sep=""))
+# curr.data$Method = "IBDAdmixed>0.5"
+# data = rbind(data,curr.data)
+
+# curr.data = read.table(paste(data.dir,output.name,".naive.ibdadmixed.txt.",seglen,".stats.txt",sep=""))
+# curr.data$Method = "Naive"
+# data = rbind(data,curr.data)
+
+curr.data = read.table(paste(data.dir,output.name,".genos.beagle3.ibd.txt.",seglen,".stats.txt",sep=""))
+curr.data$Method = "Beagle3"
+data = rbind(data,curr.data)
+
+curr.data = read.table(paste(data.dir,prefix,".parente.ibd.txt.",seglen,".stats.txt",sep=""))
+curr.data$Method = "Parente"
+data = rbind(data,curr.data)
+
+# curr.data = read.table(paste(data.dir,output.name,".germline.ibd.txt.2cM.stats.txt",sep=""))
+# curr.data$Method = "GERMLINE"
+# data = rbind(data,curr.data)
+
+colnames(data) = c("Score","Sensitivity","FDR","FPR","Method")
+data = data[data$FPR>0.0001,]
+cbPalette <- c("#56B4E9", "#0072B2", "#009E73", "#E69F00", "#D55E00", "#CC79A7")
+
+ggplot() + 
+  stat_smooth(data=data[data$Method == "IBDAdmixed",], aes(x=FPR, y=Sensitivity, group=Method, colour=Method, shape=Method),
+              method = "lm", formula = y ~ ns(x, 5), n=100, size = 1.3, se=FALSE, fullrange=TRUE) + 
+  stat_smooth(data=data[data$Method == "Beagle3",], aes(x=FPR, y=Sensitivity, group=Method, colour=Method, shape=Method),
+              method = "lm", formula = y ~ ns(x, 6), n=300, size = 1.3, se=FALSE, fullrange=TRUE) + 
+  stat_smooth(data=data[data$Method == "Naive",], aes(x=FPR, y=Sensitivity, group=Method, colour=Method, shape=Method),
+              method = "lm", formula = y ~ ns(x, 5), n=300, size = 1.3, se=FALSE, fullrange=TRUE) + 
+  stat_smooth(data=data[data$Method == "Parente",], aes(x=FPR, y=Sensitivity, group=Method, colour=Method, shape=Method),
+              method = "lm", formula = y ~ ns(x, 4), n=300, size = 1.3, se=FALSE, fullrange=TRUE) + 
+#   stat_smooth(data=data[data$Method != "IBDAdmixed",], aes(x=FPR, y=Sensitivity, group=Method, colour=Method, shape=Method),
+#               method = "lm", formula = y ~ ns(x, 5), n=300, size = 1.3, se=FALSE, fullrange=TRUE) + 
+  #stat_smooth(data=data[data$Method == "IBDAdmixed",], aes(x=FPR, y=Sensitivity, group=Method, colour=Method, shape=Method),
+  #            method = "gam", formula = y ~ s(x, k = 7), n=300, size = 1.3, se=FALSE, fullrange=TRUE) + 
+  geom_point(data=data, aes(x=FPR, y=Sensitivity, group=Method, colour=Method, shape=Method), size=4) + 
+  scale_x_continuous(expand = c(0,0), limits = c(0, 0.03)) +
   scale_y_continuous(expand = c(0,0), limits = c(0, 1)) +
-  #scale_colour_hue(name="Method", l=30) +
   scale_colour_manual(values=cbPalette) + 
   scale_shape_manual(name="Method", values=c(22,21,23,24,25,26)) +
   scale_linetype_discrete(name="Method") +
@@ -61,38 +70,7 @@ ggplot(data=data, aes(x=FPR, y=Sensitivity, group=Method, colour=Method, shape=M
         panel.grid.major =  element_line(colour = "grey", size = 0.05, linetype = 'dashed'), 
         panel.grid.minor =  element_line(colour = "grey", size = 0.05, linetype = 'dashed'), 
         panel.border = element_rect(colour = "black",size=1),
-        #axis.line = theme_segment(colour = "black"),
-        #panel.border = theme_blank(),
         axis.title.x = element_text(size=12),
         axis.text.x  = element_text(size=10),
         axis.title.y = element_text(size=12),
         axis.text.y  = element_text(size=10))
-
-# b <- ggplot(data=data, aes(x=FPR, y=Sensitivity, group=Method, colour=Method, shape=Method)) + 
-#   geom_line(size=1) + 
-#   geom_point(size=2.5, fill="white") + 
-#   xlim(0, 0.002) +    
-#   ylim(0, 1) +
-#   scale_x_continuous(expand = c(0,0), limits = c(0,0.0025)) +
-#   scale_y_continuous(expand = c(0,0), limits = c(0, 1)) +  
-#   scale_colour_hue(name="Method", l=30)  +     
-#   scale_colour_manual(values=cbPalette) + 
-#   scale_shape_manual(name="Method", values=c(22,21,23,24)) +
-#   scale_linetype_discrete(name="Method") +
-#   xlab("") + ylab("") +
-#   theme_bw() + 
-#   theme(legend.position="none",
-#         panel.grid.major =  theme_line(colour = "grey", size = 0.05, linetype = 'dashed'),
-#         panel.grid.minor =  theme_line(colour = "grey", size = 0.05, linetype = 'dashed'),
-#         #axis.line = theme_segment(colour = "black"),
-#         #panel.border = theme_blank(),
-#         axis.title.x = element_text(size=12),
-#         axis.text.x  = element_text(size=10),
-#         axis.title.y = element_text(size=12),
-#         axis.text.y  = element_text(size=10))
-
-# library(gridExtra)
-# vpb_ <- viewport(width = 1, height = 1, x = 0.5, y = 0.5)  # the larger map
-# vpa_ <- viewport(width = 0.4, height = 0.4, x = 0.7, y = 0.35)  # the inset in upper right
-# print(a, vp = vpb_)
-#print(b, vp = vpa_)

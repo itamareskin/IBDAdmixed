@@ -14,6 +14,7 @@ from IBD.IBDSegments import PairIBD, PopIBD
 from itertools import combinations
 import math
 import argparse
+import os
 
 def add_ibd(pop, ibd, pair, length, dists):
     start = random.randint(50,len(pop.individual(0).lociPos())-1000)
@@ -146,6 +147,12 @@ parser.add_argument("-s", "--scramble", action='store_true', default=False, dest
 
 
 args = parser.parse_args()
+
+if os.path.exists(args.out):
+    x = raw_input("A simulation with the same name already exists in this directory. Are you sure you would like to proceed? (this will overwrite the existing simulation) (Y/N)")
+    if x != "Y" and x != "y":
+        print "exiting..."
+        exit(0)
 
 logf = open(args.out + ".log", 'w')
 logf.write(str(args) + "\n")
